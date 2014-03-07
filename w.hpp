@@ -26,6 +26,8 @@ namespace w {
   };
 
   Response render_text(std::string text);
+  Response render_template(std::string templ);
+  Response redirect(std::string new_location, HTTPStatusCode code = HTTPStatusCode::Found);
 
   struct IScope {
     virtual ~IScope() {}
