@@ -5,10 +5,10 @@ Did your dad ever tell you: "Writing web apps in C++ is dangerous and stupid! Yo
 
 Well he's not the boss of you! You can do whatever you want!
 
-Wayward ("<w>") is a web framework for writing HTTP-aware apps in C++. It uses [libevent](http://libevent.org/) behind
+Wayward ("`<w>`") is a web framework for writing HTTP-aware apps in C++. It uses [libevent](http://libevent.org/) behind
 the scenes to create a compact HTTP server that can act as the backend for your app.
 
-<w> is heavily inspired by the Ruby framework Sinatra, and aims to keep things as simple as possible.
+`<w>` is heavily inspired by the Ruby framework Sinatra, and aims to keep things as simple as possible.
 It uses the C++ Standard Template Library extensively.
 
 But seriously, isn't this a bad idea?
@@ -26,8 +26,8 @@ Here are a couple of hints:
 - If you find yourself implementing copy-constructors and move-constructors, you are likely
   creating bugs. See if you can represent your value type with just other value types that
   take care of resource management for you.
-- Beware of `std::vector::operator[]`. Use `std::vector::at` instead.
-- <w> may choose to handle more than one request at a time. If your request handlers share
+- Beware of `std::vector::operator[]`. It doesn't do bounds checking. Use `std::vector::at` instead.
+- `<w>` may choose to handle more than one request at a time. If your request handlers share
   any state, make sure to guard it behind an `std::mutex`.
 
 Example app
@@ -54,11 +54,11 @@ int main(int argc, char** argv) {
 Dependencies
 ------------
 
-Dependency management in C++ apps is a pain, so <w> tries to keep it to a minimum.
+Dependency management in C++ apps is a pain, so `<w>` tries to keep it to a minimum.
 
 - [libevent 2.0](http://libevent.org/)
 - C++11 compatible compiler ([Clang](http://clang.llvm.org/) is recommended).
 
-<w> has been tested on the following platforms:
+`<w>` has been tested on the following platforms:
 
 - OS X 10.9.2 with Apple Clang-500.2.79
