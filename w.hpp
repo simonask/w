@@ -8,6 +8,7 @@
 #include <memory>
 #include <map>
 #include "uri.hpp"
+#include "http.hpp"
 
 namespace w {
   struct Request {
@@ -19,9 +20,9 @@ namespace w {
 
   struct Response {
     std::map<std::string, std::string> headers;
-    int code = 200;
-    std::string reason; // "OK", "Not Found" etc.
-    std::string body; // TODO: Use a Rope?
+    HTTPStatusCode code = HTTPStatusCode::OK;
+    std::string reason; // Keep empty to derive from `code`.
+    std::string body;
   };
 
   Response render_text(std::string text);

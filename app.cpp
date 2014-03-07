@@ -53,17 +53,16 @@ namespace w {
       if (h) {
         response = h->handler(req);
       } else {
-        response.code = 404;
-        response.reason = "Not Found";
+        response.code = HTTPStatusCode::NotFound;
       }
 
       if (app->config.log_requests) {
-        std::cout << req.method << " " << req.uri.path() << " " << response.code << '\n';
+        std::cout << req.method << " " << req.uri.path() << " " << (int)response.code << '\n';
       }
 
       evbuffer* body_buffer = evbuffer_new();
       evbuffer_add(body_buffer, response.body.c_str(), response.body.size());
-      evhttp_send_reply(handle, response.code, response.reason.c_str(), body_buffer);
+      evhttp_send_reply(handle, (int)response.code, response.reason.size() ? response.reason.c_str() : nullptr, body_buffer);
       evbuffer_free(body_buffer);
     }
   };
