@@ -56,6 +56,11 @@ namespace w {
         response.code = HTTPStatusCode::NotFound;
       }
 
+      evkeyvalq* headers = evhttp_request_get_output_headers(handle);
+      for (auto& pair: response.headers) {
+        evhttp_add_header(headers, pair.first.c_str(), pair.second.c_str());
+      }
+
       if (app->config.log_requests) {
         std::cout << req.method << " " << req.uri.path() << " " << (int)response.code << '\n';
       }
