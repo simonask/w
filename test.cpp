@@ -1,4 +1,6 @@
 #include <w>
+#include "format.hpp"
+#include <iostream>
 
 int main (int argc, char const *argv[])
 {
@@ -21,6 +23,9 @@ int main (int argc, char const *argv[])
   app.post("/articles", [](w::Request& req) -> w::Response {
     return w::Response();
   });
+
+  std::cout << w::format("Hello, World! article_id = {id}\n", {{"id", 123}});
+  std::cout << w::format("Hello first argument: {0} {1} {0}\n", 1, 2);
 
   return app.listen_and_serve("0.0.0.0", 3000);
 }

@@ -46,6 +46,7 @@ namespace w {
 
     struct {
       bool log_requests = true;
+      bool parallel = false;
     } config;
 
     int listen_and_serve(std::string address = "0.0.0.0", int port = 3000);
