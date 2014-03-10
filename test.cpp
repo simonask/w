@@ -58,6 +58,11 @@ int main (int argc, char const *argv[])
   auto t = p::get_type<Article>();
   std::cout << w::format("Model type: {0}, relation = {1}\n", t->name(), t->relation());
 
+  // auto results = p::from<Article>().where("author_id = {0}", 1);
+  // for (auto& article: results) {
+
+  // }
+
   //return app.listen_and_serve("0.0.0.0", 3000);
   return 0;
 }
