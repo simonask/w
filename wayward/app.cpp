@@ -75,22 +75,24 @@ namespace w {
     }
   };
 
-  App::App() : priv(new Private) { priv->app = this; }
-
-  App::~App() {
-    //evhttp_free(priv->http);
-    event_base_free(priv->base);
-  }
-
   static void app_http_request_cb(evhttp_request* req, void* userdata) {
     App* app = static_cast<App*>(userdata);
     app->priv->handle_request(req);
   }
 
-  int App::listen_and_serve(std::string address, int port) {
+  App::App() : priv(new Private) {
+    priv->app = this;
     priv->base = event_base_new();
     priv->http = evhttp_new(priv->base);
     evhttp_set_gencb(priv->http, app_http_request_cb, this);
+  }
+
+  App::~App() {
+    evhttp_free(priv->http);
+    event_base_free(priv->base);
+  }
+
+  int App::listen_and_serve(std::string address, int port) {
     int fd = evhttp_bind_socket(priv->http, address.c_str(), (u_short)port);
     if (fd < 0) return fd;
     return event_base_dispatch(priv->base);
