@@ -1,6 +1,34 @@
 #include <w>
-#include "format.hpp"
+#include <p>
 #include <iostream>
+
+struct Article;
+
+struct User {
+  int id;
+  std::string email;
+  std::string crypted_password;
+  p::HasMany<Article> articles;
+};
+
+struct Article {
+  int id;
+  std::string title;
+  p::BelongsTo<User> author;
+};
+
+PERSISTENCE(Article) {
+  property(&Article::id, "id");
+  property(&Article::title, "title");
+  belongs_to(&Article::author, "author_id");
+}
+
+PERSISTENCE(User) {
+  property(&User::id, "id");
+  property(&User::email, "email");
+  property(&User::crypted_password, "crypted_password");
+  has_many(&User::articles, "author_id");
+}
 
 int main (int argc, char const *argv[])
 {
@@ -27,5 +55,9 @@ int main (int argc, char const *argv[])
   std::cout << w::format("Hello, World! article_id = {id}\n", {{"id", 123}});
   std::cout << w::format("Hello first argument: {0} {1} {0}\n", 1, 2);
 
-  return app.listen_and_serve("0.0.0.0", 3000);
+  auto t = p::get_type<Article>();
+  std::cout << w::format("Model type: {0}, relation = {1}\n", t->name(), t->relation());
+
+  //return app.listen_and_serve("0.0.0.0", 3000);
+  return 0;
 }

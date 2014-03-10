@@ -1,5 +1,6 @@
-#include "w.hpp"
-#include "private.hpp"
+#include "wayward/w.hpp"
+#include "wayward/private.hpp"
+
 #include <map>
 #include <vector>
 #include <event2/event.h>
@@ -77,7 +78,7 @@ namespace w {
   App::App() : priv(new Private) { priv->app = this; }
 
   App::~App() {
-    evhttp_free(priv->http);
+    //evhttp_free(priv->http);
     event_base_free(priv->base);
   }
 

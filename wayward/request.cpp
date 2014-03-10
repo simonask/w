@@ -1,4 +1,5 @@
-#include "private.hpp"
+#include "wayward/private.hpp"
+
 #include <event2/keyvalq_struct.h>
 #include <event2/buffer.h>
 #include <stdlib.h>

@@ -1,4 +1,4 @@
-#include "w.hpp"
+#include "wayward/w.hpp"
 
 namespace w {
   Response render_text(std::string text) {

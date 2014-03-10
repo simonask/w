@@ -7,8 +7,9 @@
 #include <vector>
 #include <memory>
 #include <map>
-#include "uri.hpp"
-#include "http.hpp"
+#include "wayward/uri.hpp"
+#include "wayward/http.hpp"
+#include "wayward/format.hpp"
 
 namespace w {
   struct Request {

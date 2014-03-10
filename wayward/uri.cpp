@@ -1,4 +1,4 @@
-#include "uri.hpp"
+#include "wayward/uri.hpp"
 #include <event2/http.h>
 
 namespace w {
