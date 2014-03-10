@@ -2,19 +2,23 @@
 #include <p>
 #include <iostream>
 
+using p::PrimaryKey;
+using p::BelongsTo;
+using p::HasMany;
+
 struct Article;
 
 struct User {
-  int id;
+  PrimaryKey id;
   std::string email;
   std::string crypted_password;
-  p::HasMany<Article> articles;
+  HasMany<Article> articles;
 };
 
 struct Article {
-  int id;
+  PrimaryKey id;
   std::string title;
-  p::BelongsTo<User> author;
+  BelongsTo<User> author;
 };
 
 PERSISTENCE(Article) {
@@ -33,6 +37,14 @@ PERSISTENCE(User) {
 int main (int argc, char const *argv[])
 {
   w::App app;
+  std::string connection_error;
+  auto connection = p::PostgreSQLConnection::connect("postgresql://wayward_test@localhost/wayward_test", &connection_error);
+  if (!connection) {
+    std::cout << w::format("Connection failed: {0}\n", connection_error);
+    return 1;
+  } else {
+    std::cout << w::format("Connected to PostgreSQL database: {0}@{1} on {2}\n", connection->user(), connection->database(), connection->host());
+  }
 
   app.get("/", [](w::Request& req) -> w::Response {
     return w::render_text("Hello, World!");

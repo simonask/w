@@ -9,6 +9,9 @@
 #include <persistence/record_type.hpp>
 #include <persistence/record_type_builder.hpp>
 #include <persistence/persistence_macro.hpp>
+#include <persistence/primary_key.hpp>
+
+#include <persistence/postgresql.hpp>
 
 #if !defined(PERSISTENCE_NO_SHORTHAND_NAMESPACE)
 namespace p = persistence;
