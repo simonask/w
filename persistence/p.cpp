@@ -1,5 +1,5 @@
 #include "persistence/p.hpp"
 
-namespace p {
+namespace persistence {
   void connect(std::string);
 }
