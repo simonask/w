@@ -1,5 +1,9 @@
 #include <persistence/postgresql.hpp>
+#include <persistence/postgresql_renderers.hpp>
 #include <libpq-fe.h>
+
+#include <wayward/format.hpp>
+#include <sstream>
 
 namespace persistence {
   struct PostgreSQLConnection::Private {
@@ -47,9 +51,21 @@ namespace persistence {
   }
 
   std::unique_ptr<IResultSet>
-  PostgreSQLConnection::query(std::string sql) {
+  PostgreSQLConnection::execute(std::string sql) {
     PGresult* results = PQexec(priv->conn, sql.c_str());
     return make_results(results);
+  }
+
+  std::unique_ptr<IResultSet>
+  PostgreSQLConnection::execute(const ast::IQuery& query) {
+    std::string sql = to_sql(query);
+    return execute(std::move(sql));
+  }
+
+  std::string
+  PostgreSQLConnection::to_sql(const ast::IQuery& query) {
+    PostgreSQLQueryRenderer renderer(*this);
+    return query.to_sql(renderer);
   }
 
   std::string

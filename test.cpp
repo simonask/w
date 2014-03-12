@@ -15,18 +15,6 @@ struct User {
   HasMany<Article> articles;
 };
 
-struct Article {
-  PrimaryKey id;
-  std::string title;
-  BelongsTo<User> author;
-};
-
-PERSISTENCE(Article) {
-  property(&Article::id, "id");
-  property(&Article::title, "title");
-  belongs_to(&Article::author, "author_id");
-}
-
 PERSISTENCE(User) {
   property(&User::id, "id");
   property(&User::email, "email");
@@ -34,16 +22,36 @@ PERSISTENCE(User) {
   has_many(&User::articles, "author_id");
 }
 
+struct Article {
+  PrimaryKey id;
+  std::string title;
+  BelongsTo<User> author;
+  std::string some_text;
+};
+
+PERSISTENCE(Article) {
+  property(&Article::id, "id");
+  property(&Article::title, "title");
+  belongs_to(&Article::author, "author_id");
+  property(&Article::some_text, "some_text");
+}
+
 int main (int argc, char const *argv[])
 {
   w::App app;
+
+  p::Configuration config = {
+    .connection_string = "postgresql://wayward_test@localhost/wayward_test",
+    .pool_size = 5,
+  };
+
   std::string connection_error;
-  auto connection = p::PostgreSQLConnection::connect("postgresql://wayward_test@localhost/wayward_test", &connection_error);
-  if (!connection) {
+  if (p::connect(config, &connection_error)) {
+    auto& p = p::get_connection();
+    std::cout << w::format("Connected to PostgreSQL database: {0}@{1} on {2}\n", p.user(), p.database(), p.host());
+  } else {
     std::cout << w::format("Connection failed: {0}\n", connection_error);
     return 1;
-  } else {
-    std::cout << w::format("Connected to PostgreSQL database: {0}@{1} on {2}\n", connection->user(), connection->database(), connection->host());
   }
 
   app.get("/", [](w::Request& req) -> w::Response {
@@ -70,8 +78,8 @@ int main (int argc, char const *argv[])
   auto t = p::get_type<Article>();
   std::cout << w::format("Model type: {0}, relation = {1}\n", t->name(), t->relation());
 
-  // auto results = p::from<Article>().where("author_id = {0}", 1);
-  // for (auto& article: results) {
+  // auto articles = p::from<Article>().where("author_id = {0}", 1);
+  // for (auto& article: articles) {
 
   // }
 

@@ -11,11 +11,13 @@ namespace persistence {
     // Info
     std::string database() const final;
     std::string user() const final;
-    std::string host() const;
+    std::string host() const final;
 
     // Querying
-    std::unique_ptr<IResultSet> query(std::string sql) final;
     std::string sanitize(std::string sql_fragment) final;
+    std::string to_sql(const ast::IQuery& query) final;
+    std::unique_ptr<IResultSet> execute(const ast::IQuery& query) final;
+    std::unique_ptr<IResultSet> execute(std::string sql) final;
 
     //
     static std::unique_ptr<PostgreSQLConnection>
