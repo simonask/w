@@ -73,6 +73,11 @@ namespace persistence {
       virtual ~Literal() {}
     };
 
+    struct SQLFragmentValue : SingleValue {
+      std::string sql;
+      std::string to_sql(ISQLValueRenderer& visitor) const final { return sql; }
+    };
+
     struct StringLiteral : SingleValue {
       std::string literal; // unsanitized!
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
@@ -150,6 +155,13 @@ namespace persistence {
       std::unique_ptr<SingleValue> otherwise;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
+    };
+
+    // fragment
+    struct SQLFragmentCondition : Condition {
+      std::string sql;
+
+      std::string to_sql(ISQLValueRenderer& visitor) const final { return sql; }
     };
 
     // NOT (subcondition)

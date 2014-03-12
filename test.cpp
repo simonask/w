@@ -83,6 +83,20 @@ int main (int argc, char const *argv[])
 
   // }
 
+  using pr = p::relational_algebra;
+
+  auto builder = pr::projection("articles")
+    .where(
+      (
+        pr::column("articles", "title").like("%hej%")
+        && pr::column("articles", "created_at") < "localtime()"
+      ) || (
+        pr::column("articles", "author_id") == 5
+      )
+    .order(pr::column("articles", "created_at"))
+    .reverse_order()
+  ;
+
   //return app.listen_and_serve("0.0.0.0", 3000);
   return 0;
 }

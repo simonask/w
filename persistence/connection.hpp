@@ -3,7 +3,7 @@
 #define PERSISTENCE_CONNECTION_HPP_INCLUDED
 
 #include <persistence/result_set.hpp>
-#include <persistence/query.hpp>
+#include <persistence/builder.hpp>
 
 namespace persistence {
   struct IConnection {
