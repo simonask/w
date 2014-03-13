@@ -5,9 +5,14 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <wayward/support/cloning_ptr.hpp>
 
 namespace persistence {
   namespace ast {
+    using w::CloningPtr;
+    using w::Cloneable;
+    using w::ICloneable;
+
     struct StarFrom;
     struct StringLiteral;
     struct NumericLiteral;
@@ -54,7 +59,7 @@ namespace persistence {
       virtual std::string render(const InsertQuery& x) = 0;
     };
 
-    struct Value {
+    struct Value : ICloneable {
       virtual ~Value() {}
       virtual std::string to_sql(ISQLValueRenderer& visitor) const = 0;
     };
@@ -73,29 +78,35 @@ namespace persistence {
       virtual ~Literal() {}
     };
 
-    struct SQLFragmentValue : SingleValue {
+    struct SQLFragmentValue : Cloneable<SQLFragmentValue, SingleValue> {
       std::string sql;
       std::string to_sql(ISQLValueRenderer& visitor) const final { return sql; }
+
+      SQLFragmentValue(const SQLFragmentValue&) = default;
+      SQLFragmentValue(std::string sql) : sql(std::move(sql)) {}
     };
 
-    struct StringLiteral : SingleValue {
+    struct StringLiteral : Cloneable<StringLiteral, SingleValue> {
+      StringLiteral(std::string literal) : literal(std::move(literal)) {}
       std::string literal; // unsanitized!
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
-    struct NumericLiteral : SingleValue {
-      std::string literal;
+    struct NumericLiteral : Cloneable<NumericLiteral, SingleValue> {
+      double literal;
+      NumericLiteral(double literal) : literal(literal) {}
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
-    struct BooleanLiteral : SingleValue {
+    struct BooleanLiteral : Cloneable<BooleanLiteral, SingleValue> {
       bool value;
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
     // "relation"."column"
-    struct ColumnReference : SingleValue {
+    struct ColumnReference : Cloneable<ColumnReference, SingleValue> {
       virtual ~ColumnReference() {}
+      ColumnReference(std::string relation, std::string column) : relation(std::move(relation)), column(std::move(column)) {}
 
       std::string relation;
       std::string column;
@@ -104,19 +115,19 @@ namespace persistence {
     };
 
     // function(arguments...)
-    struct Aggregate : SingleValue {
+    struct Aggregate : Cloneable<Aggregate, SingleValue> {
       virtual ~Aggregate() {}
 
       std::string function;
-      std::vector<std::unique_ptr<SingleValue>> arguments;
+      std::vector<CloningPtr<SingleValue>> arguments;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
     // (elements...)
-    struct List : SingleValue {
+    struct List : Cloneable<List, SingleValue> {
       virtual ~List() {}
-      std::vector<std::unique_ptr<SingleValue>> elements;
+      std::vector<CloningPtr<SingleValue>> elements;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
@@ -126,13 +137,13 @@ namespace persistence {
     // WHEN b THEN b_v
     // ELSE otherwise
     // END
-    struct CaseSimple : SingleValue {
-      std::unique_ptr<SingleValue> value;
+    struct CaseSimple : Cloneable<CaseSimple, SingleValue> {
+      CloningPtr<SingleValue> value;
       struct When {
-        std::unique_ptr<SingleValue> when;
-        std::unique_ptr<SingleValue> then;
+        CloningPtr<SingleValue> when;
+        CloningPtr<SingleValue> then;
       };
-      std::unique_ptr<SingleValue> otherwise;
+      CloningPtr<SingleValue> otherwise;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
@@ -147,34 +158,34 @@ namespace persistence {
     // WHEN cond2 THEN value2
     // ELSE otherwise
     // END
-    struct Case : SingleValue {
+    struct Case : Cloneable<Case, SingleValue> {
       struct When {
-        std::unique_ptr<Condition> cond;
-        std::unique_ptr<SingleValue> then;
+        CloningPtr<Condition> cond;
+        CloningPtr<SingleValue> then;
       };
-      std::unique_ptr<SingleValue> otherwise;
+      CloningPtr<SingleValue> otherwise;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
     // fragment
-    struct SQLFragmentCondition : Condition {
+    struct SQLFragmentCondition : Cloneable<SQLFragmentCondition, Condition> {
       std::string sql;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return sql; }
     };
 
     // NOT (subcondition)
-    struct NotCondition : Condition {
+    struct NotCondition : Cloneable<NotCondition, Condition> {
       virtual ~NotCondition() {}
 
-      std::unique_ptr<Condition> subcondition;
+      CloningPtr<Condition> subcondition;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
     // value op
-    struct UnaryCondition : Condition {
+    struct UnaryCondition : Cloneable<UnaryCondition, Condition> {
       virtual ~UnaryCondition() {}
       enum Cond {
         IsNull,
@@ -186,15 +197,14 @@ namespace persistence {
         IsUnknown,
         IsNotUnknown,
       };
-      std::unique_ptr<SingleValue> value;
+      CloningPtr<SingleValue> value;
       Cond op;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
     // lhs op rhs
-    struct BinaryCondition : Condition {
-      virtual ~BinaryCondition() {}
+    struct BinaryCondition : Cloneable<BinaryCondition, Condition> {
       enum Cond {
         Eq,
         NotEq,
@@ -206,34 +216,42 @@ namespace persistence {
         NotIn,
         IsDistinctFrom,
         IsNotDistinctFrom,
+        Like,
+        ILike,
       };
-      std::unique_ptr<SingleValue> lhs;
-      std::unique_ptr<SingleValue> rhs;
+
+      virtual ~BinaryCondition() {}
+      BinaryCondition(CloningPtr<SingleValue> lhs, CloningPtr<SingleValue> rhs, Cond op) : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) {}
+
+      CloningPtr<SingleValue> lhs;
+      CloningPtr<SingleValue> rhs;
       Cond op;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
     // value BETWEEN lower_bound AND upper_bound
-    struct BetweenCondition : Condition {
+    struct BetweenCondition : Cloneable<BetweenCondition, Condition> {
       virtual ~BetweenCondition() {}
-      std::unique_ptr<SingleValue> value;
-      std::unique_ptr<SingleValue> lower_bound;
-      std::unique_ptr<SingleValue> upper_bound;
+      CloningPtr<SingleValue> value;
+      CloningPtr<SingleValue> lower_bound;
+      CloningPtr<SingleValue> upper_bound;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
     // (lhs) op (rhs)
-    struct LogicalCondition : Condition {
-      virtual ~LogicalCondition() {}
-
+    struct LogicalCondition : Cloneable<LogicalCondition, Condition> {
       enum Cond {
         AND,
         OR,
       };
-      std::unique_ptr<Condition> lhs;
-      std::unique_ptr<Condition> rhs;
+
+      virtual ~LogicalCondition() {}
+      LogicalCondition(CloningPtr<Condition> lhs, CloningPtr<Condition> rhs, Cond op) : lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) {}
+
+      CloningPtr<Condition> lhs;
+      CloningPtr<Condition> rhs;
       Cond op;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
@@ -244,57 +262,57 @@ namespace persistence {
       virtual std::string to_sql(ISQLQueryRenderer& visitor) const = 0;
     };
 
-    struct Join {
+    struct Join : Cloneable<Join, ICloneable> {
       std::string relation;
       std::string alias;
-      std::unique_ptr<Condition> on;
+      CloningPtr<Condition> on;
     };
 
     // SELECT select FROM relation joins WHERE where GROUP BY group ORDER BY order order_descending
     // This is a SingleValue to provide support for subselects.
-    struct SelectQuery : SingleValue, IQuery {
+    struct SelectQuery : Cloneable<SelectQuery, SingleValue>, IQuery {
       virtual ~SelectQuery() {}
-      std::vector<std::unique_ptr<ast::Value>> select;
+      std::vector<CloningPtr<ast::Value>> select;
       std::string relation;
-      std::unique_ptr<ast::Condition> where;
-      std::vector<std::unique_ptr<Join>> joins;
-      std::vector<std::unique_ptr<ast::Value>> group;
-      std::vector<std::unique_ptr<ast::SingleValue>> order;
+      CloningPtr<ast::Condition> where;
+      std::vector<CloningPtr<Join>> joins;
+      std::vector<CloningPtr<ast::Value>> group;
+      std::vector<CloningPtr<ast::SingleValue>> order;
       bool order_descending = false;
 
       // TODO: Use Maybe
-      std::unique_ptr<size_t> limit;
-      std::unique_ptr<size_t> offset;
+      ssize_t limit = -1;
+      ssize_t offset = -1;
 
       std::string to_sql(ISQLQueryRenderer& visitor) const final { return visitor.render(*this); }
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
-    struct UpdateQuery : IQuery {
+    struct UpdateQuery : Cloneable<UpdateQuery>, IQuery {
       virtual ~UpdateQuery() {}
       std::string relation;
-      std::unique_ptr<ast::Condition> where;
-      std::unique_ptr<size_t> limit;
+      CloningPtr<ast::Condition> where;
+      CloningPtr<size_t> limit;
       std::vector<std::string> columns;
-      std::vector<std::unique_ptr<SingleValue>> values;
+      std::vector<CloningPtr<SingleValue>> values;
 
       std::string to_sql(ISQLQueryRenderer& visitor) const final { return visitor.render(*this); }
     };
 
-    struct DeleteQuery : IQuery {
+    struct DeleteQuery : Cloneable<DeleteQuery>, IQuery {
       virtual ~DeleteQuery() {}
       std::string relation;
-      std::unique_ptr<ast::Condition> where;
-      std::unique_ptr<size_t> limit;
+      CloningPtr<ast::Condition> where;
+      CloningPtr<size_t> limit;
 
       std::string to_sql(ISQLQueryRenderer& visitor) const final { return visitor.render(*this); }
     };
 
-    struct InsertQuery : IQuery {
+    struct InsertQuery : Cloneable<InsertQuery>, IQuery {
       virtual ~InsertQuery() {}
       std::string relation;
       std::vector<std::string> columns;
-      std::vector<std::unique_ptr<SingleValue>> values;
+      std::vector<CloningPtr<SingleValue>> values;
 
       std::string to_sql(ISQLQueryRenderer& visitor) const final { return visitor.render(*this); }
     };

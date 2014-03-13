@@ -11,6 +11,7 @@
 #include <persistence/persistence_macro.hpp>
 #include <persistence/primary_key.hpp>
 #include <persistence/connection.hpp>
+#include <persistence/relational_algebra.hpp>
 
 #if !defined(PERSISTENCE_NO_SHORTHAND_NAMESPACE)
 namespace p = persistence;

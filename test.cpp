@@ -83,19 +83,23 @@ int main (int argc, char const *argv[])
 
   // }
 
-  using pr = p::relational_algebra;
+  namespace pr = p::relational_algebra;
 
-  auto builder = pr::projection("articles")
+  auto query = pr::projection("articles")
     .where(
       (
         pr::column("articles", "title").like("%hej%")
         && pr::column("articles", "created_at") < "localtime()"
       ) || (
-        pr::column("articles", "author_id") == 5
+        pr::column("articles", "author_id") == pr::literal(5)
       )
+    )
     .order(pr::column("articles", "created_at"))
     .reverse_order()
   ;
+
+  std::string sql = p::get_connection().to_sql(*query.query);
+  std::cout << w::format("SQL: {0}\n", sql);
 
   //return app.listen_and_serve("0.0.0.0", 3000);
   return 0;

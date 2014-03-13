@@ -14,7 +14,7 @@ namespace persistence {
             ss << ", ";
         }
       } else {
-        ss << "* ";
+        ss << "*";
       }
       ss << " FROM " << x.relation;
 
@@ -42,10 +42,10 @@ namespace persistence {
           ss << " DESC";
         }
       }
-      if (x.limit) {
-        ss << " LIMIT " << *x.limit;
-        if (x.offset) {
-          ss << " OFFSET " << *x.offset;
+      if (x.limit >= 0) {
+        ss << " LIMIT " << x.limit;
+        if (x.offset >= 0) {
+          ss << " OFFSET " << x.offset;
         }
       }
       return ss.str();
@@ -73,7 +73,7 @@ namespace persistence {
 
     std::string PostgreSQLValueRenderer::render(const NumericLiteral& x) {
       // TODO: Something cleverer once NumericLiteral becomes more aware of number types
-      return x.literal;
+      return w::format("{0}", x.literal);
     }
 
     std::string PostgreSQLValueRenderer::render(const BooleanLiteral& x) {
@@ -152,6 +152,8 @@ namespace persistence {
         case BinaryCondition::NotIn:             op = "NOT IN"; break;
         case BinaryCondition::IsDistinctFrom:    op = "IS DISTINCT FROM"; break;
         case BinaryCondition::IsNotDistinctFrom: op = "IS NOT DISTINCT FROM"; break;
+        case BinaryCondition::Like:              op = "LIKE"; break;
+        case BinaryCondition::ILike:             op = "ILIKE"; break;
       }
 
       return w::format("{0} {1} {2}", x.lhs->to_sql(*this), op, x.rhs->to_sql(*this));
