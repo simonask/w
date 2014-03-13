@@ -21,6 +21,8 @@ namespace persistence {
     struct Value {
       CloningPtr<ast::SingleValue> value;
       Value(CloningPtr<ast::SingleValue> value) : value(std::move(value)) {}
+      Value(const Value&) = default;
+      Value(Value&&) = default;
       Value(const char* sql);
       Value(std::string sql);
 
