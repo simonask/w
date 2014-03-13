@@ -263,9 +263,20 @@ namespace persistence {
     };
 
     struct Join : Cloneable<Join, ICloneable> {
+      enum Type {
+        Cross,
+        Inner,
+        LeftOuter,
+        RightOuter,
+        FullOuter,
+      };
+
+      Type type;
       std::string relation;
       std::string alias;
       CloningPtr<Condition> on;
+
+      Join(Type type, std::string relation, std::string alias, CloningPtr<Condition> on) : type(type), relation(std::move(relation)), alias(std::move(alias)), on(std::move(on)) {}
     };
 
     // SELECT select FROM relation joins WHERE where GROUP BY group ORDER BY order order_descending

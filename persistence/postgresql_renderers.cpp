@@ -18,7 +18,17 @@ namespace persistence {
       }
       ss << " FROM " << x.relation;
 
-      // TODO: Joins
+      for (auto& join: x.joins) {
+        switch (join->type) {
+          case ast::Join::Cross:      ss << " CROSS JOIN "; break;
+          case ast::Join::Inner:      ss << " INNER JOIN "; break;
+          case ast::Join::LeftOuter:  ss << " LEFT OUTER JOIN "; break;
+          case ast::Join::RightOuter: ss << " RIGHT OUTER JOIN "; break;
+          case ast::Join::FullOuter:  ss << " FULL OUTER JOIN "; break;
+        }
+        ss << join->relation << ' ' << join->alias << " ON ";
+        ss << join->on->to_sql(renderer);
+      }
 
       if (x.where) {
         ss << " WHERE " << x.where->to_sql(renderer);

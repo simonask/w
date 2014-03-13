@@ -89,10 +89,13 @@ int main (int argc, char const *argv[])
     .where(
       (
         pr::column("articles", "title").like("%hej%")
-        && pr::column("articles", "created_at") < "localtime()"
+        && pr::column("articles", "created_at") < pr::sql("localtime()")
       ) || (
         pr::column("articles", "author_id") == pr::literal(5)
       )
+    )
+    .left_join("users", "article_author",
+      pr::column("article_author", "id") == pr::column("articles", "author_id")
     )
     .order(pr::column("articles", "created_at"))
     .reverse_order()

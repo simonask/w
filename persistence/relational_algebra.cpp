@@ -24,6 +24,10 @@ namespace persistence {
       };
     }
 
+    SQL sql(std::string sql) {
+      return SQL{std::move(sql)};
+    }
+
     Condition operator&&(Condition&& lhs, Condition&& rhs) {
       return Condition{
         make_cloning_ptr(new ast::LogicalCondition{
@@ -44,12 +48,8 @@ namespace persistence {
       };
     }
 
-    Value::Value(const char* sql) {
-      value = make_cloning_ptr(new ast::SQLFragmentValue{sql});
-    }
-
-    Value::Value(std::string sql) {
-      value = make_cloning_ptr(new ast::SQLFragmentValue{std::move(sql)});
+    Value::Value(SQL sql) {
+      value = make_cloning_ptr(new ast::SQLFragmentValue{std::move(sql.sql)});
     }
 
     Condition Value::like(std::string literal) && {
@@ -118,6 +118,16 @@ namespace persistence {
 
     Projection Projection::reverse_order(bool b) && {
       query->order_descending = b;
+      return std::move(*this);
+    }
+
+    Projection Projection::left_join(std::string relation, std::string as, Condition on) && {
+      query->joins.push_back(make_cloning_ptr(new ast::Join{
+        ast::Join::LeftOuter,
+        std::move(relation),
+        std::move(as),
+        std::move(on.cond)
+      }));
       return std::move(*this);
     }
   }

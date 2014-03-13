@@ -9,9 +9,16 @@ namespace persistence {
   namespace relational_algebra {
     using w::CloningPtr;
 
+    struct SQL {
+      std::string sql;
+      explicit SQL(std::string sql) : sql(std::move(sql)) {}
+      SQL(SQL&&) = default;
+      SQL(const SQL&) = default;
+    };
+
     struct Condition {
       CloningPtr<ast::Condition> cond;
-      Condition(std::string sql);
+      Condition(SQL sql);
       Condition(CloningPtr<ast::Condition> cond) : cond(std::move(cond)) {}
     };
 
@@ -21,30 +28,31 @@ namespace persistence {
     struct Value {
       CloningPtr<ast::SingleValue> value;
       Value(CloningPtr<ast::SingleValue> value) : value(std::move(value)) {}
+      Value(SQL sql);
       Value(const Value&) = default;
       Value(Value&&) = default;
       Value(const char* sql);
       Value(std::string sql);
 
       // Unary conditions:
-      Condition is_null();
-      Condition is_not_null();
-      Condition is_true();
-      Condition is_not_true();
-      Condition is_false();
-      Condition is_not_false();
-      Condition is_unknown();
-      Condition is_not_unknown();
+      Condition is_null() &&;
+      Condition is_not_null() &&;
+      Condition is_true() &&;
+      Condition is_not_true() &&;
+      Condition is_false() &&;
+      Condition is_not_false() &&;
+      Condition is_unknown() &&;
+      Condition is_not_unknown() &&;
 
       // Binary conditions with string literals:
       Condition like(std::string cmp) &&;
-      Condition ilike(std::string cmp);
+      Condition ilike(std::string cmp) &&;
 
       // Binary conditions:
-      Condition in(Value&& other);
-      Condition not_in(Value&& other);
-      Condition is_distinct_from(Value&& other);
-      Condition is_not_distinct_from(Value&& other);
+      Condition in(Value&& other) &&;
+      Condition not_in(Value&& other) &&;
+      Condition is_distinct_from(Value&& other) &&;
+      Condition is_not_distinct_from(Value&& other) &&;
       Condition operator==(Value&& other) &&;
       Condition operator!=(Value&& other) &&;
       Condition operator<(Value&& other) &&;
@@ -72,6 +80,11 @@ namespace persistence {
       Projection order(Value) &&;
       Projection reverse_order(bool reverse = true) const&;
       Projection reverse_order(bool reverse = true) &&;
+      Projection cross_join(std::string relation, std::string alias, Condition on) &&;
+      Projection inner_join(std::string relation, std::string alias, Condition on) &&;
+      Projection left_join(std::string relation, std::string alias, Condition on) &&;
+      Projection right_join(std::string relation, std::string alias, Condition on) &&;
+      Projection full_join(std::string relation, std::string alias, Condition on) &&;
 
       CloningPtr<ast::SelectQuery> query;
     };
@@ -81,9 +94,8 @@ namespace persistence {
     Value      aggregate_impl(std::string func, Value* args, size_t num_args);
     Value      literal(std::string str);
     Value      literal(double number);
-    Value      sql(std::string sql);
-    Condition  sql_condition(std::string sql);
     Condition  negate(Condition&& cond);
+    SQL        sql(std::string sql);
 
     template <typename... Args>
     Value aggregate(std::string func, Args&&... args) {
