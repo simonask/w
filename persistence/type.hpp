@@ -7,6 +7,7 @@
 namespace persistence {
   struct IType {
     virtual std::string name() const = 0;
+    virtual bool is_nullable() const = 0;
   };
 
   template <typename T> struct BuildType;

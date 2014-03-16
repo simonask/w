@@ -3,6 +3,8 @@
 #define PERSISTENCE_PRIMARY_KEY_HPP_INCLUDED
 
 #include <cstdint>
+#include <persistence/type.hpp>
+#include <persistence/projection.hpp>
 
 namespace persistence {
   using int64 = std::int64_t;
@@ -18,6 +20,19 @@ namespace persistence {
   private:
     int64 id = -1;
   };
+
+  struct PrimaryKeyType : IType {
+    std::string name() const final { return "PrimaryKey"; }
+    bool is_nullable() const final { return false; }
+  };
+
+  template <>
+  struct BuildType<PrimaryKey> {
+    static const PrimaryKeyType* build();
+  };
+
+  template <>
+  struct ColumnAbilities<PrimaryKey> : LiteralEqualityAbilities<int64> {};
 }
 
 #endif // PERSISTENCE_PRIMARY_KEY_HPP_INCLUDED

@@ -17,9 +17,9 @@
     } \
   }; \
   template <> struct persistence::BuildType<TYPE> { \
-    static persistence::IRecordType* build() { \
+    static const persistence::RecordType<TYPE>* build() { \
       RecordTypeBuilder_ ## TYPE builder; \
-      builder.type_ = new persistence::RecordTypeImpl<TYPE>; \
+      builder.type_ = new persistence::RecordType<TYPE>; \
       builder.build_with_defaults_(); \
       return builder.result_(); \
     }\

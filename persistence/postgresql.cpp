@@ -2,7 +2,7 @@
 #include <persistence/postgresql_renderers.hpp>
 #include <libpq-fe.h>
 
-#include <wayward/format.hpp>
+#include <wayward/support/format.hpp>
 #include <sstream>
 
 namespace persistence {

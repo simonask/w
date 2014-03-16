@@ -1,4 +1,4 @@
-#include "wayward/format.hpp"
+#include <wayward/support/format.hpp>
 #include <map>
 #include <string>
 #include <ostream>
