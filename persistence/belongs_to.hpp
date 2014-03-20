@@ -24,8 +24,8 @@ namespace persistence {
     }
   };
 
-  template <typename T>
-  struct ColumnAbilities<BelongsTo<T>>: LiteralEqualityAbilities<std::int64_t> {};
+  template <typename Col, typename T>
+  struct ColumnAbilities<Col, BelongsTo<T>>: LiteralEqualityAbilities<Col, std::int64_t> {};
 
   template <typename T>
   struct BelongsToType : IType {

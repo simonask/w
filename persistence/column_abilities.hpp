@@ -5,71 +5,88 @@
 #include <persistence/relational_algebra.hpp>
 
 namespace persistence {
-  template <typename T>
+
+  template <typename Col, typename T>
   struct LiteralEqualityAbilities {
     using Cond = relational_algebra::Condition;
-    Cond operator==(T lit);
-    Cond operator!=(T lit);
+    Cond operator==(T lit) { return std::move(this->value()) == relational_algebra::literal(std::move(lit)); }
+    Cond operator!=(T lit) { return std::move(this->value()) != relational_algebra::literal(std::move(lit)); }
+
+  private:
+    relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
   };
 
-  template <typename T>
-  struct LiteralOrderingAbilities : LiteralEqualityAbilities<T> {
+  template <typename Col, typename T>
+  struct LiteralOrderingAbilities : LiteralEqualityAbilities<Col, T> {
     using Cond = relational_algebra::Condition;
-    Cond operator<(T lit);
-    Cond operator>(T lit);
-    Cond operator<=(T lit);
-    Cond operator>=(T lit);
+    Cond operator<(T lit) { return this->value() < relational_algebra::literal(std::move(lit)); }
+    Cond operator>(T lit) { return this->value() > relational_algebra::literal(std::move(lit)); }
+    Cond operator<=(T lit) { return this->value() <= relational_algebra::literal(std::move(lit)); }
+    Cond operator>=(T lit) { return this->value() >= relational_algebra::literal(std::move(lit)); }
+
+  private:
+    relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
   };
 
-  template <typename T>
-  struct NumericAbilities : LiteralOrderingAbilities<T> {};
+  template <typename Col, typename T>
+  struct NumericAbilities : LiteralOrderingAbilities<Col, T> {};
 
-  struct StringAbilities : LiteralEqualityAbilities<std::string> {
+  template <typename Col>
+  struct StringAbilities : LiteralEqualityAbilities<Col, std::string> {
     using Cond = relational_algebra::Condition;
 
-    Cond like(std::string cmp);
-    Cond ilike(std::string cmp);
+    Cond like(std::string cmp) { return std::move(this->value()).like(std::move(cmp)); }
+    Cond ilike(std::string cmp) { return std::move(this->value()).ilike(std::move(cmp)); }
+
+  private:
+    relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
   };
 
-  struct BooleanAbilities : LiteralEqualityAbilities<bool> {
+  template <typename Col>
+  struct BooleanAbilities : LiteralEqualityAbilities<Col, bool> {
     using Cond = relational_algebra::Condition;
 
-    Cond is_true() &&;
-    Cond is_not_true() &&;
-    Cond is_false() &&;
-    Cond is_not_false() &&;
-    Cond is_unknown();
-    Cond is_not_unknown();
+    Cond is_true() && { return this->value().is_true(); }
+    Cond is_not_true() && { return this->value().is_not_true(); }
+    Cond is_false() && { return this->value().is_false(); }
+    Cond is_not_false() && { return this->value().is_not_false(); }
+    Cond is_unknown() { return this->value().is_unknown(); }
+    Cond is_not_unknown() { return this->value().is_not_unknown(); }
+
+  private:
+    relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
   };
 
-  template <typename T>
+  template <typename Col, typename T>
   struct NullableAbilities {
     using Cond = relational_algebra::Condition;
 
-    Cond is_null();
-    Cond is_not_null();
+    Cond is_null() { return this->value().is_null(); }
+    Cond is_not_null() { return this->value().is_not_null(); }
+  private:
+    relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
   };
 
   // Unless specialized, only allow raw SQL abilities.
-  template <typename T> struct ColumnAbilities;
+  template <typename Col, typename T> struct ColumnAbilities;
 
   // All "Maybe<T>" fields have the abilities of T plus Nullable.
-  template <typename T>
-  struct ColumnAbilities<Maybe<T>>: ColumnAbilities<T>, NullableAbilities<T> {};
+  template <typename Col, typename T>
+  struct ColumnAbilities<Col, Maybe<T>>: ColumnAbilities<Col, T>, NullableAbilities<Col, T> {};
 
   // Bind numeric abilities to everything that is a number.
-  template <> struct ColumnAbilities<std::int32_t>: NumericAbilities<std::int32_t> {};
-  template <> struct ColumnAbilities<std::int64_t>: NumericAbilities<std::int64_t> {};
-  template <> struct ColumnAbilities<std::uint32_t>: NumericAbilities<std::uint32_t> {};
-  template <> struct ColumnAbilities<std::uint64_t>: NumericAbilities<std::uint64_t> {};
-  template <> struct ColumnAbilities<float>: NumericAbilities<float> {};
-  template <> struct ColumnAbilities<double>: NumericAbilities<double> {};
+  template <typename Col> struct ColumnAbilities<Col, std::int32_t>: NumericAbilities<Col, std::int32_t> {};
+  template <typename Col> struct ColumnAbilities<Col, std::int64_t>: NumericAbilities<Col, std::int64_t> {};
+  template <typename Col> struct ColumnAbilities<Col, std::uint32_t>: NumericAbilities<Col, std::uint32_t> {};
+  template <typename Col> struct ColumnAbilities<Col, std::uint64_t>: NumericAbilities<Col, std::uint64_t> {};
+  template <typename Col> struct ColumnAbilities<Col, float>: NumericAbilities<Col, float> {};
+  template <typename Col> struct ColumnAbilities<Col, double>: NumericAbilities<Col, double> {};
 
   // Give string abilities to std::string.
-  template <> struct ColumnAbilities<std::string>: StringAbilities {};
+  template <typename Col> struct ColumnAbilities<Col, std::string>: StringAbilities<Col> {};
 
   // Give boolean abilities to bool.
-  template <> struct ColumnAbilities<bool>: BooleanAbilities {};
+  template <typename Col> struct ColumnAbilities<Col, bool>: BooleanAbilities<Col> {};
 }
 
 #endif // PERSISTENCE_COLUMN_ABILITIES_HPP_INCLUDED

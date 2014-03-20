@@ -20,6 +20,8 @@ namespace persistence {
     virtual std::unique_ptr<IResultSet> execute(std::string sql) = 0;
     virtual std::unique_ptr<IResultSet> execute(const ast::IQuery& query) = 0;
   };
+
+  IConnection& get_connection();
 }
 
 #endif // PERSISTENCE_CONNECTION_HPP_INCLUDED

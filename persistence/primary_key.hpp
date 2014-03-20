@@ -31,8 +31,8 @@ namespace persistence {
     static const PrimaryKeyType* build();
   };
 
-  template <>
-  struct ColumnAbilities<PrimaryKey> : LiteralEqualityAbilities<int64> {};
+  template <typename Col>
+  struct ColumnAbilities<Col, PrimaryKey> : LiteralEqualityAbilities<Col, int64> {};
 }
 
 #endif // PERSISTENCE_PRIMARY_KEY_HPP_INCLUDED

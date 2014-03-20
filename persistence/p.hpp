@@ -27,7 +27,6 @@ namespace persistence {
   };
 
   bool connect(const Configuration& config, std::string* out_error = nullptr);
-  IConnection& get_connection();
 }
 
 #endif

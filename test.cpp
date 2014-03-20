@@ -36,6 +36,7 @@ PERSISTENCE(Article) {
   property(&Article::title, "title");
   belongs_to(&Article::author, "author_id");
   property(&Article::some_text, "some_text");
+  property(&Article::created_at, "created_at");
 }
 
 int main (int argc, char const *argv[])

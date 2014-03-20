@@ -9,6 +9,7 @@
 #include <persistence/column_traits.hpp>
 #include <persistence/column_abilities.hpp>
 #include <persistence/record_type.hpp>
+#include <persistence/connection.hpp>
 
 #include <functional>
 
@@ -43,9 +44,27 @@ namespace persistence {
 
     relational_algebra::Projection to_raw_relation_algebra() const { return proj; }
   private:
+    explicit Projection(relational_algebra::Projection proj) : proj(std::move(proj)) {}
     relational_algebra::Projection proj;
     void project(size_t row_idx, T& instance);
   };
+
+  template <typename T>
+  std::string Projection<T>::to_sql() const {
+    // TODO: Handle multiple data stores
+    IConnection& conn = persistence::get_connection();
+    return conn.to_sql(*proj.query);
+  }
+
+  template <typename T>
+  Projection<T> Projection<T>::where(relational_algebra::Condition cond) && {
+    return Projection<T>(std::move(proj).where(std::move(cond)));
+  }
+
+  template <typename T>
+  Projection<T> Projection<T>::where(relational_algebra::Condition cond) const& {
+    return Projection<T>(proj.where(std::move(cond)));
+  }
 
   template <typename T>
   Projection<T> from() {
@@ -56,7 +75,7 @@ namespace persistence {
   using relational_algebra::SQL;
 
   template <typename T, typename M>
-  struct Column : public ColumnAbilities<M>
+  struct Column : public ColumnAbilities<Column<T, M>, M>
   {
     using Cond = relational_algebra::Condition;
 
