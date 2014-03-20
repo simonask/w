@@ -117,7 +117,7 @@ int main (int argc, char const *argv[])
 
   auto articles = p::from<Article>().where(
     (p::column(&Article::title).like("%hej%")
-    && p::column(&Article::created_at).sql < p::sql("localtime()"))
+    && p::column(&Article::created_at).sql < p::sql("now()"))
     || (p::column(&Article::author) == 5)
   );//.join(&Article::author).order(&Article::created_at).reverse_order();
   std::string sql2 = articles.to_sql();

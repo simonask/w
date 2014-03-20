@@ -3,8 +3,16 @@
 #define PERSISTENCE_POSTGRESQL_HPP_INCLUDED
 
 #include <persistence/connection.hpp>
+#include <stdexcept>
 
 namespace persistence {
+  struct PostgreSQLError : std::runtime_error {
+    PostgreSQLError(std::string message) : message_(std::move(message)), std::runtime_error{message_.c_str()} {}
+    const std::string& message() const { return message_; }
+    std::string message_;
+    const char* what() const noexcept final { return message_.c_str(); }
+  };
+
   struct PostgreSQLConnection : IConnection {
     virtual ~PostgreSQLConnection();
 
