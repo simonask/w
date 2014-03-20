@@ -122,6 +122,9 @@ int main (int argc, char const *argv[])
   );//.join(&Article::author).order(&Article::created_at).reverse_order();
   std::string sql2 = articles.to_sql();
   std::cout << w::format("SQL2:\n{0}\n", sql2);
+  articles.each([&](Article& a) {
+    std::cout << w::format("Article {id}: {title}\n", {{"id", a.id}, {"title", a.title}});
+  });
 
   //return app.listen_and_serve("0.0.0.0", 3000);
   return 0;

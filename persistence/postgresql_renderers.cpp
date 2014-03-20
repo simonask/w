@@ -9,7 +9,8 @@ namespace persistence {
       ss << "SELECT ";
       if (x.select.size()) {
         for (size_t i = 0; i < x.select.size(); ++i) {
-          ss << x.select[i]->to_sql(renderer);
+          auto& alias = x.select[i];
+          ss << w::format("\"{0}\".\"{1}\" AS \"{2}\"", alias.relation, alias.column, alias.alias);
           if (i+1 != x.select.size())
             ss << ", ";
         }

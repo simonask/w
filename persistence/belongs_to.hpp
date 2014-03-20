@@ -28,9 +28,13 @@ namespace persistence {
   struct ColumnAbilities<Col, BelongsTo<T>>: LiteralEqualityAbilities<Col, std::int64_t> {};
 
   template <typename T>
-  struct BelongsToType : IType {
+  struct BelongsToType : IDataTypeFor<BelongsTo<T>> {
     std::string name() const final { return w::format("BelongsTo<{0}>", get_type<T>()->name()); }
     bool is_nullable() const final { return false; }
+
+    void extract_from_results(BelongsTo<T>& value, const IResultSet& r, size_t row, const std::string& col) const final {
+      get_type<PrimaryKey>()->extract_from_results(value.id, r, row, col);
+    }
   };
 
   template <typename T>

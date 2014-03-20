@@ -17,9 +17,28 @@ namespace persistence {
         PQclear(result);
       }
 
-      size_t width() const final { return 0; }
-      size_t height() const final { return 0; }
-      std::string column_at(size_t idx) const final { return ""; }
+      size_t width() const final { return PQnfields(result); }
+      size_t height() const final { return PQntuples(result); }
+
+      bool is_null_at(size_t row, const std::string& col) const final {
+        auto idx = PQfnumber(result, col.c_str());
+        return PQgetisnull(result, row, idx);
+      }
+
+      std::string get(size_t row, const std::string& col) const final {
+        auto idx = PQfnumber(result, col.c_str());
+        return std::string{PQgetvalue(result, row, idx)};
+      }
+
+      std::vector<std::string> columns() const final {
+        std::vector<std::string> r;
+        size_t n = PQnfields(result);
+        r.reserve(n);
+        for (size_t i = 0; i < n; ++i) {
+          r.push_back(std::string(PQfname(result, i)));
+        }
+        return r;
+      }
 
       PGresult* result;
     };
@@ -53,6 +72,7 @@ namespace persistence {
   std::unique_ptr<IResultSet>
   PostgreSQLConnection::execute(std::string sql) {
     PGresult* results = PQexec(priv->conn, sql.c_str());
+    // TODO: Check errors
     return make_results(results);
   }
 

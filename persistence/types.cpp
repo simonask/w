@@ -8,8 +8,8 @@ namespace persistence {
   }
 
   #define DEFINE_NUMERIC_TYPE(T) \
-    const NumericType* BuildType<T>::build() { \
-      static const NumericType* p = new NumericType{#T, sizeof(T)*8, std::is_signed<T>::value, std::is_floating_point<T>::value}; \
+    const NumericType<T>* BuildType<T>::build() { \
+      static const NumericType<T>* p = new NumericType<T>{#T}; \
       return p; \
     }
 
@@ -20,7 +20,9 @@ namespace persistence {
   DEFINE_NUMERIC_TYPE(float)
   DEFINE_NUMERIC_TYPE(double)
 
-  std::string MaybeType::name() const {
-    return w::format("Maybe<{0}>", inner_type_->name());
+  namespace detail {
+    std::string maybe_type_name(const IType* inner_type) {
+      return w::format("Maybe<{0}>", inner_type->name());
+    }
   }
 }

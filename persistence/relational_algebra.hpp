@@ -85,6 +85,10 @@ namespace persistence {
       Projection left_join(std::string relation, std::string alias, Condition on) &&;
       Projection right_join(std::string relation, std::string alias, Condition on) &&;
       Projection full_join(std::string relation, std::string alias, Condition on) &&;
+      Projection limit(size_t n) const&;
+      Projection limit(size_t n) &&;
+      Projection offset(size_t n) const&;
+      Projection offset(size_t n) &&;
 
       CloningPtr<ast::SelectQuery> query;
     };

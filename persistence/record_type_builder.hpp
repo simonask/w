@@ -21,7 +21,7 @@ namespace persistence {
     BelongsToAssociation<RT, AssociatedType>&
     belongs_to(BelongsTo<AssociatedType> RT::*member, std::string key_column) {
       auto p = new BelongsToAssociation<RT, AssociatedType> { key_column, member };
-      auto prop = new PropertyOf<RT, BelongsTo<AssociatedType>> { std::move(key_column) };
+      auto prop = new PropertyOf<RT, BelongsTo<AssociatedType>> { member, std::move(key_column) };
       type_->associations_.push_back(std::unique_ptr<IAssociationFrom<RT>>(p));
       type_->properties_.push_back(std::unique_ptr<IPropertyOf<RT>>(prop));
       return *p;
@@ -46,7 +46,7 @@ namespace persistence {
     template <typename T>
     PropertyOf<RT, T>&
     property(T RT::*field, std::string column) {
-      auto p = new PropertyOf<RT, T>{std::move(column)};
+      auto p = new PropertyOf<RT, T>{field, std::move(column)};
       type_->properties_.push_back(std::unique_ptr<IPropertyOf<RT>>(p));
       return *p;
     }

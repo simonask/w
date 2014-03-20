@@ -14,65 +14,10 @@
 #include <functional>
 
 namespace persistence {
-  /*
-    A Projection<T> is an object that can generate an SQL SELECT
-    and put the result into a struct of type T.
-  */
-  template <typename T>
-  struct Projection {
-    // static_assert(IsPersistenceType<T>::Value, "Cannot create typed projection for this type, because it doesn't support persistence. Use the PERSISTENCE macro to define properties and relations for the type.");
-    Projection() : proj{relational_algebra::projection(get_type<T>()->relation())} {}
-    ~Projection() {}
-    Projection(const Projection<T>& other) = default;
-    Projection(Projection<T>&& other) = default;
-
-    // Query interface:
-    Projection<T> where(relational_algebra::Condition cond) &&;
-    Projection<T> where(relational_algebra::Condition cond) const&;
-
-    // Debugging/Logging:
-    std::string to_sql() const;
-
-    // Inspecting results:
-    struct iterator;
-    using value_type = T;
-    iterator begin();
-    iterator end();
-    void each(std::function<void(T&)> callback);
-    T first();
-    std::vector<T> all();
-
-    relational_algebra::Projection to_raw_relation_algebra() const { return proj; }
-  private:
-    explicit Projection(relational_algebra::Projection proj) : proj(std::move(proj)) {}
-    relational_algebra::Projection proj;
-    void project(size_t row_idx, T& instance);
-  };
-
-  template <typename T>
-  std::string Projection<T>::to_sql() const {
-    // TODO: Handle multiple data stores
-    IConnection& conn = persistence::get_connection();
-    return conn.to_sql(*proj.query);
-  }
-
-  template <typename T>
-  Projection<T> Projection<T>::where(relational_algebra::Condition cond) && {
-    return Projection<T>(std::move(proj).where(std::move(cond)));
-  }
-
-  template <typename T>
-  Projection<T> Projection<T>::where(relational_algebra::Condition cond) const& {
-    return Projection<T>(proj.where(std::move(cond)));
-  }
-
-  template <typename T>
-  Projection<T> from() {
-    return Projection<T>();
-  }
-
   using relational_algebra::sql;
   using relational_algebra::SQL;
+  using w::Maybe;
+  using w::Nothing;
 
   template <typename T, typename M>
   struct Column : public ColumnAbilities<Column<T, M>, M>
@@ -94,6 +39,136 @@ namespace persistence {
     // Cond operator<=(SQL sql) const;
     // Cond operator>=(SQL sql) const;
   };
+
+  /*
+    A Projection<T> is an object that can generate an SQL SELECT
+    and put the results into a struct of type T.
+  */
+  template <typename T>
+  struct Projection {
+    // static_assert(IsPersistenceType<T>::Value, "Cannot create typed projection for this type, because it doesn't support persistence. Use the PERSISTENCE macro to define properties and relations for the type.");
+    Projection() : proj{relational_algebra::projection(get_type<T>()->relation())} { init_aliasing(); }
+    ~Projection() {}
+    Projection(const Projection<T>& other) = default;
+    Projection(Projection<T>&& other) = default;
+
+    // Query interface:
+    Projection<T> where(relational_algebra::Condition cond) &&;
+    Projection<T> where(relational_algebra::Condition cond) const&;
+
+    template <typename M>
+    Projection<T> order(Column<T, M> col) &&;
+    template <typename M>
+    Projection<T> order(Column<T, M> col) const&;
+    Projection<T> order(SQL sql) &&;
+    Projection<T> order(SQL sql) const&;
+
+    size_t count() const;
+
+    Projection<T> limit(size_t n) && { return std::move(proj).limit(n); }
+    Projection<T> limit(size_t n) const& { return proj.limit(n); }
+    Projection<T> offset(size_t n) && { return std::move(proj).offset(n); }
+    Projection<T> offset(size_t n) const& { return proj.offset(n); }
+
+    // Debugging/Logging:
+    std::string to_sql() const;
+
+    // Inspecting results:
+    void each(std::function<void(T&)> callback);
+    Maybe<T> first();
+    std::vector<T> all();
+
+    relational_algebra::Projection to_raw_relation_algebra() const { return proj; }
+  private:
+    Projection(relational_algebra::Projection proj) : proj(std::move(proj)) {}
+    relational_algebra::Projection proj;
+    std::unique_ptr<IResultSet> realized_;
+    std::map<const IPropertyOf<T>*, std::string> select_aliases_;
+
+    void realize();
+    void project(size_t row_idx, T& instance) const;
+    void init_aliasing();
+  };
+
+  template <typename T>
+  void Projection<T>::init_aliasing() {
+    // TODO: Support joins.
+    const IRecordType* type = get_type<T>();
+    for (size_t i = 0; i < type->num_properties(); ++i) {
+      auto& property = type->property_at(i);
+      std::string alias = w::format("t0_c{0}", i);
+      proj.query->select.push_back(ast::ColumnAlias{proj.query->relation, property.column(), alias});
+      select_aliases_[dynamic_cast<const IPropertyOf<T>*>(&property)] = alias;
+    }
+  }
+
+  template <typename T>
+  std::string Projection<T>::to_sql() const {
+    // TODO: Handle multiple data stores
+    IConnection& conn = persistence::get_connection();
+    return conn.to_sql(*proj.query);
+  }
+
+  template <typename T>
+  Projection<T> Projection<T>::where(relational_algebra::Condition cond) && {
+    return Projection<T>(std::move(proj).where(std::move(cond)));
+  }
+
+  template <typename T>
+  Projection<T> Projection<T>::where(relational_algebra::Condition cond) const& {
+    return Projection<T>(proj.where(std::move(cond)));
+  }
+
+  template <typename T>
+  void Projection<T>::each(std::function<void(T&)> callback) {
+    T tmp_;
+    realize();
+    if (realized_ != nullptr) {
+      for (size_t i = 0; i < realized_->height(); ++i) {
+        project(i, tmp_);
+        callback(tmp_);
+      }
+    }
+  }
+
+  template <typename T>
+  Maybe<T> Projection<T>::first() {
+    if (realized_) {
+      if (realized_->height() > 0) {
+        T tmp_;
+        project(0, tmp_);
+        return std::move(tmp_);
+      }
+    } else {
+      auto limited = limit(1);
+      auto v = limited.all();
+      if (v.size() > 0) {
+        return std::move(v.first());
+      }
+    }
+    return Nothing;
+  }
+
+  template <typename T>
+  void Projection<T>::realize() {
+    if (!realized_) {
+      realized_ = persistence::get_connection().execute(*proj.query);
+    }
+  }
+
+  template <typename T>
+  void Projection<T>::project(size_t row_idx, T& record) const {
+    if (realized_) {
+      for (auto& pair: select_aliases_) {
+        pair.first->set(record, *realized_, row_idx, pair.second);
+      }
+    }
+  }
+
+  template <typename T>
+  Projection<T> from() {
+    return Projection<T>();
+  }
 
   struct UnregisteredPropertyError : std::runtime_error {
     UnregisteredPropertyError(std::string type_name) : std::runtime_error(nullptr) {

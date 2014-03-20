@@ -21,9 +21,17 @@ namespace persistence {
     int64 id = -1;
   };
 
-  struct PrimaryKeyType : IType {
+  struct PrimaryKeyType : IDataTypeFor<PrimaryKey> {
     std::string name() const final { return "PrimaryKey"; }
     bool is_nullable() const final { return false; }
+
+    void extract_from_results(PrimaryKey& value, const IResultSet& r, size_t row, const std::string& col) const final {
+      std::stringstream ss;
+      ss.str(r.get(row, col));
+      int64_t v;
+      ss >> v;
+      value = PrimaryKey{v};
+    }
   };
 
   template <>

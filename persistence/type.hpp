@@ -10,6 +10,13 @@ namespace persistence {
     virtual bool is_nullable() const = 0;
   };
 
+  struct IResultSet;
+
+  template <typename T>
+  struct IDataTypeFor : IType {
+    virtual void extract_from_results(T& value, const IResultSet&, size_t row, const std::string& col_name) const = 0;
+  };
+
   template <typename T> struct BuildType;
   template <typename T>
   auto get_type() -> const decltype(BuildType<T>::build()) {
