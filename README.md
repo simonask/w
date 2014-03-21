@@ -11,6 +11,7 @@ the scenes to create a compact HTTP server that can act as the backend for your 
 `<w>` is heavily inspired by the Ruby framework Sinatra, and aims to keep things as simple as possible.
 It uses the C++ Standard Template Library extensively.
 
+
 But seriously, isn't this a bad idea?
 -------------------------------------
 
@@ -51,6 +52,69 @@ int main(int argc, char** argv) {
 }
 ```
 
+Persistence Struct-Relational Mapper
+------------------------------------
+
+Persistence is an ORM included with Wayward that does several things:
+
+- Builds SQL queries in a convenient and type-safe manner.
+- Optionally defines relationships between objects in belongs-to/has-many/has-one relationships.
+- Maps SQL result rows to instances of structs.
+
+Persistence is non-intrusive — i.e., you can tell Persistence how to map a type to/from relational data without modifying the data structure.
+
+Persistence is an approximate implementation of [the data mapper pattern](http://en.wikipedia.org/wiki/Data_mapper_pattern).
+
+Example of binding a data structure to a table in an SQL database:
+
+```C++
+#include <p>
+
+struct Article {
+  p::PrimaryKey   id;     // Could also be a plain integer, though less safe.
+  uint64_t        timestamp;
+  std::string     title;
+  std::string     text;
+  BelongsTo<User> author; // Could also be an integer.
+};
+
+PERSISTENCE(Article) {
+  relation("articles"); // Optional. Default = pluralized lowercase of the struct name.
+
+  property(&Article::id, "id");
+  property(&Article::timestamp, "timestamp");
+  property(&Article::title, "title");
+  property(&Article::text, "text");
+
+  belongs_to(&Article::author, "author_id");
+}
+```
+
+The second argument to `property(...)` above indicates the name of the column in the database.
+
+Example of the query interface:
+
+```C++
+auto articles = from<Article>().where(p::column(&Article::title) == "The title.").order(&Article::timestamp).reverse_order();
+auto articles_with_text = from<Article>().where(p::column(&Article::text).like("%something%"));
+
+articles.each([&](Article& article) {
+  // Do something with the fetched article.
+});
+```
+
+Example of the update/insert interface (NIY):
+
+```C++
+Article article { ... };
+p::insert(article); // always creates a new primary key
+p::save(article);   // inserts if the object is new, otherwise updates.
+```
+
+Supported data stores:
+
+- PostgreSQL
+
 Dependencies
 ------------
 
@@ -58,7 +122,9 @@ Dependency management in C++ apps is a pain, so `<w>` tries to keep it to a mini
 
 - [libevent 2.0](http://libevent.org/)
 - C++11 compatible compiler ([Clang](http://clang.llvm.org/) is recommended).
+- For Persistence: `libpq` (from PostgreSQL).
 
 `<w>` has been tested on the following platforms:
 
 - OS X 10.9.2 with Apple Clang-500.2.79
+
