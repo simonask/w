@@ -15,7 +15,7 @@ It uses the C++ Standard Template Library extensively.
 But seriously, isn't this a bad idea?
 -------------------------------------
 
-C++ is really difficult to get right. However, most of the pitfalls come from
+Pretty much. C++ is really difficult to get right. However, most of the pitfalls come from
 trying to be "too clever" and using advanced library-author features when they're
 not necessary. Application control code in C++ is equally plain and boring as in
 any other language, if done almost right, but many orders of magnitude faster.
