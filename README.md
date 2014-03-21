@@ -103,6 +103,8 @@ articles.each([&](Article& article) {
 });
 ```
 
+The query interface is "lazy", and you can extend and modify queries in as many steps as you like. In the above, the only SQL command that actually gets executed happens when `each` is called.
+
 Example of the update/insert interface (NIY):
 
 ```C++
