@@ -80,10 +80,11 @@ namespace persistence {
 
     relational_algebra::Projection to_raw_relation_algebra() const { return proj; }
   private:
-    Projection(relational_algebra::Projection proj) : proj(std::move(proj)) {}
+    using SelectAliasMap = std::map<const IPropertyOf<T>*, std::string>;
+    explicit Projection(relational_algebra::Projection proj, SelectAliasMap aliases = SelectAliasMap()) : proj(std::move(proj)), select_aliases_(std::move(aliases)) {}
     relational_algebra::Projection proj;
     std::unique_ptr<IResultSet> realized_;
-    std::map<const IPropertyOf<T>*, std::string> select_aliases_;
+    SelectAliasMap select_aliases_;
 
     void realize();
     void project(size_t row_idx, T& instance) const;
@@ -111,12 +112,12 @@ namespace persistence {
 
   template <typename T>
   Projection<T> Projection<T>::where(relational_algebra::Condition cond) && {
-    return Projection<T>(std::move(proj).where(std::move(cond)));
+    return Projection<T>(std::move(proj).where(std::move(cond)), std::move(select_aliases_));
   }
 
   template <typename T>
   Projection<T> Projection<T>::where(relational_algebra::Condition cond) const& {
-    return Projection<T>(proj.where(std::move(cond)));
+    return Projection<T>(proj.where(std::move(cond)), select_aliases_);
   }
 
   template <typename T>
