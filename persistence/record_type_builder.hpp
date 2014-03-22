@@ -48,6 +48,12 @@ namespace persistence {
     property(T RT::*field, std::string column) {
       auto p = new PropertyOf<RT, T>{field, std::move(column)};
       type_->properties_.push_back(std::unique_ptr<IPropertyOf<RT>>(p));
+
+      // TODO: Handle multi-column primary keys?
+      if (std::is_same<T, PrimaryKey>::value) {
+        type_->primary_key_ = p;
+      }
+
       return *p;
     }
   };

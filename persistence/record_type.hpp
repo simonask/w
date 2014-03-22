@@ -15,6 +15,8 @@ namespace persistence {
     virtual std::string relation() const = 0;
     virtual void initialize_associations_in_object(void*) const = 0;
 
+    virtual const IProperty* primary_key() const = 0;
+
     virtual size_t num_properties() const = 0;
     virtual const IProperty& property_at(size_t idx) const = 0;
 
@@ -40,6 +42,7 @@ namespace persistence {
     // TODO: Constructors, destructors, etc.
     std::vector<std::unique_ptr<IPropertyOf<RT>>> properties_;
     std::vector<std::unique_ptr<IAssociationFrom<RT>>> associations_;
+    const IPropertyOf<RT>* primary_key_ = nullptr;
 
     void initialize_associations_in_object(void* obj) const final {
       RT& object = *reinterpret_cast<RT*>(obj);
@@ -47,6 +50,8 @@ namespace persistence {
         p->initialize_in_object(object);
       }
     }
+
+    const IProperty* primary_key() const final { return primary_key_; }
 
     size_t num_properties() const final { return properties_.size(); }
     const IProperty& property_at(size_t idx) const final { return *properties_.at(idx); }
