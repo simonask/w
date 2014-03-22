@@ -163,6 +163,7 @@ namespace persistence {
       for (auto& pair: select_aliases_) {
         pair.first->set(record, *realized_, row_idx, pair.second);
       }
+      get_type<T>()->initialize_associations_in_object(&record);
     }
   }
 
