@@ -1,0 +1,5 @@
+CMakeCache.txt
+*.dSYM
+CMakeFiles
+*.a
+cmake_install.cmake
