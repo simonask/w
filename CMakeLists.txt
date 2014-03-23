@@ -25,9 +25,9 @@ set(PERSISTENCE_SOURCES
   persistence/types.cpp
 )
 
-add_library(wayward_support ${WAYWARD_SUPPORT_SOURCES})
-add_library(wayward ${WAYWARD_SOURCES})
-add_library(persistence ${PERSISTENCE_SOURCES})
+add_library(wayward_support SHARED ${WAYWARD_SUPPORT_SOURCES})
+add_library(wayward SHARED ${WAYWARD_SOURCES})
+add_library(persistence SHARED ${PERSISTENCE_SOURCES})
 
 target_link_libraries(wayward wayward_support)
 target_link_libraries(persistence wayward_support)
@@ -36,6 +36,7 @@ find_library(LIBEVENT event)
 find_library(LIBPQ pq)
 target_link_libraries(persistence ${LIBPQ})
 target_link_libraries(wayward ${LIBEVENT})
+target_link_libraries(wayward_support ${LIBEVENT})
 
 add_executable(test test.cpp)
 target_link_libraries(test wayward)

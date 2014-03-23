@@ -3,3 +3,4 @@ CMakeCache.txt
 CMakeFiles
 *.a
 cmake_install.cmake
+*.dylib
