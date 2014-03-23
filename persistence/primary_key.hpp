@@ -25,6 +25,10 @@ namespace persistence {
     std::string name() const final { return "PrimaryKey"; }
     bool is_nullable() const final { return false; }
 
+    bool has_value(const PrimaryKey& value) const final {
+      return value.is_persisted();
+    }
+
     void extract_from_results(PrimaryKey& value, const IResultSet& r, size_t row, const std::string& col) const final {
       std::stringstream ss;
       ss.str(r.get(row, col));

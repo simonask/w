@@ -15,6 +15,7 @@ namespace persistence {
   template <typename T>
   struct IDataTypeFor : IType {
     virtual void extract_from_results(T& value, const IResultSet&, size_t row, const std::string& col_name) const = 0;
+    virtual bool has_value(const T& value) const = 0;
   };
 
   template <typename T> struct BuildType;

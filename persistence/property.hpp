@@ -25,6 +25,7 @@ namespace persistence {
   struct IPropertyOf : IProperty {
     virtual ~IPropertyOf() {}
 
+    virtual bool has_value(const T& record) const = 0;
     virtual void set(T& record, const IResultSet&, size_t row_num, const std::string& col_name) const = 0;
   };
 
@@ -35,6 +36,11 @@ namespace persistence {
     explicit PropertyOf(MemberPtr ptr, std::string column) : Property<M>{column}, ptr_(ptr) {}
     const IType& type() const { return *get_type<M>(); }
     std::string column() const { return this->column_; }
+
+    bool has_value(const T& record) const override {
+      auto& value = record.*ptr_;
+      return get_type<M>()->has_value(value);
+    }
 
     void set(T& record, const IResultSet& results, size_t row_num, const std::string& col_name) const override {
       M* value_ptr = &(record.*ptr_);

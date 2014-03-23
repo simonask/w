@@ -15,6 +15,7 @@
 #include <persistence/belongs_to.hpp>
 #include <persistence/has_many.hpp>
 #include <persistence/has_one.hpp>
+#include <persistence/record.hpp>
 
 #if !defined(PERSISTENCE_NO_SHORTHAND_NAMESPACE)
 namespace p = persistence;
