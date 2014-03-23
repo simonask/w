@@ -54,9 +54,7 @@ namespace w {
       if (h) {
         response = h->handler(req);
       } else {
-        response.code = HTTPStatusCode::NotFound;
-        response.body = "Not Found";
-        response.headers["Content-Type"] = "text/plain";
+        response = w::not_found();
       }
 
       evkeyvalq* headers = evhttp_request_get_output_headers(handle);

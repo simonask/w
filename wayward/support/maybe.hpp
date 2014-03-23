@@ -20,7 +20,7 @@ namespace w {
   class Maybe {
   public:
     constexpr Maybe() {}
-    Maybe(T value) : has_value_(true) { new(&storage_) T{std::move(value)}; }
+    Maybe(T value) : has_value_(true) { new(&storage_) T(std::move(value)); }
     Maybe(const Maybe<T>& other) : has_value_(false) { *this = other; }
     Maybe(Maybe<T>&& other) : has_value_(false) { swap(other); }
     constexpr Maybe(NothingType) {}
@@ -82,7 +82,7 @@ namespace w {
   template <typename T>
   Maybe<T>& Maybe<T>::operator=(const Maybe<T>& value) {
     Maybe<T> copy = value;
-    swap(value);
+    swap(copy);
     return *this;
   }
 

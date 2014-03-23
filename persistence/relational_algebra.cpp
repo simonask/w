@@ -121,6 +121,16 @@ namespace persistence {
       return std::move(*this);
     }
 
+    Projection Projection::limit(size_t n) && {
+      query->limit = n;
+      return std::move(*this);
+    }
+
+    Projection Projection::limit(size_t n) const& {
+      Projection p = *this;
+      return std::move(p).limit(n);
+    }
+
     Projection Projection::left_join(std::string relation, std::string as, Condition on) && {
       query->joins.push_back(make_cloning_ptr(new ast::Join{
         ast::Join::LeftOuter,

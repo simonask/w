@@ -26,7 +26,23 @@ namespace w {
     std::string body;
   };
 
-  Response render_text(std::string text);
+  template <typename... Args>
+  Response render_text(std::string text, Args&&... args) {
+    Response r;
+    r.code = HTTPStatusCode::OK;
+    r.headers["Content-Type"] = "text/plain";
+    r.body = w::format(text, std::forward<Args>(args)...);
+    return r;
+  }
+
+  inline Response not_found() {
+    Response r;
+    r.code = HTTPStatusCode::NotFound;
+    r.body = "Not Found";
+    r.headers["Content-Type"] = "text/plain";
+    return r;
+  }
+
   Response render_template(std::string templ);
   Response redirect(std::string new_location, HTTPStatusCode code = HTTPStatusCode::Found);
 

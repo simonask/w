@@ -49,26 +49,32 @@ namespace persistence {
     // static_assert(IsPersistenceType<T>::Value, "Cannot create typed projection for this type, because it doesn't support persistence. Use the PERSISTENCE macro to define properties and relations for the type.");
     Projection() : proj{relational_algebra::projection(get_type<T>()->relation())} { init_aliasing(); }
     ~Projection() {}
-    Projection(const Projection<T>& other) = default;
+    Projection(const Projection<T>& other) : proj(other.proj), realized_(nullptr), select_aliases_(other.select_aliases_) {}
     Projection(Projection<T>&& other) = default;
 
     // Query interface:
     Projection<T> where(relational_algebra::Condition cond) &&;
-    Projection<T> where(relational_algebra::Condition cond) const&;
+    Projection<T> where(relational_algebra::Condition cond) const& { return moved_copy().where(std::move(cond)); }
 
     template <typename M>
     Projection<T> order(Column<T, M> col) &&;
     template <typename M>
-    Projection<T> order(Column<T, M> col) const&;
+    Projection<T> order(Column<T, M> col) const& { return moved_copy().order(std::move(col)); }
+    template <typename M>
+    Projection<T> order(M T::*field) && { return std::move(*this).order(column(field)); }
+    template <typename M>
+    Projection<T> order(M T::*field) const& { return this->order(column(field)); }
     Projection<T> order(SQL sql) &&;
-    Projection<T> order(SQL sql) const&;
+    Projection<T> order(SQL sql) const& { return moved_copy().order(std::move(sql)); }
+    Projection<T> reverse_order() &&;
+    Projection<T> reverse_order() const& { return moved_copy().reverse_order(); }
 
     size_t count() const;
 
-    Projection<T> limit(size_t n) && { return std::move(proj).limit(n); }
-    Projection<T> limit(size_t n) const& { return proj.limit(n); }
-    Projection<T> offset(size_t n) && { return std::move(proj).offset(n); }
-    Projection<T> offset(size_t n) const& { return proj.offset(n); }
+    Projection<T> limit(size_t n) && { return Projection<T>(std::move(proj).limit(n), std::move(select_aliases_)); }
+    Projection<T> limit(size_t n) const& { return moved_copy().limit(n); }
+    Projection<T> offset(size_t n) && { return Projection<T>(std::move(proj).offset(n), std::move(select_aliases_)); }
+    Projection<T> offset(size_t n) const& { return moved_copy().offset(n); }
 
     // Debugging/Logging:
     std::string to_sql() const;
@@ -89,6 +95,11 @@ namespace persistence {
     void realize();
     void project(size_t row_idx, T& instance) const;
     void init_aliasing();
+
+    Projection<T> moved_copy() const {
+      Projection<T> copy(*this);
+      return std::move(copy);
+    }
   };
 
   template <typename T>
@@ -116,8 +127,14 @@ namespace persistence {
   }
 
   template <typename T>
-  Projection<T> Projection<T>::where(relational_algebra::Condition cond) const& {
-    return Projection<T>(proj.where(std::move(cond)), select_aliases_);
+  template <typename M>
+  Projection<T> Projection<T>::order(Column<T, M> col) && {
+    return Projection<T>(std::move(proj).order(std::move(col.sql)), std::move(select_aliases_));
+  }
+
+  template <typename T>
+  Projection<T> Projection<T>::reverse_order() && {
+    return Projection<T>(std::move(proj).reverse_order(), std::move(select_aliases_));
   }
 
   template <typename T>
@@ -133,6 +150,20 @@ namespace persistence {
   }
 
   template <typename T>
+  std::vector<T> Projection<T>::all() {
+    std::vector<T> records;
+    realize();
+    if (realized_ != nullptr) {
+      size_t n = realized_->height();
+      records.resize(n);
+      for (size_t i = 0; i < n; ++i) {
+        project(i, records[i]);
+      }
+    }
+    return std::move(records);
+  }
+
+  template <typename T>
   Maybe<T> Projection<T>::first() {
     if (realized_) {
       if (realized_->height() > 0) {
@@ -144,7 +175,7 @@ namespace persistence {
       auto limited = limit(1);
       auto v = limited.all();
       if (v.size() > 0) {
-        return std::move(v.first());
+        return std::move(v.front());
       }
     }
     return Nothing;

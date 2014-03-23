@@ -32,21 +32,21 @@ namespace w {
     CloningPtr(std::nullptr_t) : ptr(nullptr) {}
 
     template <typename U>
-    CloningPtr(const CloningPtr<U>& other) : ptr(dynamic_cast<U*>(other.ptr->clone())) {}
+    CloningPtr(const CloningPtr<U>& other) : ptr(other.ptr ? dynamic_cast<U*>(other.ptr->clone()) : nullptr) {}
 
-    CloningPtr(const CloningPtr<T>& other) : ptr(dynamic_cast<T*>(other.ptr->clone())) {}
+    CloningPtr(const CloningPtr<T>& other) : ptr(other.ptr ? dynamic_cast<T*>(other.ptr->clone()) : nullptr) {}
 
     template <typename U>
     CloningPtr(CloningPtr<U>&& other) : ptr(std::move(other.unique_ptr())) {}
 
     template <typename U>
     CloningPtr<T>& operator=(const CloningPtr<U>& other) {
-      ptr = std::unique_ptr<U>(dynamic_cast<U*>(other.ptr->clone()));
+      ptr = other.ptr ? std::unique_ptr<U>(dynamic_cast<U*>(other.ptr->clone())) : nullptr;
       return *this;
     }
 
     CloningPtr<T>& operator=(const CloningPtr<T>& other) {
-      ptr = std::unique_ptr<T>(dynamic_cast<T*>(other.ptr->clone()));
+      ptr = other.ptr ? std::unique_ptr<T>(dynamic_cast<T*>(other.ptr->clone())) : nullptr;
       return *this;
     }
 
