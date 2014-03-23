@@ -9,12 +9,27 @@
 #include <event2/buffer.h>
 #include <sstream>
 #include <iostream>
+#include <regex>
 
 namespace w {
   namespace {
     struct Handler {
+      std::string human_readable_regex;
+      std::regex regex;
       std::string path;
       std::function<Response(Request&)> handler;
+      std::map<size_t, std::string> regex_group_names;
+
+      bool match_and_set_params(Request& req) const {
+        MatchResults match;
+        if (std::regex_match(req.uri.path(), match, regex)) {
+          for (auto& group_name: regex_group_names) {
+            req.params[group_name.second] = match[group_name.first];
+          }
+          return true;
+        }
+        return false;
+      }
     };
   }
 
@@ -24,6 +39,31 @@ namespace w {
     event_base* base = nullptr;
     evhttp* http = nullptr;
 
+    Handler handler_for_path(std::string path, std::function<Response(Request&)> callback) {
+      Handler handler;
+      static const std::regex escape {"[\\^\\.\\$\\|\\(\\)\\[\\]\\*\\+\\?\\/\\\\]"};
+      static const std::string replacement = "\\\\\\1&";
+      std::string escaped_path = std::regex_replace(path, escape, replacement);
+      handler.path = std::move(path);
+
+      static const std::regex find_placeholder {"/\\:([\\w\\d]+)(/?)"};
+      static const std::string match_placeholder = "/(.+)";
+      std::stringstream rs;
+      size_t group_counter = 1;
+      regex_replace_stream(rs, handler.path, find_placeholder, [&](std::ostream& os, const MatchResults& match) {
+        os << match_placeholder;
+        handler.regex_group_names[group_counter++] = match[1];
+        if (match.size() >= 2) {
+          os << match[2]; // Trailing '/'
+        }
+      });
+
+      handler.human_readable_regex = rs.str();
+      handler.regex = std::regex(handler.human_readable_regex);
+      handler.handler = std::move(callback);
+      return std::move(handler);
+    }
+
     void add_handler(std::string path, std::function<Response(Request&)> handler, std::string method) {
       auto it = method_handlers.find(method);
       if (it == method_handlers.end()) {
@@ -31,7 +71,7 @@ namespace w {
         it = pair.first;
       }
       auto& handlers = it->second;
-      handlers.push_back({std::move(path), std::move(handler)});
+      handlers.push_back(handler_for_path(std::move(path), handler));
     }
 
     void handle_request(evhttp_request* req) {
@@ -44,7 +84,7 @@ namespace w {
       Handler* h = nullptr;
       if (handlers_it != method_handlers.end()) {
         for (auto& handler: handlers_it->second) {
-          if (handler.path == req.uri.path()) {
+          if (handler.match_and_set_params(req)) {
             h = &handler;
           }
         }
@@ -118,5 +158,13 @@ namespace w {
 
   void App::options(std::string path, std::function<Response(Request&)> handler) {
     priv->add_handler(std::move(path), std::move(handler), "OPTIONS");
+  }
+
+  void App::print_routes() const {
+    for (auto& method_handlers: priv->method_handlers) {
+      for (auto& handler: method_handlers.second) {
+        std::cout << method_handlers.first << " " << handler.path << "    " << handler.human_readable_regex << "\n";
+      }
+    }
   }
 }

@@ -14,6 +14,7 @@
 namespace w {
   struct Request {
     std::map<std::string, std::string> headers;
+    std::map<std::string, std::string> params;
     std::string method;
     URI uri;
     std::string body;
@@ -74,6 +75,8 @@ namespace w {
     void del(std::string path, std::function<Response(Request&)> handler) override;
     void head(std::string path, std::function<Response(Request&)> handler) override;
     void options(std::string path, std::function<Response(Request&)> handler) override;
+
+    void print_routes() const;
 
     struct Private;
     std::unique_ptr<Private> priv;

@@ -62,9 +62,14 @@ int main (int argc, char const *argv[])
   });
 
   app.get("/articles/:id", [](w::Request& req) -> w::Response {
+    std::stringstream ss;
+    for (auto& pair: req.params) {
+      ss << w::format("{0} = {1}\n", pair.first, pair.second);
+    }
+
     auto article = p::from<Article>().order(&Article::id).reverse_order().first();
     if (article) {
-      return w::render_text("Article {0}: {1}", article->id, article->title);
+      return w::render_text("{2}\nArticle {0}: {1}", article->id, article->title, ss.str());
     }
     return w::not_found();
     // return w::render_template("article", req);
@@ -129,6 +134,8 @@ int main (int argc, char const *argv[])
   articles.each([&](Article& a) {
     std::cout << w::format("Article {id}: {title}\n", {{"id", a.id}, {"title", a.title}});
   });
+
+  app.print_routes();
 
   return app.listen_and_serve("0.0.0.0", 3000);
   //return 0;
