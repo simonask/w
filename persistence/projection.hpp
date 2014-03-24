@@ -16,8 +16,8 @@
 namespace persistence {
   using relational_algebra::sql;
   using relational_algebra::SQL;
-  using w::Maybe;
-  using w::Nothing;
+  using wayward::Maybe;
+  using wayward::Nothing;
 
   template <typename T, typename M>
   struct Column : public ColumnAbilities<Column<T, M>, M>
@@ -108,7 +108,7 @@ namespace persistence {
     const IRecordType* type = get_type<T>();
     for (size_t i = 0; i < type->num_properties(); ++i) {
       auto& property = type->property_at(i);
-      std::string alias = w::format("t0_c{0}", i);
+      std::string alias = wayward::format("t0_c{0}", i);
       proj.query->select.push_back(ast::ColumnAlias{proj.query->relation, property.column(), alias});
       select_aliases_[dynamic_cast<const IPropertyOf<T>*>(&property)] = alias;
     }
@@ -205,7 +205,7 @@ namespace persistence {
 
   struct UnregisteredPropertyError : std::runtime_error {
     UnregisteredPropertyError(std::string type_name) : std::runtime_error(nullptr) {
-      what_ = w::format("Attempted to use unregistered property on type {0}. Use property(member, column) in the PERSISTENCE block for the type to register the property.", type_name);
+      what_ = wayward::format("Attempted to use unregistered property on type {0}. Use property(member, column) in the PERSISTENCE block for the type to register the property.", type_name);
     }
     const char* what() const noexcept final { return what_.c_str(); }
     std::string what_;

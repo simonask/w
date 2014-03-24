@@ -70,13 +70,13 @@ namespace persistence {
     }
 
     template <typename M>
-    w::Maybe<std::string> find_column_by_member_pointer(M RT::*member) const {
+    wayward::Maybe<std::string> find_column_by_member_pointer(M RT::*member) const {
       // TODO: We can optimize this by indexing properties by their types.
       auto p = find_property_by_member_pointer(member);
       if (p) {
         return p->column();
       } else {
-        return w::Nothing;
+        return wayward::Nothing;
       }
     }
   };

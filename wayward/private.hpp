@@ -5,7 +5,7 @@
 #include <event2/http.h>
 #include "w.hpp"
 
-namespace w {
+namespace wayward {
   namespace priv {
     Request make_request_from_evhttp_request(evhttp_request*);
   }

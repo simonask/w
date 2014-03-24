@@ -4,7 +4,7 @@
 
 #include <memory>
 
-namespace w {
+namespace wayward {
   struct ICloneable {
     virtual ICloneable* clone() const = 0;
   };
@@ -88,13 +88,13 @@ namespace w {
 
 namespace std {
   template <typename T>
-  void swap(w::CloningPtr<T>& a, w::CloningPtr<T>& b) {
+  void swap(wayward::CloningPtr<T>& a, wayward::CloningPtr<T>& b) {
     a.swap(b);
   }
 
   template <typename T>
-  struct hash<w::CloningPtr<T>> {
-    size_t operator()(const w::CloningPtr<T>& cptr) const {
+  struct hash<wayward::CloningPtr<T>> {
+    size_t operator()(const wayward::CloningPtr<T>& cptr) const {
       return std::hash<std::unique_ptr<T>>()(cptr.unique_ptr());
     }
   };

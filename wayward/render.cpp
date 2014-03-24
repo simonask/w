@@ -1,6 +1,6 @@
 #include "wayward/w.hpp"
 
-namespace w {
+namespace wayward {
   Response redirect(std::string new_location, HTTPStatusCode code) {
     Response r;
     r.code = code;

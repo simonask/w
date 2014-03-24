@@ -7,7 +7,7 @@
 
 namespace persistence {
   namespace relational_algebra {
-    using w::CloningPtr;
+    using wayward::CloningPtr;
 
     struct SQL {
       std::string sql;

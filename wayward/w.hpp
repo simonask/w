@@ -11,7 +11,11 @@
 #include "wayward/http.hpp"
 #include <wayward/support/format.hpp>
 
-namespace w {
+#if !defined(WAYWARD_NO_SHORTHAND_NAMESPACE)
+namespace w = wayward;
+#endif
+
+namespace wayward {
   struct Request {
     std::map<std::string, std::string> headers;
     std::map<std::string, std::string> params;
@@ -32,7 +36,7 @@ namespace w {
     Response r;
     r.code = HTTPStatusCode::OK;
     r.headers["Content-Type"] = "text/plain";
-    r.body = w::format(text, std::forward<Args>(args)...);
+    r.body = wayward::format(text, std::forward<Args>(args)...);
     return r;
   }
 

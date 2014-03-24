@@ -8,7 +8,7 @@
 #include <array>
 #include <map>
 
-namespace w {
+namespace wayward {
   struct IFormatter {
     virtual ~IFormatter() {}
     virtual void write(std::ostream& os, const std::string& fmt) const = 0;
@@ -76,7 +76,7 @@ namespace w {
   /*
     Interpolate string with indexed placeholders:
 
-    w::format("{0}, {1}!", "Hello", "World");
+    wayward::format("{0}, {1}!", "Hello", "World");
     // => "Hello, World!"
   */
   template <typename... Rest>
@@ -90,7 +90,7 @@ namespace w {
   /*
     Interpolate string with named placeholders:
 
-    w::format("{greeting}, {entity}!", {{"greeting", "Hello"}, {"entity", "World"}});
+    wayward::format("{greeting}, {entity}!", {{"greeting", "Hello"}, {"entity", "World"}});
     // => "Hello, World!"
   */
   inline std::string format(const std::string& fmt, const FormattableParameters& params) {

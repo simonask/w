@@ -22,7 +22,7 @@ namespace persistence {
 
   namespace detail {
     std::string maybe_type_name(const IType* inner_type) {
-      return w::format("Maybe<{0}>", inner_type->name());
+      return wayward::format("Maybe<{0}>", inner_type->name());
     }
   }
 }

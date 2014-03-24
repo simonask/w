@@ -9,9 +9,9 @@
 
 namespace persistence {
   namespace ast {
-    using w::CloningPtr;
-    using w::Cloneable;
-    using w::ICloneable;
+    using wayward::CloningPtr;
+    using wayward::Cloneable;
+    using wayward::ICloneable;
 
     struct StarFrom;
     struct StringLiteral;

@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace w {
+namespace wayward {
   struct URI {
     URI();
     explicit URI(std::string uri);

@@ -1,7 +1,7 @@
 #ifndef W_HTTP_HPP_INCLUDED
 #define W_HTTP_HPP_INCLUDED
 
-namespace w {
+namespace wayward {
   /*
     Source:
     http://en.wikipedia.org/wiki/List_of_HTTP_status_codes

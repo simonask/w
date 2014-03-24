@@ -6,7 +6,7 @@
 #include <wayward/support/maybe.hpp>
 
 namespace persistence {
-  using w::Maybe;
+  using wayward::Maybe;
   struct TrueType { static const bool Value = true; };
   struct FalseType { static const bool Value = false; };
 

@@ -10,7 +10,7 @@ namespace persistence {
       if (x.select.size()) {
         for (size_t i = 0; i < x.select.size(); ++i) {
           auto& alias = x.select[i];
-          ss << w::format("\"{0}\".\"{1}\" AS \"{2}\"", alias.relation, alias.column, alias.alias);
+          ss << wayward::format("\"{0}\".\"{1}\" AS \"{2}\"", alias.relation, alias.column, alias.alias);
           if (i+1 != x.select.size())
             ss << ", ";
         }
@@ -75,16 +75,16 @@ namespace persistence {
     }
 
     std::string PostgreSQLValueRenderer::render(const StarFrom& x) {
-      return w::format("{0}.*", x.relation);
+      return wayward::format("{0}.*", x.relation);
     }
 
     std::string PostgreSQLValueRenderer::render(const StringLiteral& x) {
-      return w::format("'{0}'", conn.sanitize(x.literal));
+      return wayward::format("'{0}'", conn.sanitize(x.literal));
     }
 
     std::string PostgreSQLValueRenderer::render(const NumericLiteral& x) {
       // TODO: Something cleverer once NumericLiteral becomes more aware of number types
-      return w::format("{0}", x.literal);
+      return wayward::format("{0}", x.literal);
     }
 
     std::string PostgreSQLValueRenderer::render(const BooleanLiteral& x) {
@@ -92,7 +92,7 @@ namespace persistence {
     }
 
     std::string PostgreSQLValueRenderer::render(const ColumnReference& x) {
-      return w::format("\"{0}\".\"{1}\"", x.relation, x.column);
+      return wayward::format("\"{0}\".\"{1}\"", x.relation, x.column);
     }
 
     std::string PostgreSQLValueRenderer::render(const Aggregate& x) {
@@ -132,7 +132,7 @@ namespace persistence {
     }
 
     std::string PostgreSQLValueRenderer::render(const NotCondition& x) {
-      return w::format("NOT ({0})", x.subcondition->to_sql(*this));
+      return wayward::format("NOT ({0})", x.subcondition->to_sql(*this));
     }
 
     std::string PostgreSQLValueRenderer::render(const UnaryCondition& x) {
@@ -147,7 +147,7 @@ namespace persistence {
         case UnaryCondition::IsUnknown:    op = "IS UNKNOWN"; break;
         case UnaryCondition::IsNotUnknown: op = "IS NOT UNKNOWN"; break;
       }
-      return w::format("({0}) {1}", x.value->to_sql(*this));
+      return wayward::format("({0}) {1}", x.value->to_sql(*this));
     }
 
     std::string PostgreSQLValueRenderer::render(const BinaryCondition& x) {
@@ -167,11 +167,11 @@ namespace persistence {
         case BinaryCondition::ILike:             op = "ILIKE"; break;
       }
 
-      return w::format("{0} {1} {2}", x.lhs->to_sql(*this), op, x.rhs->to_sql(*this));
+      return wayward::format("{0} {1} {2}", x.lhs->to_sql(*this), op, x.rhs->to_sql(*this));
     }
 
     std::string PostgreSQLValueRenderer::render(const BetweenCondition& x) {
-      return w::format("{0} IS BETWEEN {1} AND {2}", x.value->to_sql(*this), x.lower_bound->to_sql(*this), x.upper_bound->to_sql(*this));
+      return wayward::format("{0} IS BETWEEN {1} AND {2}", x.value->to_sql(*this), x.lower_bound->to_sql(*this), x.upper_bound->to_sql(*this));
     }
 
     std::string PostgreSQLValueRenderer::render(const LogicalCondition& x) {
@@ -180,13 +180,13 @@ namespace persistence {
         case LogicalCondition::AND: op = "AND"; break;
         case LogicalCondition::OR:  op = "OR"; break;
       }
-      return w::format("({0}) {1} ({2})", x.lhs->to_sql(*this), op, x.rhs->to_sql(*this));
+      return wayward::format("({0}) {1} ({2})", x.lhs->to_sql(*this), op, x.rhs->to_sql(*this));
     }
 
     std::string PostgreSQLValueRenderer::render(const SelectQuery& x) {
       // TODO: Actually, the semantics here may have to be slightly different, because
       // a sub-SELECT is allowed to do different things from a toplevel select.
       PostgreSQLQueryRenderer renderer{conn};
-      return w::format("({0})", x.to_sql(renderer));
+      return wayward::format("({0})", x.to_sql(renderer));
     }
 }

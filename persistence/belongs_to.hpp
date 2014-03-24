@@ -29,7 +29,7 @@ namespace persistence {
 
   template <typename T>
   struct BelongsToType : IDataTypeFor<BelongsTo<T>> {
-    std::string name() const final { return w::format("BelongsTo<{0}>", get_type<T>()->name()); }
+    std::string name() const final { return wayward::format("BelongsTo<{0}>", get_type<T>()->name()); }
     bool is_nullable() const final { return false; }
 
     bool has_value(const BelongsTo<T>& value) const final {

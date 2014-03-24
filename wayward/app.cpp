@@ -11,7 +11,7 @@
 #include <iostream>
 #include <regex>
 
-namespace w {
+namespace wayward {
   namespace {
     struct Handler {
       std::string human_readable_regex;
@@ -94,7 +94,7 @@ namespace w {
       if (h) {
         response = h->handler(req);
       } else {
-        response = w::not_found();
+        response = wayward::not_found();
       }
 
       evkeyvalq* headers = evhttp_request_get_output_headers(handle);

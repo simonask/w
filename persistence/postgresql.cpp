@@ -83,7 +83,7 @@ namespace persistence {
       case PGRES_SINGLE_TUPLE:
         return make_results(results);
       case PGRES_NONFATAL_ERROR:
-        std::cerr << w::format("--> WARNING: {0}\n", PQresultErrorMessage(results));
+        std::cerr << wayward::format("--> WARNING: {0}\n", PQresultErrorMessage(results));
         return make_results(results);
       case PGRES_BAD_RESPONSE:
       case PGRES_FATAL_ERROR:

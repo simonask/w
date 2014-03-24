@@ -84,18 +84,18 @@ namespace persistence {
   }
 
   template <typename T>
-  struct MaybeType : IDataTypeFor<w::Maybe<T>> {
+  struct MaybeType : IDataTypeFor<wayward::Maybe<T>> {
     MaybeType(const IDataTypeFor<T>* inner_type) : inner_type_(inner_type) {}
     std::string name() const final { return detail::maybe_type_name(inner_type_); }
     bool is_nullable() const { return true; }
 
-    bool has_value(const w::Maybe<T>& value) const final {
+    bool has_value(const wayward::Maybe<T>& value) const final {
       return static_cast<bool>(value);
     }
 
-    void extract_from_results(w::Maybe<T>& value, const IResultSet& results, size_t row, const std::string& col) const final {
+    void extract_from_results(wayward::Maybe<T>& value, const IResultSet& results, size_t row, const std::string& col) const final {
       if (results.is_null_at(row, col)) {
-        value = w::Nothing;
+        value = wayward::Nothing;
       } else {
         T tmp;
         inner_type_->extract_from_results(tmp, results, row, col);
@@ -107,7 +107,7 @@ namespace persistence {
   };
 
   template <typename T>
-  struct BuildType<w::Maybe<T>> {
+  struct BuildType<wayward::Maybe<T>> {
     static const MaybeType<T>* build() {
       static const MaybeType<T>* p = new MaybeType<T>{get_type<T>()};
       return p;

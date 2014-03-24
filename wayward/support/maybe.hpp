@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <stdexcept>
 
-namespace w {
+namespace wayward {
   struct EmptyMaybeDereference : std::runtime_error {
     EmptyMaybeDereference() : std::runtime_error("Attempt to dereference a Maybe object that was empty.") {}
   };
@@ -110,7 +110,7 @@ namespace w {
 
 namespace std {
   template <typename T>
-  void swap(w::Maybe<T>& a, w::Maybe<T>& b) {
+  void swap(wayward::Maybe<T>& a, wayward::Maybe<T>& b) {
     a.swap(b);
   }
 }

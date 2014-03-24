@@ -2,7 +2,7 @@
 
 namespace persistence {
   namespace relational_algebra {
-    using w::make_cloning_ptr;
+    using wayward::make_cloning_ptr;
 
     Projection projection(std::string relation) {
       return Projection{relation};

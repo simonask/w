@@ -1,7 +1,7 @@
 #include "wayward/support/uri.hpp"
 #include <event2/http.h>
 
-namespace w {
+namespace wayward {
   #define P ((evhttp_uri*)priv)
 
   URI::URI() {
