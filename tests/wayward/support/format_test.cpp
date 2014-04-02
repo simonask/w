@@ -51,4 +51,6 @@ namespace {
     auto a = format("{b}", "a");
     EXPECT_EQ(a, "{b}");
   }
+
+  // TODO: Support number formatting strings, like {0:09.2f} == "%09.2f"
 }
