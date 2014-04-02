@@ -38,6 +38,5 @@ target_link_libraries(persistence ${LIBPQ})
 target_link_libraries(wayward ${LIBEVENT})
 target_link_libraries(wayward_support ${LIBEVENT})
 
-add_executable(test test.cpp)
-target_link_libraries(test wayward)
-target_link_libraries(test persistence)
+add_subdirectory(tests)
+enable_testing()

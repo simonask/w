@@ -4,3 +4,7 @@ CMakeFiles
 *.a
 cmake_install.cmake
 *.dylib
+Testing
+CTestTestfile.cmake
+Makefile
+*_test
