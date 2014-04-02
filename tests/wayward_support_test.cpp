@@ -1,8 +1,6 @@
 #include <gtest/gtest.h>
-
-TEST(TestCase, TestCaseName) {
-  EXPECT_EQ(2, 1+1);
-}
+#include "wayward/support/cloning_ptr_test.cpp"
+#include "wayward/support/format_test.cpp"
 
 int main(int argc, char *argv[])
 {
