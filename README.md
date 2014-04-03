@@ -124,6 +124,7 @@ Dependency management in C++ apps is a pain, so `<w>` tries to keep it to a mini
 
 - [libevent 2.0](http://libevent.org/)
 - C++11 compatible compiler ([Clang](http://clang.llvm.org/) is recommended).
+- CMake 2.6 or newer.
 - For Persistence: `libpq` (from PostgreSQL).
 
 `<w>` has been tested on the following platforms:
