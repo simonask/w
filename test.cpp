@@ -84,9 +84,6 @@ int main (int argc, char const *argv[])
     return w::Response();
   });
 
-  std::cout << w::format("Hello, World! article_id = {id}\n", {{"id", 123}});
-  std::cout << w::format("Hello first argument: {0} {1} {0}\n", 1, 2);
-
   // auto articles = p::from<Article>().where("author_id = {0}", 1);
   // for (auto& article: articles) {
 
@@ -94,46 +91,46 @@ int main (int argc, char const *argv[])
 
   namespace pr = p::relational_algebra;
 
-  auto query = pr::projection("articles")
-    .where(
-      (
-        pr::column("articles", "title").like("%hej%")
-        && pr::column("articles", "created_at") < pr::sql("localtime()")
-      ) || (
-        pr::column("articles", "author_id") == pr::literal(5)
-      )
-    )
-    .left_join("users", "article_author",
-      pr::column("article_author", "id") == pr::column("articles", "author_id")
-    )
-    .order(pr::column("articles", "created_at"))
-    .reverse_order()
-  ;
+  // auto query = pr::projection("articles")
+  //   .where(
+  //     (
+  //       pr::column("articles", "title").like("%hej%")
+  //       && pr::column("articles", "created_at") < pr::sql("localtime()")
+  //     ) || (
+  //       pr::column("articles", "author_id") == pr::literal(5)
+  //     )
+  //   )
+  //   .left_join("users", "article_author",
+  //     pr::column("article_author", "id") == pr::column("articles", "author_id")
+  //   )
+  //   .order(pr::column("articles", "created_at"))
+  //   .reverse_order()
+  // ;
 
-  std::string sql = p::get_connection().to_sql(*query.query);
-  std::cout << w::format("SQL:\n{0}\n", sql);
+  // std::string sql = p::get_connection().to_sql(*query.query);
+  // std::cout << w::format("SQL:\n{0}\n", sql);
 
-  auto t = p::get_type<Article>();
-  std::cout << w::format("TYPE: {0}\nRELATION: {1}\n", t->name(), t->relation());
-  for (size_t i = 0; i < t->num_properties(); ++i) {
-    auto& prop = t->property_at(i);
-    std::cout << w::format("- {0} {1}\n", prop.type().name(), prop.column());
-  }
-  for (size_t i = 0; i < t->num_associations(); ++i) {
-    auto& assoc = t->association_at(i);
-    std::cout << w::format("@ [{0}] {1}\n", assoc.foreign_type().name(), assoc.foreign_key());
-  }
+  // auto t = p::get_type<Article>();
+  // std::cout << w::format("TYPE: {0}\nRELATION: {1}\n", t->name(), t->relation());
+  // for (size_t i = 0; i < t->num_properties(); ++i) {
+  //   auto& prop = t->property_at(i);
+  //   std::cout << w::format("- {0} {1}\n", prop.type().name(), prop.column());
+  // }
+  // for (size_t i = 0; i < t->num_associations(); ++i) {
+  //   auto& assoc = t->association_at(i);
+  //   std::cout << w::format("@ [{0}] {1}\n", assoc.foreign_type().name(), assoc.foreign_key());
+  // }
 
-  auto articles = p::from<Article>().where(
-    (p::column(&Article::title).like("%hej%")
-    && p::column(&Article::created_at).sql < p::sql("now()"))
-    || (p::column(&Article::author) == 5)
-  );//.join(&Article::author).order(&Article::created_at).reverse_order();
-  std::string sql2 = articles.to_sql();
-  std::cout << w::format("SQL2:\n{0}\n", sql2);
-  articles.each([&](Article& a) {
-    std::cout << w::format("Article {id}: {title}\n", {{"id", a.id}, {"title", a.title}});
-  });
+  // auto articles = p::from<Article>().where(
+  //   (p::column(&Article::title).like("%hej%")
+  //   && p::column(&Article::created_at).sql < p::sql("now()"))
+  //   || (p::column(&Article::author) == 5)
+  // );//.join(&Article::author).order(&Article::created_at).reverse_order();
+  // std::string sql2 = articles.to_sql();
+  // std::cout << w::format("SQL2:\n{0}\n", sql2);
+  // articles.each([&](Article& a) {
+  //   std::cout << w::format("Article {id}: {title}\n", {{"id", a.id}, {"title", a.title}});
+  // });
 
   app.print_routes();
 
