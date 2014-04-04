@@ -8,6 +8,8 @@ set(CMAKE_CXX_FLAGS "-std=c++11 -O0 -g")
 set(WAYWARD_SUPPORT_SOURCES
   wayward/support/format.cpp
   wayward/support/uri.cpp
+  wayward/support/node.cpp
+  wayward/support/json.cpp
 )
 
 set(WAYWARD_SOURCES
