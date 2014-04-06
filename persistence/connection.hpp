@@ -3,9 +3,12 @@
 #define PERSISTENCE_CONNECTION_HPP_INCLUDED
 
 #include <persistence/result_set.hpp>
-#include <persistence/builder.hpp>
 
 namespace persistence {
+  namespace ast {
+    struct IQuery;
+  }
+
   struct IConnection {
     virtual ~IConnection() {}
 
