@@ -21,7 +21,7 @@ namespace wayward {
   public:
     constexpr Maybe() {}
     Maybe(T value) : has_value_(true) { new(&storage_) T(std::move(value)); }
-    Maybe(const Maybe<T>& other) : has_value_(false) { *this = other; }
+    Maybe(const Maybe<T>& other);
     Maybe(Maybe<T>&& other) : has_value_(false) { swap(other); }
     constexpr Maybe(NothingType) {}
     ~Maybe();
@@ -55,6 +55,13 @@ namespace wayward {
   void when_maybe(Maybe<T>& m, F then) {
     if (m) {
       then(*m);
+    }
+  }
+
+  template <typename T>
+  Maybe<T>::Maybe(const Maybe<T>& other) : has_value_(other.has_value_) {
+    if (has_value_) {
+      new(get()) T(*other);
     }
   }
 
