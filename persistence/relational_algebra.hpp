@@ -81,6 +81,19 @@ namespace persistence {
       SelectAlias(SelectAlias&&) = default;
     };
 
+    struct Ordering {
+      using OrderingType = ast::Ordering::OrderingType;
+
+      Value value;
+      OrderingType ordering = ast::Ordering::Ascending;
+
+      Ordering() {}
+      Ordering(Value value) : value(std::move(value)) {}
+      Ordering(Value value, OrderingType ordering) : value(std::move(value)), ordering(ordering) {}
+      Ordering(const Ordering&) = default;
+      Ordering(Ordering&&) = default;
+    };
+
     struct Projection {
       explicit Projection(std::string relation);
       Projection(const Projection&) = default;
@@ -88,8 +101,8 @@ namespace persistence {
 
       Projection where(Condition) const&;
       Projection where(Condition) &&;
-      Projection order(Value) const&;
-      Projection order(Value) &&;
+      Projection order(std::vector<Ordering>) const&;
+      Projection order(std::vector<Ordering>) &&;
       Projection reverse_order(bool reverse = true) const&;
       Projection reverse_order(bool reverse = true) &&;
       Projection cross_join(std::string relation, std::string alias, Condition on) &&;

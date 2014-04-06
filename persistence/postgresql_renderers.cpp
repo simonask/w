@@ -48,12 +48,12 @@ namespace persistence {
       if (x.order.size()) {
         ss << " ORDER BY ";
         for (size_t i = 0; i < x.order.size(); ++i) {
-          ss << x.order[i]->to_sql(renderer);
+          ss << x.order[i].value->to_sql(renderer);
+          if (x.order[i].ordering == ast::Ordering::Descending) {
+            ss << " DESC";
+          }
           if (i+1 != x.order.size())
             ss << ", ";
-        }
-        if (x.order_descending) {
-          ss << " DESC";
         }
       }
       if (x.limit >= 0) {

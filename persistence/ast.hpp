@@ -291,6 +291,21 @@ namespace persistence {
       SelectAlias(SelectAlias&&) = default;
     };
 
+    struct Ordering {
+      CloningPtr<ast::Value> value;
+      enum OrderingType {
+        Ascending,
+        Descending,
+      };
+      OrderingType ordering = Ascending;
+
+      Ordering() {}
+      Ordering(CloningPtr<ast::Value> val) : value(std::move(val)) {}
+      Ordering(CloningPtr<ast::Value> val, OrderingType ordering) : value(std::move(val)), ordering(ordering) {}
+      Ordering(const Ordering&) = default;
+      Ordering(Ordering&&) = default;
+    };
+
     // SELECT select FROM relation joins WHERE where GROUP BY group ORDER BY order order_descending
     // This is a SingleValue to provide support for subselects.
     struct SelectQuery : Cloneable<SelectQuery, SingleValue>, IQuery {
@@ -300,8 +315,7 @@ namespace persistence {
       CloningPtr<ast::Condition> where;
       std::vector<CloningPtr<Join>> joins;
       std::vector<CloningPtr<ast::Value>> group;
-      std::vector<CloningPtr<ast::SingleValue>> order;
-      bool order_descending = false;
+      std::vector<Ordering> order;
 
       // TODO: Use Maybe
       ssize_t limit = -1;

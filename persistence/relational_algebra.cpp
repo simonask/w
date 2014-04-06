@@ -124,14 +124,16 @@ namespace persistence {
       return std::move(*this);
     }
 
-    Projection Projection::order(Value ordering_value) const& {
+    Projection Projection::order(std::vector<Ordering> ordering_values) const& {
       Projection p = *this;
-      return std::move(p).order(std::move(ordering_value));
+      return std::move(p).order(std::move(ordering_values));
     }
 
-    Projection Projection::order(Value ordering_value) && {
+    Projection Projection::order(std::vector<Ordering> ordering_values) && {
       query->order.clear();
-      query->order.push_back(std::move(ordering_value.value));
+      for (auto& ord: ordering_values) {
+        query->order.push_back({std::move(ord.value.value), ord.ordering});
+      }
       return std::move(*this);
     }
 
@@ -141,7 +143,18 @@ namespace persistence {
     }
 
     Projection Projection::reverse_order(bool b) && {
-      query->order_descending = b;
+      for (auto& ord: query->order) {
+        switch (ord.ordering) {
+          case ast::Ordering::Ascending: {
+            ord.ordering = ast::Ordering::Descending;
+            break;
+          }
+          case ast::Ordering::Descending: {
+            ord.ordering = ast::Ordering::Ascending;
+            break;
+          }
+        }
+      }
       return std::move(*this);
     }
 
