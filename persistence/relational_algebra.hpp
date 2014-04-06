@@ -27,6 +27,7 @@ namespace persistence {
 
     struct Value {
       CloningPtr<ast::SingleValue> value;
+      Value() {}
       Value(CloningPtr<ast::SingleValue> value) : value(std::move(value)) {}
       Value(SQL sql);
       Value(const Value&) = default;
@@ -69,6 +70,17 @@ namespace persistence {
     Value operator%(Value&& lhs, Value&& rhs);
     Value operator^(Value&& lhs, Value&& rhs);
 
+    struct SelectAlias {
+      Value value;
+      wayward::Maybe<std::string> alias;
+
+      SelectAlias() {}
+      SelectAlias(Value value) : value(std::move(value)) {}
+      SelectAlias(Value value, std::string alias) : value(std::move(value)), alias(std::move(alias)) {}
+      SelectAlias(const SelectAlias&) = default;
+      SelectAlias(SelectAlias&&) = default;
+    };
+
     struct Projection {
       explicit Projection(std::string relation);
       Projection(const Projection&) = default;
@@ -89,6 +101,8 @@ namespace persistence {
       Projection limit(size_t n) &&;
       Projection offset(size_t n) const&;
       Projection offset(size_t n) &&;
+      Projection select(std::vector<SelectAlias>) &&;
+      Projection select(std::vector<SelectAlias>) const&;
 
       CloningPtr<ast::SelectQuery> query;
     };

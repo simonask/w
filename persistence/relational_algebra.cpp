@@ -76,6 +76,30 @@ namespace persistence {
       })};
     }
 
+    Condition Value::operator>(Value&& other) && {
+      return Condition{make_cloning_ptr(new ast::BinaryCondition{
+        std::move(value),
+        std::move(other.value),
+        ast::BinaryCondition::GreaterThan
+      })};
+    }
+
+    Condition Value::operator<=(Value&& other) && {
+      return Condition{make_cloning_ptr(new ast::BinaryCondition{
+        std::move(value),
+        std::move(other.value),
+        ast::BinaryCondition::LessThanOrEq
+      })};
+    }
+
+    Condition Value::operator>=(Value&& other) && {
+      return Condition{make_cloning_ptr(new ast::BinaryCondition{
+        std::move(value),
+        std::move(other.value),
+        ast::BinaryCondition::GreaterThanOrEq
+      })};
+    }
+
     Projection::Projection(std::string relation) {
       query = make_cloning_ptr(new ast::SelectQuery);
       query->relation = std::move(relation);
@@ -129,6 +153,20 @@ namespace persistence {
     Projection Projection::limit(size_t n) const& {
       Projection p = *this;
       return std::move(p).limit(n);
+    }
+
+    Projection Projection::select(std::vector<SelectAlias> selects) && {
+      query->select.resize(selects.size());
+      for (size_t i = 0; i < selects.size(); ++i) {
+        query->select[i].value = std::move(selects[i].value.value);
+        query->select[i].alias = std::move(selects[i].alias);
+      }
+      return std::move(*this);
+    }
+
+    Projection Projection::select(std::vector<SelectAlias> selects) const& {
+      Projection p = *this;
+      return std::move(p).select(std::move(selects));
     }
 
     Projection Projection::left_join(std::string relation, std::string as, Condition on) && {

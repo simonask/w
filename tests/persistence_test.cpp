@@ -1,8 +1,5 @@
 #include <gtest/gtest.h>
-
-TEST(TestCase, TestCaseName) {
-  EXPECT_EQ(2, 1+1);
-}
+#include "persistence/relational_algebra_test.cpp"
 
 int main(int argc, char *argv[])
 {

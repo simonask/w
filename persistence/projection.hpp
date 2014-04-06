@@ -109,7 +109,7 @@ namespace persistence {
     for (size_t i = 0; i < type->num_properties(); ++i) {
       auto& property = type->property_at(i);
       std::string alias = wayward::format("t0_c{0}", i);
-      proj.query->select.push_back(ast::ColumnAlias{proj.query->relation, property.column(), alias});
+      proj.query->select.push_back({wayward::make_cloning_ptr(new ast::ColumnReference(proj.query->relation, property.column())), alias});
       select_aliases_[dynamic_cast<const IPropertyOf<T>*>(&property)] = alias;
     }
   }

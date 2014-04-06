@@ -9,8 +9,8 @@ namespace persistence {
   using namespace persistence::ast;
 
   struct PostgreSQLQueryRenderer : ast::ISQLQueryRenderer {
-    PostgreSQLConnection& conn;
-    PostgreSQLQueryRenderer(PostgreSQLConnection& conn) : conn(conn) {}
+    IConnection& conn;
+    PostgreSQLQueryRenderer(IConnection& conn) : conn(conn) {}
 
     std::string render(const SelectQuery& x) final;
     std::string render(const UpdateQuery& x) final;
@@ -19,8 +19,8 @@ namespace persistence {
   };
 
   struct PostgreSQLValueRenderer : ast::ISQLValueRenderer {
-    PostgreSQLConnection& conn;
-    PostgreSQLValueRenderer(PostgreSQLConnection& conn) : conn(conn) {}
+    IConnection& conn;
+    PostgreSQLValueRenderer(IConnection& conn) : conn(conn) {}
 
     std::string render(const StarFrom& x) final;
     std::string render(const StringLiteral& x) final;

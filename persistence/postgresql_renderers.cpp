@@ -10,7 +10,10 @@ namespace persistence {
       if (x.select.size()) {
         for (size_t i = 0; i < x.select.size(); ++i) {
           auto& alias = x.select[i];
-          ss << wayward::format("\"{0}\".\"{1}\" AS \"{2}\"", alias.relation, alias.column, alias.alias);
+          ss << alias.value->to_sql(renderer);
+          if (alias.alias) {
+            ss << wayward::format(" AS \"{0}\"", *alias.alias);
+          }
           if (i+1 != x.select.size())
             ss << ", ";
         }
@@ -158,7 +161,7 @@ namespace persistence {
         case BinaryCondition::LessThan:          op = "<"; break;
         case BinaryCondition::GreaterThan:       op = ">"; break;
         case BinaryCondition::LessThanOrEq:      op = "<="; break;
-        case BinaryCondition::GreatherThanOrEq:  op = ">="; break;
+        case BinaryCondition::GreaterThanOrEq:   op = ">="; break;
         case BinaryCondition::In:                op = "IN"; break;
         case BinaryCondition::NotIn:             op = "NOT IN"; break;
         case BinaryCondition::IsDistinctFrom:    op = "IS DISTINCT FROM"; break;

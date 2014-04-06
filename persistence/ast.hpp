@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <wayward/support/cloning_ptr.hpp>
+#include <wayward/support/maybe.hpp>
 
 namespace persistence {
   namespace ast {
@@ -211,7 +212,7 @@ namespace persistence {
         LessThan,
         GreaterThan,
         LessThanOrEq,
-        GreatherThanOrEq,
+        GreaterThanOrEq,
         In,
         NotIn,
         IsDistinctFrom,
@@ -279,17 +280,22 @@ namespace persistence {
       Join(Type type, std::string relation, std::string alias, CloningPtr<Condition> on) : type(type), relation(std::move(relation)), alias(std::move(alias)), on(std::move(on)) {}
     };
 
-    struct ColumnAlias {
-      std::string relation;
-      std::string column;
-      std::string alias;
+    struct SelectAlias {
+      CloningPtr<ast::Value> value;
+      wayward::Maybe<std::string> alias;
+
+      SelectAlias() {}
+      SelectAlias(CloningPtr<ast::Value> val) : value(std::move(val)) {}
+      SelectAlias(CloningPtr<ast::Value> val, std::string alias) : value(std::move(val)), alias(std::move(alias)) {}
+      SelectAlias(const SelectAlias&) = default;
+      SelectAlias(SelectAlias&&) = default;
     };
 
     // SELECT select FROM relation joins WHERE where GROUP BY group ORDER BY order order_descending
     // This is a SingleValue to provide support for subselects.
     struct SelectQuery : Cloneable<SelectQuery, SingleValue>, IQuery {
       virtual ~SelectQuery() {}
-      std::vector<ColumnAlias> select;
+      std::vector<SelectAlias> select;
       std::string relation;
       CloningPtr<ast::Condition> where;
       std::vector<CloningPtr<Join>> joins;
