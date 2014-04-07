@@ -5,13 +5,22 @@ enable_testing()
 
 set(TESTS wayward_support_test persistence_test wayward_test)
 
-foreach(TEST ${TESTS})
-  add_executable(${TEST} ${TEST}.cpp)
-  target_include_directories(${TEST} PRIVATE googletest/include)
-  target_link_libraries(${TEST} gtest)
-  add_test(NAME ${TEST} COMMAND ${TEST})
-endforeach(TEST)
+set(wayward_support_test_CASES
+  wayward/support/cloning_ptr_test
+  wayward/support/format_test
+  wayward/support/json_test
+)
+set(wayward_support_test_LINK wayward_support)
 
-target_link_libraries(persistence_test persistence)
-target_link_libraries(wayward_support_test wayward_support)
-target_link_libraries(wayward_test wayward)
+set(persistence_test_CASES
+  persistence/relational_algebra_test
+  persistence/projection_test
+)
+set(persistence_test_LINK persistence)
+
+foreach(TEST_CASE ${persistence_test_CASES})
+  add_executable(${TEST_CASE} test.cpp ${TEST_CASE}.cpp)
+  target_include_directories(${TEST_CASE} PRIVATE googletest/include)
+  target_link_libraries(${TEST_CASE} gtest persistence)
+  add_test(NAME ${TEST_CASE} COMMAND ${TEST_CASE})
+endforeach(TEST_CASE)

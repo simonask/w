@@ -1,3 +1,5 @@
+#include <gtest/gtest.h>
+
 #include <persistence/relational_algebra.hpp>
 
 #include "connection_mock.hpp"
