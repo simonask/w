@@ -8,3 +8,6 @@ Testing
 CTestTestfile.cmake
 Makefile
 *_test
+CMakeScripts
+*.build
+*.xcodeproj
