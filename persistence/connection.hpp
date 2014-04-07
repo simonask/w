@@ -24,6 +24,7 @@ namespace persistence {
     virtual std::unique_ptr<IResultSet> execute(const ast::IQuery& query) = 0;
   };
 
+  void set_connection(IConnection* conn);
   IConnection& get_connection();
 }
 
