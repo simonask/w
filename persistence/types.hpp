@@ -24,10 +24,7 @@ namespace persistence {
     }
   };
 
-  template <>
-  struct BuildType<std::string> {
-    static const StringType* build();
-  };
+  const StringType* build_type(const TypeIdentifier<std::string>*);
 
   template <typename T>
   struct NumericType : IDataTypeFor<T> {
@@ -49,35 +46,12 @@ namespace persistence {
     std::string name_;
   };
 
-  template <>
-  struct BuildType<std::int32_t> {
-    static const NumericType<std::int32_t>* build();
-  };
-
-  template <>
-  struct BuildType<std::int64_t> {
-    static const NumericType<std::int64_t>* build();
-  };
-
-  template <>
-  struct BuildType<std::uint32_t> {
-    static const NumericType<std::uint32_t>* build();
-  };
-
-  template <>
-  struct BuildType<std::uint64_t> {
-    static const NumericType<std::uint64_t>* build();
-  };
-
-  template <>
-  struct BuildType<float> {
-    static const NumericType<float>* build();
-  };
-
-  template <>
-  struct BuildType<double> {
-    static const NumericType<double>* build();
-  };
+  const NumericType<std::int32_t>* build_type(const TypeIdentifier<std::int32_t>*);
+  const NumericType<std::int64_t>* build_type(const TypeIdentifier<std::int64_t>*);
+  const NumericType<std::uint32_t>* build_type(const TypeIdentifier<std::uint32_t>*);
+  const NumericType<std::uint64_t>* build_type(const TypeIdentifier<std::uint64_t>*);
+  const NumericType<float>* build_type(const TypeIdentifier<float>*);
+  const NumericType<double>* build_type(const TypeIdentifier<double>*);
 
   namespace detail {
     std::string maybe_type_name(const IType* inner);
@@ -107,12 +81,10 @@ namespace persistence {
   };
 
   template <typename T>
-  struct BuildType<wayward::Maybe<T>> {
-    static const MaybeType<T>* build() {
-      static const MaybeType<T>* p = new MaybeType<T>{get_type<T>()};
-      return p;
-    }
-  };
+  const MaybeType<T>* build_type(const TypeIdentifier<wayward::Maybe<T>>*) {
+    static const MaybeType<T>* p = new MaybeType<T>{get_type<T>()};
+    return p;
+  }
 }
 
 #endif // PERSISTENCE_TYPES_HPP_INCLUDED

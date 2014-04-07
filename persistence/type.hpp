@@ -18,10 +18,16 @@ namespace persistence {
     virtual bool has_value(const T& value) const = 0;
   };
 
-  template <typename T> struct BuildType;
   template <typename T>
-  auto get_type() -> const decltype(BuildType<T>::build()) {
-    static const auto t = BuildType<T>::build();
+  struct TypeIdentifier { TypeIdentifier() {} };
+
+  // Implement this:
+  // const IType* build_type(const TypeIdentifier<T>* null);
+
+  template <typename T>
+  auto get_type() -> decltype(build_type(std::declval<const TypeIdentifier<T>*>())) {
+    static const TypeIdentifier<T> type_id;
+    static const auto t = build_type(&type_id);
     return t;
   }
 }

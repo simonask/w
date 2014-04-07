@@ -42,12 +42,10 @@ namespace persistence {
   };
 
   template <typename T>
-  struct BuildType<BelongsTo<T>> {
-    static const BelongsToType<T>* build() {
-      static const auto p = new BelongsToType<T>;
-      return p;
-    }
-  };
+  const BelongsToType<T>* build_type(const TypeIdentifier<BelongsToType<T>>*) {
+    static const auto p = new BelongsToType<T>;
+    return p;
+  }
 }
 
 #endif // PERSISTENCE_BELONGS_TO_HPP_INCLUDED

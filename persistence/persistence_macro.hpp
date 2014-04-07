@@ -16,14 +16,12 @@
       build_(); \
     } \
   }; \
-  template <> struct persistence::BuildType<TYPE> { \
-    static const persistence::RecordType<TYPE>* build() { \
-      RecordTypeBuilder_ ## TYPE builder; \
-      builder.type_ = new persistence::RecordType<TYPE>; \
-      builder.build_with_defaults_(); \
-      return builder.result_(); \
-    }\
-  }; \
+  inline const ::persistence::RecordType<TYPE>* build_type(const ::persistence::TypeIdentifier<TYPE>* dummy) { \
+    RecordTypeBuilder_ ## TYPE builder; \
+    builder.type_ = new ::persistence::RecordType<TYPE>; \
+    builder.build_with_defaults_(); \
+    return builder.result_(); \
+  } \
   inline void RecordTypeBuilder_ ## TYPE ::build_()
 
 #endif // PERSISTENCE_PERSISTENCE_MACRO_HPP_INCLUDED

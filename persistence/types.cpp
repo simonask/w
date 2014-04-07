@@ -2,13 +2,13 @@
 #include <wayward/support/format.hpp>
 
 namespace persistence {
-  const StringType* BuildType<std::string>::build() {
+  const StringType* build_type(const TypeIdentifier<std::string>*) {
     static const StringType* p = new StringType;
     return p;
   }
 
   #define DEFINE_NUMERIC_TYPE(T) \
-    const NumericType<T>* BuildType<T>::build() { \
+    const NumericType<T>* build_type(const TypeIdentifier<T>*) { \
       static const NumericType<T>* p = new NumericType<T>{#T}; \
       return p; \
     }

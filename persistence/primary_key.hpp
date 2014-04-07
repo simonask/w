@@ -38,10 +38,7 @@ namespace persistence {
     }
   };
 
-  template <>
-  struct BuildType<PrimaryKey> {
-    static const PrimaryKeyType* build();
-  };
+  const PrimaryKeyType* build_type(const TypeIdentifier<PrimaryKey>*);
 
   template <typename Col>
   struct ColumnAbilities<Col, PrimaryKey> : LiteralEqualityAbilities<Col, int64> {};
