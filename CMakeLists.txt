@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 project(wayward)
 
 include_directories(.)
+include_directories(/usr/local/include)
 set(CMAKE_CXX_FLAGS "-std=c++11 -O0 -g")
 
 set(WAYWARD_SUPPORT_SOURCES
