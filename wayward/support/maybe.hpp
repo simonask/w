@@ -23,7 +23,7 @@ namespace wayward {
     Maybe(T value) : has_value_(true) { new(&storage_) T(std::move(value)); }
     Maybe(const Maybe<T>& other);
     Maybe(Maybe<T>&& other) : has_value_(false) { swap(other); }
-    constexpr Maybe(NothingType) {}
+    constexpr Maybe(NothingType) : has_value_(false) {}
     ~Maybe();
     Maybe<T>& operator=(T value);
     Maybe<T>& operator=(const Maybe<T>& value);
@@ -75,6 +75,7 @@ namespace wayward {
     if (has_value_) {
       *get() = std::move(value);
     } else {
+	  has_value_ = true;
       new(&storage_) T(std::move(value));
     }
     return *this;
@@ -100,14 +101,14 @@ namespace wayward {
         std::swap(*get(), *other.get());
       } else {
         new(&other.storage_) T(std::move(*get()));
-        std::swap(has_value_, other.has_value_);
         get()->~T();
+        std::swap(has_value_, other.has_value_);
       }
     } else {
       if (other.has_value_) {
         new(&storage_) T(std::move(*other.get()));
-        std::swap(has_value_, other.has_value_);
         other.get()->~T();
+        std::swap(has_value_, other.has_value_);
       } else {
         // Neither has a value, so do nothing.
       }
