@@ -49,7 +49,7 @@ namespace persistence {
     // static_assert(IsPersistenceType<T>::Value, "Cannot create typed projection for this type, because it doesn't support persistence. Use the PERSISTENCE macro to define properties and relations for the type.");
     Projection() : proj{relational_algebra::projection(get_type<T>()->relation())} { init_aliasing(); }
     ~Projection() {}
-    Projection(const Projection<T>& other) : proj(other.proj), realized_(nullptr), select_aliases_(other.select_aliases_) {}
+    Projection(const Projection<T>& other) : proj(other.proj), materialized_(nullptr), select_aliases_(other.select_aliases_) {}
     Projection(Projection<T>&& other) = default;
 
     // Query interface:
@@ -89,10 +89,10 @@ namespace persistence {
     using SelectAliasMap = std::map<const IPropertyOf<T>*, std::string>;
     explicit Projection(relational_algebra::Projection proj, SelectAliasMap aliases = SelectAliasMap()) : proj(std::move(proj)), select_aliases_(std::move(aliases)) {}
     relational_algebra::Projection proj;
-    std::unique_ptr<IResultSet> realized_;
+    std::unique_ptr<IResultSet> materialized_;
     SelectAliasMap select_aliases_;
 
-    void realize();
+    void materialize();
     void project(size_t row_idx, T& instance) const;
     void init_aliasing();
 
@@ -140,9 +140,9 @@ namespace persistence {
   template <typename T>
   void Projection<T>::each(std::function<void(T&)> callback) {
     T tmp_;
-    realize();
-    if (realized_ != nullptr) {
-      for (size_t i = 0; i < realized_->height(); ++i) {
+    materialize();
+    if (materialized_ != nullptr) {
+      for (size_t i = 0; i < materialized_->height(); ++i) {
         project(i, tmp_);
         callback(tmp_);
       }
@@ -152,9 +152,9 @@ namespace persistence {
   template <typename T>
   std::vector<T> Projection<T>::all() {
     std::vector<T> records;
-    realize();
-    if (realized_ != nullptr) {
-      size_t n = realized_->height();
+    materialize();
+    if (materialized_ != nullptr) {
+      size_t n = materialized_->height();
       records.resize(n);
       for (size_t i = 0; i < n; ++i) {
         project(i, records[i]);
@@ -165,8 +165,8 @@ namespace persistence {
 
   template <typename T>
   Maybe<T> Projection<T>::first() {
-    if (realized_) {
-      if (realized_->height() > 0) {
+    if (materialized_) {
+      if (materialized_->height() > 0) {
         T tmp_;
         project(0, tmp_);
         return std::move(tmp_);
@@ -182,17 +182,17 @@ namespace persistence {
   }
 
   template <typename T>
-  void Projection<T>::realize() {
-    if (!realized_) {
-      realized_ = persistence::get_connection().execute(*proj.query);
+  void Projection<T>::materialize() {
+    if (!materialized_) {
+      materialized_ = persistence::get_connection().execute(*proj.query);
     }
   }
 
   template <typename T>
   void Projection<T>::project(size_t row_idx, T& record) const {
-    if (realized_) {
+    if (materialized_) {
       for (auto& pair: select_aliases_) {
-        pair.first->set(record, *realized_, row_idx, pair.second);
+        pair.first->set(record, *materialized_, row_idx, pair.second);
       }
       get_type<T>()->initialize_associations_in_object(&record);
     }
