@@ -14,6 +14,14 @@ namespace persistence {
   , pool(adapter_or_error(connection_url), connection_url, options.pool_size)
   {}
 
+  AcquiredConnection DataStore::acquire() {
+    return pool.acquire();
+  }
+
+  Maybe<AcquiredConnection> DataStore::try_acquire() {
+    return pool.try_acquire();
+  }
+
   const IAdapter& DataStore::adapter_or_error(const std::string& connection_url) {
     URI uri{connection_url};
     std::string protocol = uri.scheme();
@@ -45,7 +53,7 @@ namespace persistence {
     if (it != g_data_stores.end()) {
       return *it->second;
     } else {
-      throw DataStoreError(wayward::format("Data store \"{0}\" is not configured. Call persistence::setup(\"{0}\", \"<connection string>\") to set it up."));
+      throw DataStoreError(wayward::format("Data store \"{0}\" is not configured. Call persistence::setup(\"{0}\", \"<connection string>\") to set it up.", name));
     }
   }
 }

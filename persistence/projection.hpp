@@ -10,6 +10,7 @@
 #include <persistence/column_abilities.hpp>
 #include <persistence/record_type.hpp>
 #include <persistence/connection.hpp>
+#include <persistence/data_store.hpp>
 
 #include <functional>
 
@@ -116,8 +117,8 @@ namespace persistence {
 
   template <typename T>
   std::string Projection<T>::to_sql() const {
-    // TODO: Handle multiple data stores
-    IConnection& conn = persistence::get_connection();
+    auto& store = data_store(get_type<T>()->data_store());
+    auto conn = store.acquire();
     return conn.to_sql(*proj.query);
   }
 
@@ -184,7 +185,9 @@ namespace persistence {
   template <typename T>
   void Projection<T>::materialize() {
     if (!materialized_) {
-      materialized_ = persistence::get_connection().execute(*proj.query);
+      auto& ds = persistence::data_store(get_type<T>()->data_store());
+      auto conn = ds.acquire();
+      materialized_ = conn.execute(*proj.query);
     }
   }
 

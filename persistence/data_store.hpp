@@ -18,6 +18,9 @@ namespace persistence {
   class DataStore {
   public:
     DataStore(std::string name, std::string connection_url, const DataStoreOptions& options);
+
+    AcquiredConnection acquire();
+    Maybe<AcquiredConnection> try_acquire();
   private:
     std::string name;
     std::string connection_url;

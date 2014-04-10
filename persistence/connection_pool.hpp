@@ -15,6 +15,7 @@ namespace persistence {
   struct AcquiredConnection : IConnection {
     virtual ~AcquiredConnection() { release(); }
     AcquiredConnection(AcquiredConnection&&);
+    AcquiredConnection& operator=(AcquiredConnection&&);
 
     // IConnection interface
     std::string database() const final { return connection_->database(); }
@@ -32,6 +33,10 @@ namespace persistence {
     void release();
   };
 
+  struct ConnectionPoolError : std::runtime_error {
+    ConnectionPoolError(const std::string& str) : std::runtime_error(str) {}
+  };
+
   class ConnectionPool {
   public:
     ConnectionPool(const IAdapter& adapter, std::string connection_string, size_t pool_size) : adapter_(adapter), connection_string_(std::move(connection_string)), size_(pool_size) { fill_pool(); }
@@ -41,12 +46,17 @@ namespace persistence {
   private:
     const IAdapter& adapter_;
     std::mutex mutex_;
+    std::condition_variable available_;
+
     std::string connection_string_;
     std::vector<std::unique_ptr<IConnection>> pool_;
+    std::vector<std::unique_ptr<IConnection>> reserved_;
     size_t size_ = 0;
-    size_t acquired_ = 0;
 
     void fill_pool();
+    AcquiredConnection acquire_unlocked();
+    friend class AcquiredConnection;
+    void release(IConnection*);
   };
 }
 
