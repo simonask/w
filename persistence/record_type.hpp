@@ -13,6 +13,7 @@
 namespace persistence {
   struct IRecordType : IType {
     virtual std::string relation() const = 0;
+    virtual std::string data_store() const = 0;
     virtual void initialize_associations_in_object(void*) const = 0;
 
     virtual const IProperty* primary_key() const = 0;
@@ -31,10 +32,12 @@ namespace persistence {
 
     // IRecordType
     std::string relation() const final { return relation_; }
+    std::string data_store() const final { return data_store_; }
 
     // Internal
     std::string name_;
     std::string relation_;
+    std::string data_store_ = "default";
   };
 
   template <typename RT>

@@ -11,6 +11,18 @@ namespace persistence {
     PGconn* conn = nullptr;
   };
 
+  static const AdapterRegistrar<PostgreSQLAdapter> registrar_ = AdapterRegistrar<PostgreSQLAdapter>("postgresql");
+
+  std::unique_ptr<IConnection> PostgreSQLAdapter::connect(std::string connection_string) const {
+    std::string error;
+    auto conn = PostgreSQLConnection::connect(std::move(connection_string), &error);
+    if (conn) {
+      return std::move(conn);
+    } else {
+      throw PostgreSQLError{std::move(error)};
+    }
+  }
+
   namespace {
     struct PostgreSQLResultSet : IResultSet {
       explicit PostgreSQLResultSet(PGresult* result) : result(result) {}

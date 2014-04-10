@@ -3,6 +3,7 @@
 #define PERSISTENCE_POSTGRESQL_HPP_INCLUDED
 
 #include <persistence/connection.hpp>
+#include <persistence/adapter.hpp>
 #include <stdexcept>
 
 namespace persistence {
@@ -11,6 +12,10 @@ namespace persistence {
     const std::string& message() const { return message_; }
     std::string message_;
     const char* what() const noexcept final { return message_.c_str(); }
+  };
+
+  struct PostgreSQLAdapter : IAdapter {
+    std::unique_ptr<IConnection> connect(std::string connection_string) const final;
   };
 
   struct PostgreSQLConnection : IConnection {

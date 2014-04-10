@@ -20,6 +20,9 @@ set(WAYWARD_SOURCES
 )
 
 set(PERSISTENCE_SOURCES
+  persistence/adapter.cpp
+  persistence/data_store.cpp
+  persistence/connection_pool.cpp
   persistence/p.cpp
   persistence/postgresql.cpp
   persistence/postgresql_renderers.cpp

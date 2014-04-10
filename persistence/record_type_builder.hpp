@@ -16,6 +16,7 @@ namespace persistence {
 
     void name(std::string name) { type_->name_ = std::move(name); }
     void relation(std::string table_name) { type_->relation_ = std::move(table_name); }
+    void data_store(std::string data_store) { type_->data_store_ = std::move(data_store); }
 
     template <typename AssociatedType>
     BelongsToAssociation<RT, AssociatedType>&
