@@ -11,15 +11,15 @@ namespace persistence {
   DataStore::DataStore(std::string name, std::string connection_url, const DataStoreOptions& options)
   : name(std::move(name))
   , connection_url(connection_url)
-  , pool(adapter_or_error(connection_url), connection_url, options.pool_size)
+  , pool(make_limited_connection_pool(adapter_or_error(connection_url), connection_url, options.pool_size))
   {}
 
   AcquiredConnection DataStore::acquire() {
-    return pool.acquire();
+    return pool->acquire();
   }
 
   Maybe<AcquiredConnection> DataStore::try_acquire() {
-    return pool.try_acquire();
+    return pool->try_acquire();
   }
 
   const IAdapter& DataStore::adapter_or_error(const std::string& connection_url) {

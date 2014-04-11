@@ -24,7 +24,7 @@ namespace persistence {
   private:
     std::string name;
     std::string connection_url;
-    ConnectionPool pool;
+    std::unique_ptr<IConnectionPool> pool;
 
     const IAdapter& adapter_or_error(const std::string& connection_url);
   };

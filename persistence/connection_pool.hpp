@@ -5,16 +5,15 @@
 #include <persistence/connection.hpp>
 #include <wayward/support/maybe.hpp>
 
-#include <mutex>
-
 namespace persistence {
-  class ConnectionPool;
+  struct IConnectionPool;
   struct IAdapter;
   using wayward::Maybe;
 
   struct AcquiredConnection : IConnection {
     virtual ~AcquiredConnection() { release(); }
     AcquiredConnection(AcquiredConnection&&);
+    AcquiredConnection(IConnectionPool& pool, IConnection& connection) : pool_(&pool), connection_(&connection) {}
     AcquiredConnection& operator=(AcquiredConnection&&);
 
     // IConnection interface
@@ -26,38 +25,25 @@ namespace persistence {
     std::unique_ptr<IResultSet> execute(std::string sql) final { return connection_->execute(std::move(sql)); }
     std::unique_ptr<IResultSet> execute(const ast::IQuery& query) final { return connection_->execute(query); }
   private:
-    friend class ConnectionPool;
-    AcquiredConnection(ConnectionPool& pool, IConnection& connection) : pool_(&pool), connection_(&connection) {}
-    ConnectionPool* pool_ = nullptr;
+    IConnectionPool* pool_ = nullptr;
     IConnection* connection_ = nullptr;
     void release();
+  };
+
+  struct IConnectionPool {
+    virtual ~IConnectionPool() {}
+    virtual Maybe<AcquiredConnection> try_acquire() = 0;
+    virtual AcquiredConnection acquire() = 0;
+  protected:
+    friend struct AcquiredConnection;
+    virtual void release(IConnection*) = 0;
   };
 
   struct ConnectionPoolError : std::runtime_error {
     ConnectionPoolError(const std::string& str) : std::runtime_error(str) {}
   };
 
-  class ConnectionPool {
-  public:
-    ConnectionPool(const IAdapter& adapter, std::string connection_string, size_t pool_size) : adapter_(adapter), connection_string_(std::move(connection_string)), size_(pool_size) { fill_pool(); }
-
-    Maybe<AcquiredConnection> try_acquire();
-    AcquiredConnection acquire();
-  private:
-    const IAdapter& adapter_;
-    std::mutex mutex_;
-    std::condition_variable available_;
-
-    std::string connection_string_;
-    std::vector<std::unique_ptr<IConnection>> pool_;
-    std::vector<std::unique_ptr<IConnection>> reserved_;
-    size_t size_ = 0;
-
-    void fill_pool();
-    AcquiredConnection acquire_unlocked();
-    friend struct AcquiredConnection;
-    void release(IConnection*);
-  };
+  std::unique_ptr<IConnectionPool> make_limited_connection_pool(const IAdapter& adapter, std::string connection_string, size_t pool_size);
 }
 
 #endif // PERSISTENCE_CONNECTION_POOL_HPP_INCLUDED
