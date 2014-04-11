@@ -6,6 +6,7 @@
 #include <persistence/types.hpp>
 
 #include "connection_mock.hpp"
+#include "adapter_mock.hpp"
 
 namespace {
   using persistence::PrimaryKey;
@@ -14,7 +15,9 @@ namespace {
   using persistence::from;
   using persistence::column;
 
+  using persistence::AdapterRegistrar;
   using persistence::test::ConnectionMock;
+  using persistence::test::AdapterMock;
 
   struct Foo {
     PrimaryKey id;
@@ -34,11 +37,16 @@ namespace {
   }
 
   struct ProjectionWithConnectionMock : ::testing::Test {
-    ConnectionMock connection;
+    AdapterRegistrar<AdapterMock> adapter_registrar_ = "test";
+
+    ConnectionMock& connection() {
+      return adapter_registrar_.adapter_.connection;
+    }
 
     void SetUp() override {
+      persistence::setup("test://test");
 
-      connection.results_.columns_ = {"t0_c0", "t0_c1", "t0_c2", "t0_c3", "t0_c4"};
+      connection().results_.columns_ = {"t0_c0", "t0_c1", "t0_c2", "t0_c3", "t0_c4"};
       for (size_t i = 0; i < 5; ++i) {
         std::vector<Maybe<std::string>> row {
           wayward::format("{0}", i+1),
@@ -47,7 +55,7 @@ namespace {
           wayward::format("{0}", (int32_t)(i*2)),
           wayward::format("{0}", ((double)i * 123.4))
         };
-        connection.results_.rows_.push_back(std::move(row));
+        connection().results_.rows_.push_back(std::move(row));
       }
     }
   };
@@ -65,7 +73,7 @@ namespace {
     auto q = from<Foo>();
     size_t counter = 0;
     q.each([&](const Foo& foo) {
-      EXPECT_EQ(foo.string_value, *connection.results_.rows_.at(counter).at(1));
+      EXPECT_EQ(foo.string_value, *connection().results_.rows_.at(counter).at(1));
       ++counter;
     });
   }
@@ -74,7 +82,7 @@ namespace {
     auto q = from<Foo>();
     size_t counter = 0;
     q.each([&](const Foo& foo) {
-      EXPECT_EQ((bool)foo.nullable_string_value, (bool)connection.results_.rows_.at(counter).at(2));
+      EXPECT_EQ((bool)foo.nullable_string_value, (bool)connection().results_.rows_.at(counter).at(2));
       ++counter;
     });
   }
@@ -84,7 +92,7 @@ namespace {
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       std::stringstream ss;
-      ss.str(*connection.results_.rows_.at(counter).at(3));
+      ss.str(*connection().results_.rows_.at(counter).at(3));
       int32_t n;
       ss >> n;
       EXPECT_EQ(foo.int32_value, n);
@@ -97,7 +105,7 @@ namespace {
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       std::stringstream ss;
-      ss.str(*connection.results_.rows_.at(counter).at(4));
+      ss.str(*connection().results_.rows_.at(counter).at(4));
       double n;
       ss >> n;
       EXPECT_EQ(foo.double_value, n);

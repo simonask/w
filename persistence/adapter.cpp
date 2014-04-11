@@ -3,14 +3,19 @@
 namespace persistence {
   namespace detail {
     static AdapterLink* g_adapter_link_head = nullptr;
-    static AdapterLink* g_adapter_link_tail = nullptr;
 
     void register_adapter(AdapterLink* link) {
-      if (g_adapter_link_head == nullptr)
-        g_adapter_link_head = link;
-      if (g_adapter_link_tail != nullptr)
-        g_adapter_link_tail->next = link;
-      g_adapter_link_tail = link;
+      link->next = g_adapter_link_head;
+      g_adapter_link_head = link;
+    }
+
+    void unregister_adapter(AdapterLink* link) {
+      for (AdapterLink** p = &g_adapter_link_head; *p; p = &(*p)->next) {
+        if (*p == link) {
+          *p = link->next;
+          return;
+        }
+      }
     }
   }
 

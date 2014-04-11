@@ -21,6 +21,7 @@ namespace persistence {
     };
 
     void register_adapter(AdapterLink* adapter);
+    void unregister_adapter(AdapterLink* adapter);
   }
 
   /*
@@ -30,6 +31,9 @@ namespace persistence {
   struct AdapterRegistrar {
     AdapterRegistrar(const char* name) : link_{name, &adapter_} {
       persistence::detail::register_adapter(&link_);
+    }
+    ~AdapterRegistrar() {
+      persistence::detail::unregister_adapter(&link_);
     }
     detail::AdapterLink link_;
     T adapter_;
