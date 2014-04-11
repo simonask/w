@@ -55,7 +55,7 @@ namespace persistence {
 
     void fill_pool();
     AcquiredConnection acquire_unlocked();
-    friend class AcquiredConnection;
+    friend struct AcquiredConnection;
     void release(IConnection*);
   };
 }
