@@ -8,10 +8,7 @@
 
 namespace persistence {
   struct PostgreSQLError : std::runtime_error {
-    PostgreSQLError(std::string message) : message_(std::move(message)), std::runtime_error{message_.c_str()} {}
-    const std::string& message() const { return message_; }
-    std::string message_;
-    const char* what() const noexcept final { return message_.c_str(); }
+    PostgreSQLError(const std::string& message) : std::runtime_error{message} {}
   };
 
   struct PostgreSQLAdapter : IAdapter {

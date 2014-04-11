@@ -106,10 +106,6 @@ namespace persistence {
         if (i+1 != x.arguments.size())
           ss << ", ";
       }
-      for (auto& value: x.arguments) {
-
-
-      }
       ss << ')';
       return ss.str();
     }

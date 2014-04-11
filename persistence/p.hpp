@@ -21,13 +21,4 @@
 namespace p = persistence;
 #endif
 
-namespace persistence {
-  struct Configuration {
-    std::string connection_string;
-    size_t pool_size;
-  };
-
-  bool connect(const Configuration& config, std::string* out_error = nullptr);
-}
-
 #endif

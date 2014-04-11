@@ -37,7 +37,6 @@ namespace {
     ConnectionMock connection;
 
     void SetUp() override {
-      persistence::set_connection(&connection);
 
       connection.results_.columns_ = {"t0_c0", "t0_c1", "t0_c2", "t0_c3", "t0_c4"};
       for (size_t i = 0; i < 5; ++i) {
