@@ -10,6 +10,7 @@ namespace persistence {
   struct LimitedConnectionPool : IConnectionPool {
   public:
     LimitedConnectionPool(const IAdapter& adapter, std::string connection_string, size_t pool_size) : adapter_(adapter), connection_string_(std::move(connection_string)), size_(pool_size) { fill_pool(); }
+    virtual ~LimitedConnectionPool();
 
     Maybe<AcquiredConnection> try_acquire();
     AcquiredConnection acquire();
@@ -31,6 +32,12 @@ namespace persistence {
 
   std::unique_ptr<IConnectionPool> make_limited_connection_pool(const IAdapter& adapter, std::string connection_string, size_t pool_size) {
     return std::unique_ptr<IConnectionPool>(new LimitedConnectionPool(adapter, std::move(connection_string), pool_size));
+  }
+
+  LimitedConnectionPool::~LimitedConnectionPool() {
+    if (reserved_.size()) {
+      throw ConnectionPoolError(wayward::format("Consistency error: Trying to destroy connection pool, but there are {0} AcquiredConnections still in use.", reserved_.size()));
+    }
   }
 
   void LimitedConnectionPool::fill_pool() {
