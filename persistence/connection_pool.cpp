@@ -15,7 +15,6 @@ namespace persistence {
 
   AcquiredConnection ConnectionPool::acquire() {
     std::unique_lock<std::mutex> L(mutex_);
-    L.lock();
     while (pool_.empty()) {
       available_.wait(L);
     }
