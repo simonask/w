@@ -4,7 +4,6 @@ TODO
 Persistence
 -----------
 
-- ConnectionPool facility.
 - AssociationContext facility for handling circular references in records.
 
 Wayward

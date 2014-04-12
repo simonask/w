@@ -12,6 +12,7 @@ namespace persistence {
 
   struct AcquiredConnection : IConnection {
     virtual ~AcquiredConnection() { release(); }
+    AcquiredConnection() {}
     AcquiredConnection(AcquiredConnection&&);
     AcquiredConnection(IConnectionPool& pool, IConnection& connection) : pool_(&pool), connection_(&connection) {}
     AcquiredConnection& operator=(AcquiredConnection&&);

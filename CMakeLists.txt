@@ -20,6 +20,8 @@ set(WAYWARD_SOURCES
 )
 
 set(PERSISTENCE_SOURCES
+  persistence/connection_provider.cpp
+  persistence/connection_retainer.cpp
   persistence/adapter.cpp
   persistence/data_store.cpp
   persistence/connection_pool.cpp
