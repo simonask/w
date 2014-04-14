@@ -11,12 +11,17 @@ set(WAYWARD_SUPPORT_SOURCES
   wayward/support/uri.cpp
   wayward/support/node.cpp
   wayward/support/json.cpp
+  wayward/support/datetime.cpp
 )
 
 set(WAYWARD_SOURCES
   wayward/app.cpp
   wayward/render.cpp
   wayward/request.cpp
+)
+
+set(WAYWARD_TESTING_SOURCES
+  wayward/testing/time_machine.cpp
 )
 
 set(PERSISTENCE_SOURCES
@@ -36,9 +41,11 @@ set(PERSISTENCE_SOURCES
 add_library(wayward_support SHARED ${WAYWARD_SUPPORT_SOURCES})
 add_library(wayward SHARED ${WAYWARD_SOURCES})
 add_library(persistence SHARED ${PERSISTENCE_SOURCES})
+add_library(wayward_testing SHARED ${WAYWARD_TESTING_SOURCES})
 
 target_link_libraries(wayward wayward_support)
 target_link_libraries(persistence wayward_support)
+target_link_libraries(wayward_testing wayward wayward_support)
 
 find_library(LIBEVENT event)
 find_library(LIBPQ pq)
