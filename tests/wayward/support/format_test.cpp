@@ -1,3 +1,4 @@
+#include <gtest/gtest.h>
 #include <wayward/support/format.hpp>
 
 namespace {

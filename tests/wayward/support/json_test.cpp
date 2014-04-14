@@ -1,3 +1,4 @@
+#include <gtest/gtest.h>
 #include <wayward/support/json.hpp>
 
 namespace {
