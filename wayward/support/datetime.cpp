@@ -52,21 +52,24 @@ namespace wayward {
 
   DateTime::CalendarValues DateTime::as_calendar_values() const {
     CalendarValues cal;
-    auto us_dur = std::chrono::microseconds(repr_.time_since_epoch().count() / 1000);
-    auto us_repr = std::chrono::time_point<std::chrono::system_clock>(us_dur);
+    
+    // Standard std::chrono::time_point only understands microsecond precision.
+    auto ns = repr_.time_since_epoch().count();
+    auto us = ns / 1000;
+    ns %= 1000;
+    std::chrono::time_point<std::chrono::system_clock> us_repr {std::chrono::microseconds(us)};
     auto from_epoch = std::chrono::system_clock::to_time_t(us_repr);
     struct tm t;
-    ::localtime_r(&from_epoch, &t);
-    cal.year = t.tm_year;
+    ::gmtime_r(&from_epoch, &t);
+    cal.year = t.tm_year + 1900;
     cal.month = t.tm_mon + 1;
     cal.day = t.tm_mday;
     cal.hour = t.tm_hour;
     cal.minute = t.tm_min;
     cal.second = t.tm_sec;
-    auto dur_ns = repr_.time_since_epoch();
-    cal.millisecond = ((dur_ns / (1000*1000)) % 1000).count();
-    cal.microsecond = ((dur_ns / 1000) % 1000).count();
-    cal.nanosecond = (dur_ns % 1000).count();
+    cal.millisecond = (us / 1000) % 1000;
+    cal.microsecond = us % 1000;
+    cal.nanosecond = ns;
     return cal;
   }
 
@@ -85,11 +88,10 @@ namespace wayward {
   }
 
   DateTime DateTime::at(const CalendarValues& cal) {
-    struct tm t;
-    t.tm_year = cal.year;
+    struct tm t = {0};
+    t.tm_year = cal.year - 1900;
     t.tm_mon = cal.month - 1;
     t.tm_mday = cal.day;
-    t.tm_wday = 0;
     t.tm_hour = cal.hour;
     t.tm_min = cal.minute;
     t.tm_sec = cal.second;
@@ -101,6 +103,7 @@ namespace wayward {
     microseconds %= 1000;
     int64_t milliseconds = cal.millisecond + milliseconds_from_microseconds;
     int64_t seconds_from_milliseconds = milliseconds / 1000;
+    t.tm_sec += seconds_from_milliseconds;
     milliseconds %= 1000;
 
     auto time_us = std::chrono::system_clock::from_time_t(::timegm(&t));
