@@ -22,4 +22,10 @@ namespace {
     EXPECT_EQ(200, date.microsecond());
     EXPECT_EQ(300, date.nanosecond());
   }
+
+  TEST(DateTime, strftime_formats_iso8601) {
+    auto date = DateTime::at(2012, 3, 21, 12, 21, 43);
+    auto formatted = date.strftime("%Y-%m-%d %H:%M:%S %Z");
+    EXPECT_EQ("2012-03-21 12:21:43 UTC", formatted);
+  }
 }

@@ -3,6 +3,7 @@
 #define WAYWARD_SUPPORT_DATETIME_HPP_INCLUDED
 
 #include <chrono>
+#include <string>
 
 namespace wayward {
   template <typename IntervalType>
@@ -199,6 +200,10 @@ namespace wayward {
     int64_t millisecond() const;
     int64_t microsecond() const;
     int64_t nanosecond() const;
+
+    Seconds unix_timestamp() const;
+    std::string strftime(const std::string& format) const;
+    std::string iso8601() const;
 
     struct CalendarValues {
       int64_t year;

@@ -3,6 +3,8 @@
 
 #include <time.h>
 
+#include <array>
+
 namespace wayward {
   namespace {
     static __thread IClock* g_current_clock = nullptr;
@@ -50,27 +52,77 @@ namespace wayward {
     return *this;
   }
 
+  namespace {
+    struct tm
+    calendar_values_to_tm(const DateTime::CalendarValues& cal) {
+      struct tm t = {0};
+      t.tm_year = cal.year - 1900;
+      t.tm_mon = cal.month - 1;
+      t.tm_mday = cal.day;
+      t.tm_hour = cal.hour;
+      t.tm_min = cal.minute;
+      t.tm_sec = cal.second;
+      return t;
+    }
+
+    DateTime::CalendarValues
+    tm_to_calendar_values(const struct tm& t) {
+      DateTime::CalendarValues cal;
+      cal.year = t.tm_year + 1900;
+      cal.month = t.tm_mon + 1;
+      cal.day = t.tm_mday;
+      cal.hour = t.tm_hour;
+      cal.minute = t.tm_min;
+      cal.second = t.tm_sec;
+      return cal;
+    }
+
+    Nanoseconds calendar_values_to_nanoseconds_from_epoch(const DateTime::CalendarValues& cal) {
+      struct tm t = calendar_values_to_tm(cal);
+
+      int64_t microseconds_from_nanoseconds = cal.nanosecond / 1000;
+      int64_t nanoseconds = cal.nanosecond % 1000;
+      int64_t microseconds = cal.microsecond + microseconds_from_nanoseconds;
+      int64_t milliseconds_from_microseconds = microseconds / 1000;
+      microseconds %= 1000;
+      int64_t milliseconds = cal.millisecond + milliseconds_from_microseconds;
+      int64_t seconds_from_milliseconds = milliseconds / 1000;
+      t.tm_sec += seconds_from_milliseconds;
+      milliseconds %= 1000;
+
+      auto time_us = std::chrono::system_clock::from_time_t(::timegm(&t));
+      auto from_epoch_ns = std::chrono::nanoseconds{time_us.time_since_epoch().count() * 1000};
+      from_epoch_ns += std::chrono::nanoseconds{nanoseconds};
+      from_epoch_ns += std::chrono::microseconds{microseconds};
+      from_epoch_ns += std::chrono::milliseconds{milliseconds};
+      return from_epoch_ns;
+    }
+
+    struct tm nanoseconds_to_tm(Nanoseconds ns) {
+      // Standard std::chrono::time_point only understands microsecond precision.
+      auto us = ns.repr_.count() / 1000;
+      std::chrono::time_point<std::chrono::system_clock> us_repr {std::chrono::microseconds(us)};
+      auto from_epoch = std::chrono::system_clock::to_time_t(us_repr);
+      struct tm t;
+      ::gmtime_r(&from_epoch, &t);
+      return t;
+    }
+
+    DateTime::CalendarValues
+    nanoseconds_from_epoch_to_calendar_values(Nanoseconds ns) {
+      DateTime::CalendarValues cal = tm_to_calendar_values(nanoseconds_to_tm(ns));
+      auto ns_rem = ns.repr_.count() % 1000;
+      auto us = ns.repr_.count() / 1000;
+      cal.millisecond = (us / 1000) % 1000;
+      cal.microsecond = us % 1000;
+      cal.nanosecond = ns_rem;
+      return cal;
+    }
+  }
+
   DateTime::CalendarValues DateTime::as_calendar_values() const {
-    CalendarValues cal;
-    
-    // Standard std::chrono::time_point only understands microsecond precision.
-    auto ns = repr_.time_since_epoch().count();
-    auto us = ns / 1000;
-    ns %= 1000;
-    std::chrono::time_point<std::chrono::system_clock> us_repr {std::chrono::microseconds(us)};
-    auto from_epoch = std::chrono::system_clock::to_time_t(us_repr);
-    struct tm t;
-    ::gmtime_r(&from_epoch, &t);
-    cal.year = t.tm_year + 1900;
-    cal.month = t.tm_mon + 1;
-    cal.day = t.tm_mday;
-    cal.hour = t.tm_hour;
-    cal.minute = t.tm_min;
-    cal.second = t.tm_sec;
-    cal.millisecond = (us / 1000) % 1000;
-    cal.microsecond = us % 1000;
-    cal.nanosecond = ns;
-    return cal;
+    auto ns = repr_.time_since_epoch();
+    return nanoseconds_from_epoch_to_calendar_values(ns);
   }
 
   DateTime DateTime::at(int64_t year, int32_t month, int64_t d, int64_t h, int64_t m, int64_t s, int64_t ms, int64_t us, int64_t ns) {
@@ -88,30 +140,12 @@ namespace wayward {
   }
 
   DateTime DateTime::at(const CalendarValues& cal) {
-    struct tm t = {0};
-    t.tm_year = cal.year - 1900;
-    t.tm_mon = cal.month - 1;
-    t.tm_mday = cal.day;
-    t.tm_hour = cal.hour;
-    t.tm_min = cal.minute;
-    t.tm_sec = cal.second;
+    return DateTime::Repr{calendar_values_to_nanoseconds_from_epoch(cal)};
+  }
 
-    int64_t microseconds_from_nanoseconds = cal.nanosecond / 1000;
-    int64_t nanoseconds = cal.nanosecond % 1000;
-    int64_t microseconds = cal.microsecond + microseconds_from_nanoseconds;
-    int64_t milliseconds_from_microseconds = microseconds / 1000;
-    microseconds %= 1000;
-    int64_t milliseconds = cal.millisecond + milliseconds_from_microseconds;
-    int64_t seconds_from_milliseconds = milliseconds / 1000;
-    t.tm_sec += seconds_from_milliseconds;
-    milliseconds %= 1000;
-
-    auto time_us = std::chrono::system_clock::from_time_t(::timegm(&t));
-    auto from_epoch_ns = std::chrono::nanoseconds{time_us.time_since_epoch().count() * 1000};
-    from_epoch_ns += std::chrono::nanoseconds{nanoseconds};
-    from_epoch_ns += std::chrono::microseconds{microseconds};
-    from_epoch_ns += std::chrono::milliseconds{milliseconds};
-    return DateTime::Repr{from_epoch_ns};
+  Seconds DateTime::unix_timestamp() const {
+    auto ns = repr_.time_since_epoch().count();
+    return Seconds{ns / 1000000000};
   }
 
   int64_t DateTime::year() const {
@@ -159,6 +193,16 @@ namespace wayward {
     return cal.nanosecond;
   }
 
+  std::string DateTime::strftime(const std::string& fmt) const {
+    struct tm t = nanoseconds_to_tm(repr_.time_since_epoch());
+    std::array<char, 1000> buffer;
+    size_t len = ::strftime(buffer.data(), buffer.size(), fmt.c_str(), &t);
+    return std::string(buffer.data(), len);
+  }
+
+  std::string DateTime::iso8601() const {
+    return strftime("%Y-%m-%d %H:%M:%S %z");
+  }
 
   bool DateTimeArithmetic<DateTimeInterval>::is_months(const DateTimeInterval& interval) {
     return interval.numerator() == Months::RatioToSeconds::num && interval.denominator() == Months::RatioToSeconds::den;
