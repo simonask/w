@@ -1,35 +1,11 @@
 #include <wayward/support/datetime.hpp>
-#include <wayward/support/datetime_private.hpp>
 
-#include <time.h>
+#include <ctime>
+#include <cassert>
 
 #include <array>
 
 namespace wayward {
-  namespace {
-    static __thread IClock* g_current_clock = nullptr;
-  }
-
-  IClock& clock() {
-    if (g_current_clock == nullptr) {
-      g_current_clock = &SystemClock::get();
-    }
-    return *g_current_clock;
-  }
-
-  void set_clock(IClock* cl) {
-    g_current_clock = cl;
-  }
-
-  SystemClock& SystemClock::get() {
-    static SystemClock instance;
-    return instance;
-  }
-
-  DateTime SystemClock::now() const {
-    return DateTime{std::chrono::system_clock::now()};
-  }
-
   DateTime DateTime::operator+(const DateTimeInterval& interval) const {
     DateTime copy = *this;
     copy += interval;
@@ -118,6 +94,39 @@ namespace wayward {
       cal.nanosecond = ns_rem;
       return cal;
     }
+
+    bool
+    is_leap_year(int64_t year) {
+      // It's leap year every 4 years, except every 100 years, but then again every 400 years.
+      // Source: http://en.wikipedia.org/wiki/Leap_year
+      return ((year % 4) == 0) && (((year % 100) != 0) || ((year % 400) == 0));
+    }
+
+    uint32_t
+    days_in_month(int64_t year, int64_t month) {
+      int64_t month_sign = month < 0 ? -1 : 1;
+
+      month *= month_sign; // abs
+      year += month_sign * ((month - 1) / 12);
+      month = ((month - 1) % 12) + 1;
+      month *= month_sign; // undo abs
+
+      switch (month) {
+        case 1: return 31;
+        case 2: return is_leap_year(year) ? 29 : 28;
+        case 3: return 31;
+        case 4: return 30;
+        case 5: return 31;
+        case 6: return 30;
+        case 7: return 31;
+        case 8: return 31;
+        case 9: return 30;
+        case 10: return 31;
+        case 11: return 30;
+        case 12: return 31;
+        default: assert(false); // Algorithm error.
+      }
+    }
   }
 
   DateTime::CalendarValues DateTime::as_calendar_values() const {
@@ -125,7 +134,7 @@ namespace wayward {
     return nanoseconds_from_epoch_to_calendar_values(ns);
   }
 
-  DateTime DateTime::at(int64_t year, int32_t month, int64_t d, int64_t h, int64_t m, int64_t s, int64_t ms, int64_t us, int64_t ns) {
+  DateTime DateTime::at(int32_t year, int32_t month, int32_t d, int32_t h, int32_t m, int32_t s, int32_t ms, int32_t us, int32_t ns) {
     CalendarValues cal;
     cal.year = year;
     cal.month = month;
@@ -148,47 +157,47 @@ namespace wayward {
     return Seconds{ns / 1000000000};
   }
 
-  int64_t DateTime::year() const {
+  int32_t DateTime::year() const {
     auto cal = as_calendar_values();
     return cal.year;
   }
 
-  int64_t DateTime::month() const {
+  int32_t DateTime::month() const {
     auto cal = as_calendar_values();
     return cal.month;
   }
 
-  int64_t DateTime::day() const {
+  int32_t DateTime::day() const {
     auto cal = as_calendar_values();
     return cal.day;
   }
 
-  int64_t DateTime::hour() const {
+  int32_t DateTime::hour() const {
     auto cal = as_calendar_values();
     return cal.hour;
   }
 
-  int64_t DateTime::minute() const {
+  int32_t DateTime::minute() const {
     auto cal = as_calendar_values();
     return cal.minute;
   }
 
-  int64_t DateTime::second() const {
+  int32_t DateTime::second() const {
     auto cal = as_calendar_values();
     return cal.second;
   }
 
-  int64_t DateTime::millisecond() const {
+  int32_t DateTime::millisecond() const {
     auto cal = as_calendar_values();
     return cal.millisecond;
   }
 
-  int64_t DateTime::microsecond() const {
+  int32_t DateTime::microsecond() const {
     auto cal = as_calendar_values();
     return cal.microsecond;
   }
 
-  int64_t DateTime::nanosecond() const {
+  int32_t DateTime::nanosecond() const {
     auto cal = as_calendar_values();
     return cal.nanosecond;
   }
@@ -234,5 +243,32 @@ namespace wayward {
       auto ns = Nanoseconds{whole_ms * 1000 * 1000 + whole_ns};
       t += ns;
     }
+  }
+
+  void DateTimeArithmetic<Years>::adjust(DateTime& t, Years by) {
+    DateTime::CalendarValues cal = t.as_calendar_values();
+    cal.year += by.repr_.count();
+
+    // If we're adding years from a leap year, we way end up with
+    // an off-by-one-day error.
+    uint32_t dim = days_in_month(cal.year, cal.month);
+    if (cal.day > dim) {
+      cal.day = dim;
+    }
+
+    t = DateTime::at(cal);
+  }
+
+  void DateTimeArithmetic<Months>::adjust(DateTime& t, Months by) {
+    DateTime::CalendarValues cal = t.as_calendar_values();
+    cal.month += by.repr_.count();
+
+    // Don't leak into next month.
+    uint32_t dim = days_in_month(cal.year, cal.month);
+    if (cal.day > dim) {
+      cal.day = dim;
+    }
+
+    t = DateTime::at(cal);
   }
 }

@@ -11,7 +11,8 @@ set(WAYWARD_SUPPORT_SOURCES
   wayward/support/uri.cpp
   wayward/support/node.cpp
   wayward/support/json.cpp
-  wayward/support/datetime.cpp
+  wayward/support/datetime/datetime.cpp
+  wayward/support/datetime/clock.cpp
 )
 
 set(WAYWARD_SOURCES
