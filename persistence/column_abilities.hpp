@@ -3,6 +3,7 @@
 #define PERSISTENCE_COLUMN_ABILITIES_HPP_INCLUDED
 
 #include <persistence/relational_algebra.hpp>
+#include <wayward/support/maybe.hpp>
 
 namespace persistence {
 
@@ -19,10 +20,10 @@ namespace persistence {
   template <typename Col, typename T>
   struct LiteralOrderingAbilities : LiteralEqualityAbilities<Col, T> {
     using Cond = relational_algebra::Condition;
-    Cond operator<(T lit) { return this->value() < relational_algebra::literal(std::move(lit)); }
-    Cond operator>(T lit) { return this->value() > relational_algebra::literal(std::move(lit)); }
-    Cond operator<=(T lit) { return this->value() <= relational_algebra::literal(std::move(lit)); }
-    Cond operator>=(T lit) { return this->value() >= relational_algebra::literal(std::move(lit)); }
+    Cond operator<(T lit) { return std::move(this->value()) < relational_algebra::literal(std::move(lit)); }
+    Cond operator>(T lit) { return std::move(this->value()) > relational_algebra::literal(std::move(lit)); }
+    Cond operator<=(T lit) { return std::move(this->value()) <= relational_algebra::literal(std::move(lit)); }
+    Cond operator>=(T lit) { return std::move(this->value()) >= relational_algebra::literal(std::move(lit)); }
 
   private:
     relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
@@ -72,7 +73,7 @@ namespace persistence {
 
   // All "Maybe<T>" fields have the abilities of T plus Nullable.
   template <typename Col, typename T>
-  struct ColumnAbilities<Col, Maybe<T>>: ColumnAbilities<Col, T>, NullableAbilities<Col, T> {};
+  struct ColumnAbilities<Col, wayward::Maybe<T>>: ColumnAbilities<Col, T>, NullableAbilities<Col, T> {};
 
   // Bind numeric abilities to everything that is a number.
   template <typename Col> struct ColumnAbilities<Col, std::int32_t>: NumericAbilities<Col, std::int32_t> {};
