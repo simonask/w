@@ -5,6 +5,8 @@ Persistence
 -----------
 
 - AssociationContext facility for handling circular references in records.
+- Projection joins.
+- Migrations.
 
 Wayward
 -------
