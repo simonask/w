@@ -128,6 +128,36 @@ namespace persistence {
     Condition  negate(Condition&& cond);
     SQL        sql(std::string sql);
 
+    template <typename T, typename Enable = void> struct RepresentAsLiteral;
+
+    template <typename T>
+    struct RepresentAsLiteral<T, typename std::enable_if<
+      (std::is_integral<T>::value && !std::is_same<T, bool>::value)
+      || std::is_floating_point<T>::value
+    >::type> {
+      static Value literal(T number) {
+        return Value {
+          // TODO: Fix this casting to double.
+          make_cloning_ptr(new ast::NumericLiteral{(double)number})
+        };
+      }
+    };
+
+    template <>
+    struct RepresentAsLiteral<std::string> {
+      static Value literal(std::string str) {
+        return Value {
+          make_cloning_ptr(new ast::StringLiteral{std::move(str)})
+        };
+      }
+    };
+
+
+    template <typename T>
+    Value literal(T lit) {
+      return RepresentAsLiteral<T>::literal(std::forward<T>(lit));
+    }
+
     template <typename... Args>
     Value aggregate(std::string func, Args&&... args) {
       std::array<Value, sizeof...(Args)> a = {{{std::move(args)}...}};
