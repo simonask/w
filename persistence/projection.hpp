@@ -4,6 +4,7 @@
 
 #include <persistence/result_set.hpp>
 #include <persistence/ast.hpp>
+#include <persistence/relational_algebra.hpp>
 #include <wayward/support/maybe.hpp>
 #include <wayward/support/format.hpp>
 #include <persistence/column_traits.hpp>
@@ -19,6 +20,28 @@ namespace persistence {
   using relational_algebra::SQL;
   using wayward::Maybe;
   using wayward::Nothing;
+
+  struct UnregisteredPropertyError : std::runtime_error {
+    UnregisteredPropertyError(std::string type_name) : std::runtime_error(nullptr) {
+      what_ = wayward::format("Attempted to use unregistered property on type {0}. Use property(member, column) in the PERSISTENCE block for the type to register the property.", type_name);
+    }
+    const char* what() const noexcept final { return what_.c_str(); }
+    std::string what_;
+  };
+
+  template <typename T, typename M> struct Column;
+
+  template <typename T, typename M>
+  Column<T,M> column(M T::*member) {
+    const RecordType<T>* t = get_type<T>();
+    Maybe<std::string> column = t->find_column_by_member_pointer(member);
+    if (column) {
+      return Column<T,M>{relational_algebra::column(t->relation(), std::move(*column))};
+    }
+    throw UnregisteredPropertyError(t->name());
+  }
+
+  using relational_algebra::column;
 
   template <typename T, typename M>
   struct Column : public ColumnAbilities<Column<T, M>, M>
@@ -129,7 +152,7 @@ namespace persistence {
   template <typename T>
   template <typename M>
   Projection<T> Projection<T>::order(Column<T, M> col) && {
-    return Projection<T>(std::move(proj).order(std::move(col.sql)), std::move(select_aliases_));
+    return Projection<T>(std::move(proj).order({std::move(col.sql)}), std::move(select_aliases_));
   }
 
   template <typename T>
@@ -203,26 +226,6 @@ namespace persistence {
   Projection<T> from() {
     return Projection<T>();
   }
-
-  struct UnregisteredPropertyError : std::runtime_error {
-    UnregisteredPropertyError(std::string type_name) : std::runtime_error(nullptr) {
-      what_ = wayward::format("Attempted to use unregistered property on type {0}. Use property(member, column) in the PERSISTENCE block for the type to register the property.", type_name);
-    }
-    const char* what() const noexcept final { return what_.c_str(); }
-    std::string what_;
-  };
-
-  template <typename T, typename M>
-  Column<T,M> column(M T::*member) {
-    const RecordType<T>* t = get_type<T>();
-    Maybe<std::string> column = t->find_column_by_member_pointer(member);
-    if (column) {
-      return Column<T,M>{relational_algebra::column(t->relation(), std::move(*column))};
-    }
-    throw UnregisteredPropertyError(t->name());
-  }
-
-  using relational_algebra::column;
 }
 
 #endif // PERSISTENCE_PROJECTION_HPP_INCLUDED

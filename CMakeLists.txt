@@ -38,6 +38,7 @@ set(PERSISTENCE_SOURCES
   persistence/primary_key.cpp
   persistence/relational_algebra.cpp
   persistence/types.cpp
+  persistence/datetime.cpp
 )
 
 add_library(wayward_support SHARED ${WAYWARD_SUPPORT_SOURCES})
