@@ -11,5 +11,5 @@ add_executable(blog
   blog.cpp
 )
 
-add_subdirectory("../.." wayward)
+add_subdirectory("../.." wayward.bin)
 target_link_libraries(blog wayward persistence)
