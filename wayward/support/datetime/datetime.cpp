@@ -6,6 +6,17 @@
 #include <array>
 
 namespace wayward {
+  constexpr char GetTimeUnitName<Years>::Value[];
+  constexpr char GetTimeUnitName<Months>::Value[];
+  constexpr char GetTimeUnitName<Weeks>::Value[];
+  constexpr char GetTimeUnitName<Days>::Value[];
+  constexpr char GetTimeUnitName<Hours>::Value[];
+  constexpr char GetTimeUnitName<Minutes>::Value[];
+  constexpr char GetTimeUnitName<Seconds>::Value[];
+  constexpr char GetTimeUnitName<Milliseconds>::Value[];
+  constexpr char GetTimeUnitName<Microseconds>::Value[];
+  constexpr char GetTimeUnitName<Nanoseconds>::Value[];
+
   DateTime DateTime::operator+(const DateTimeInterval& interval) const {
     DateTime copy = *this;
     copy += interval;

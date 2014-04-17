@@ -6,11 +6,17 @@ namespace wayward {
   void PrintTo(const wayward::DateTime& dt, std::ostream* os) {
     *os << dt.iso8601();
   }
+
+  template <typename T>
+  void PrintTo(DateTimeDuration<T> duration, std::ostream* os) {
+    *os << duration.repr_.count() << " " << GetTimeUnitName<DateTimeDuration<T>>::Value;
+  }
 }
 
 namespace {
   using wayward::DateTime;
   using wayward::DateTimeDuration;
+  using wayward::DateTimeInterval;
   using wayward::Nanoseconds;
   using wayward::Microseconds;
   using wayward::Milliseconds;
@@ -21,6 +27,7 @@ namespace {
   using wayward::Weeks;
   using wayward::Months;
   using wayward::Years;
+  using namespace wayward::units;
 
   TEST(DateTime, instantiates_now) {
     DateTime now = DateTime::now();
@@ -170,5 +177,13 @@ namespace {
   TEST(DateTime, treats_1980_as_leap_year) {
     auto date = DateTime::at(1980, 2, 29, 0, 0, 0);
     EXPECT_EQ(date.month(), 2);
+  }
+
+  TEST(DateTimeInterval, adds_seconds_and_minutes) {
+    DateTimeInterval seconds { 30_seconds };
+    DateTimeInterval minutes { 1_minute };
+    auto x = minutes + seconds;
+    auto expected = 90_seconds;
+    EXPECT_EQ(x, expected);
   }
 }

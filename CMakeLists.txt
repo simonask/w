@@ -13,6 +13,7 @@ set(WAYWARD_SUPPORT_SOURCES
   wayward/support/json.cpp
   wayward/support/datetime/datetime.cpp
   wayward/support/datetime/clock.cpp
+  wayward/support/datetime/interval.cpp
 )
 
 set(WAYWARD_SOURCES

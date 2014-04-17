@@ -3,6 +3,7 @@
 #define WAYWARD_SUPPORT_DATETIME_INTERVAL_HPP_INCLUDED
 
 #include <wayward/support/datetime/duration_units.hpp>
+#include <ostream>
 
 namespace wayward {
   struct DateTimeInterval {
@@ -23,7 +24,18 @@ namespace wayward {
     Microseconds microseconds() const;
     Nanoseconds nanoseconds() const;
 
+    bool operator==(const DateTimeInterval& other) const;
+    bool operator!=(const DateTimeInterval& other) const;
+    bool operator<(const DateTimeInterval& other) const;
+    bool operator>(const DateTimeInterval& other) const;
+    bool operator<=(const DateTimeInterval& other) const;
+    bool operator>=(const DateTimeInterval& other) const;
+
     DateTimeInterval operator-() const { DateTimeInterval copy = *this; copy.value_ = -copy.value_; return copy; }
+    DateTimeInterval operator+(const DateTimeInterval&) const;
+    DateTimeInterval operator-(const DateTimeInterval&) const;
+    DateTimeInterval operator*(double scalar) const;
+    DateTimeInterval operator/(double scalar) const;
     DateTimeInterval& operator+=(const DateTimeInterval& other);
     DateTimeInterval& operator-=(const DateTimeInterval& other);
     DateTimeInterval& operator*=(double scalar);
@@ -46,6 +58,8 @@ namespace wayward {
   , num_(T::period::num)
   , denom_(T::period::den)
   {}
+
+  std::ostream& operator<<(std::ostream&, const DateTimeInterval&);
 }
 
 #endif // WAYWARD_SUPPORT_DATETIME_INTERVAL_HPP_INCLUDED
