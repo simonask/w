@@ -42,7 +42,7 @@ namespace persistence {
   };
 
   template <typename T>
-  const BelongsToType<T>* build_type(const TypeIdentifier<BelongsToType<T>>*) {
+  const BelongsToType<T>* build_type(const TypeIdentifier<BelongsTo<T>>*) {
     static const auto p = new BelongsToType<T>;
     return p;
   }
