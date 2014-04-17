@@ -10,6 +10,7 @@
 #include "wayward/support/uri.hpp"
 #include "wayward/http.hpp"
 #include <wayward/support/format.hpp>
+#include <wayward/support/logger.hpp>
 
 #if !defined(WAYWARD_NO_SHORTHAND_NAMESPACE)
 namespace w = wayward;
@@ -85,6 +86,20 @@ namespace wayward {
     struct Private;
     std::unique_ptr<Private> priv;
   };
+
+  std::shared_ptr<ILogger> logger();
+  void set_logger(std::shared_ptr<ILogger>);
+
+  namespace log {
+    void debug(std::string tag, std::string message);
+    void debug(std::string message);
+    void info(std::string tag, std::string message);
+    void info(std::string message);
+    void warning(std::string tag, std::string message);
+    void warning(std::string message);
+    void error(std::string tag, std::string message);
+    void error(std::string message);
+  }
 }
 
 #endif /* end of include guard: SYMBOL */

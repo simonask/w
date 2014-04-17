@@ -103,7 +103,7 @@ namespace wayward {
       }
 
       if (app->config.log_requests) {
-        std::cout << req.method << " " << req.uri.path() << " " << (int)response.code << '\n';
+        log::info("w", wayward::format("{0} {1} {2}", req.method, req.uri.path(), (int)response.code));
       }
 
       evbuffer* body_buffer = evbuffer_new();
@@ -132,7 +132,11 @@ namespace wayward {
 
   int App::listen_and_serve(std::string address, int port) {
     int fd = evhttp_bind_socket(priv->http, address.c_str(), (u_short)port);
-    if (fd < 0) return fd;
+    if (fd < 0) {
+      log::error("w", "Could not bind to socket.");
+      return fd;
+    }
+    log::info("w", wayward::format("Listening for connections on {0}:{1}", address, port));
     return event_base_dispatch(priv->base);
   }
 

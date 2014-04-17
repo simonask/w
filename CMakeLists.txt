@@ -14,12 +14,14 @@ set(WAYWARD_SUPPORT_SOURCES
   wayward/support/datetime/datetime.cpp
   wayward/support/datetime/clock.cpp
   wayward/support/datetime/interval.cpp
+  wayward/support/logger.cpp
 )
 
 set(WAYWARD_SOURCES
   wayward/app.cpp
   wayward/render.cpp
   wayward/request.cpp
+  wayward/log.cpp
 )
 
 set(WAYWARD_TESTING_SOURCES
