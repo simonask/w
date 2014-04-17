@@ -5,6 +5,7 @@
 #include <wayward/support/datetime/clock.hpp>
 #include <wayward/support/datetime/duration_units.hpp>
 #include <wayward/support/datetime/interval.hpp>
+#include <wayward/support/datetime/timezone.hpp>
 
 #include <wayward/support/maybe.hpp>
 
@@ -22,10 +23,15 @@ namespace wayward {
     using Repr = std::chrono::time_point<Clock, std::chrono::nanoseconds>;
 
     DateTime() {}
-    DateTime(Repr repr) : repr_(std::move(repr)) {}
+    explicit DateTime(Repr repr) : repr_(repr) {}
+    DateTime(Repr repr, Timezone tz) : repr_(repr), timezone_(tz) {}
     operator Repr() const { return repr_; }
     Repr& r() { return repr_; }
     DateTime& operator=(const DateTime&) = default;
+
+    // Returns the same time in the UTC time zone.
+    DateTime utc() const;
+    Repr r_utc() const;
 
     template <typename T>
     DateTime operator+(DateTimeDuration<T> duration) {
@@ -55,12 +61,12 @@ namespace wayward {
 
     DateTimeInterval operator-(DateTime other);
 
-    bool operator==(const DateTime& other) const { return repr_ == other.repr_; }
-    bool operator!=(const DateTime& other) const { return repr_ != other.repr_; }
-    bool operator<(const DateTime& other)  const { return repr_ <  other.repr_; }
-    bool operator>(const DateTime& other)  const { return repr_ >  other.repr_; }
-    bool operator<=(const DateTime& other) const { return repr_ <= other.repr_; }
-    bool operator>=(const DateTime& other) const { return repr_ >= other.repr_; }
+    bool operator==(const DateTime& other) const { return r_utc() == other.r_utc(); }
+    bool operator!=(const DateTime& other) const { return r_utc() != other.r_utc(); }
+    bool operator<(const DateTime& other)  const { return r_utc() <  other.r_utc(); }
+    bool operator>(const DateTime& other)  const { return r_utc() >  other.r_utc(); }
+    bool operator<=(const DateTime& other) const { return r_utc() <= other.r_utc(); }
+    bool operator>=(const DateTime& other) const { return r_utc() >= other.r_utc(); }
 
     static DateTime now() { return clock().now(); }
 
@@ -103,10 +109,13 @@ namespace wayward {
     */
     static DateTime at(int32_t year, int32_t month, int32_t d, int32_t h, int32_t m, int32_t s, int32_t ms = 0, int32_t us = 0, int32_t ns = 0);
     static DateTime at(const CalendarValues& calendar_values);
+    static DateTime at(Timezone tz, int32_t year, int32_t month, int32_t d, int32_t h, int32_t m, int32_t s, int32_t ms = 0, int32_t us = 0, int32_t ns = 0);
+    static DateTime at(Timezone tz, const CalendarValues& calendar_values);
 
     static Maybe<DateTime> strptime(const std::string& input, const std::string& format);
 
     Repr repr_;
+    Timezone timezone_ = Timezone::UTC;
   };
 
   template <>

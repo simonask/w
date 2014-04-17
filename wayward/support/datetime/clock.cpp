@@ -2,6 +2,8 @@
 #include <wayward/support/datetime/datetime.hpp>
 #include <wayward/support/datetime/private.hpp>
 
+#include <sys/time.h>
+
 namespace wayward {
   namespace {
     static __thread IClock* g_current_clock = nullptr;
@@ -26,6 +28,17 @@ namespace wayward {
   }
 
   DateTime SystemClock::now() const {
-    return DateTime{std::chrono::system_clock::now()};
+    // Note: Not using std::chrono::system_clock::now(), because it doesn't understand timezones.
+    struct timeval tv;
+    struct timezone tz;
+    ::gettimeofday(&tv, &tz);
+
+    Timezone timezone;
+    timezone.utc_offset = Seconds{tz.tz_minuteswest * 60};
+    timezone.is_dst = tz.tz_dsttime != 0;
+
+    auto ns = std::chrono::seconds{tv.tv_sec} + std::chrono::microseconds{tv.tv_usec};
+
+    return DateTime{DateTime::Repr{ns}};
   }
 }

@@ -6,6 +6,10 @@
 #include <array>
 
 namespace wayward {
+  using namespace units;
+
+  const Timezone Timezone::UTC = Timezone();
+
   constexpr char GetTimeUnitName<Years>::Value[];
   constexpr char GetTimeUnitName<Months>::Value[];
   constexpr char GetTimeUnitName<Weeks>::Value[];
@@ -16,6 +20,18 @@ namespace wayward {
   constexpr char GetTimeUnitName<Milliseconds>::Value[];
   constexpr char GetTimeUnitName<Microseconds>::Value[];
   constexpr char GetTimeUnitName<Nanoseconds>::Value[];
+
+  DateTime::Repr DateTime::r_utc() const {
+    auto adjusted = repr_ + timezone_.utc_offset.repr_;
+    if (timezone_.is_dst) {
+      adjusted -= Hours{1}.repr_;
+    }
+    return adjusted;
+  }
+
+  DateTime DateTime::utc() const {
+    return DateTime{r_utc(), Timezone::UTC};
+  }
 
   DateTime DateTime::operator+(const DateTimeInterval& interval) const {
     DateTime copy = *this;
@@ -163,7 +179,7 @@ namespace wayward {
   }
 
   DateTime DateTime::at(const CalendarValues& cal) {
-    return DateTime::Repr{calendar_values_to_nanoseconds_from_epoch(cal)};
+    return DateTime{DateTime::Repr{calendar_values_to_nanoseconds_from_epoch(cal)}};
   }
 
   Seconds DateTime::unix_timestamp() const {
@@ -221,6 +237,17 @@ namespace wayward {
     std::array<char, 1000> buffer;
     size_t len = ::strftime(buffer.data(), buffer.size(), fmt.c_str(), &t);
     return std::string(buffer.data(), len);
+  }
+
+  Maybe<DateTime> DateTime::strptime(const std::string& input, const std::string& fmt) {
+    struct tm t;
+    char* r = ::strptime(input.c_str(), fmt.c_str(), &t);
+    if (r == nullptr || r == input.c_str()) {
+      // Conversion failed.
+      return Nothing;
+    } else {
+      return DateTime::at(tm_to_calendar_values(t));
+    }
   }
 
   std::string DateTime::iso8601() const {

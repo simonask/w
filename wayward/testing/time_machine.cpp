@@ -1,5 +1,5 @@
 #include <wayward/testing/time_machine.hpp>
-#include <wayward/support/datetime_private.hpp>
+#include <wayward/support/datetime/private.hpp>
 #include <wayward/support/maybe.hpp>
 
 namespace wayward {
