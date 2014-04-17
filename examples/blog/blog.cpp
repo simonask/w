@@ -14,7 +14,7 @@ namespace app {
 
 int main(int argc, char const *argv[])
 {
-  p::setup("postgresql://wayward_examples:@wayward_examples_blog");
+  p::setup("postgresql://wayward_examples@localhost/wayward_examples_blog");
 
   w::App app;
   app.get("/", app::index);
