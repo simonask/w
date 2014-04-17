@@ -2,6 +2,8 @@
 #ifndef WAYWARD_SUPPORT_DATETIME_INTERVAL_HPP_INCLUDED
 #define WAYWARD_SUPPORT_DATETIME_INTERVAL_HPP_INCLUDED
 
+#include <wayward/support/datetime/duration_units.hpp>
+
 namespace wayward {
   struct DateTimeInterval {
     DateTimeInterval() {}

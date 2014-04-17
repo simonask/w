@@ -29,12 +29,48 @@ namespace wayward {
   }
 
   namespace {
+    bool
+    is_leap_year(int64_t year) {
+      // It's leap year every 4 years, except every 100 years, but then again every 400 years.
+      // Source: http://en.wikipedia.org/wiki/Leap_year
+      return ((year % 4) == 0) && (((year % 100) != 0) || ((year % 400) == 0));
+    }
+
+    uint32_t
+    days_in_month(int64_t year, int64_t month) {
+      int64_t month_sign = month < 0 ? -1 : 1;
+
+      month *= month_sign; // abs
+      year += month_sign * ((month - 1) / 12);
+      month = ((month - 1) % 12) + 1;
+      month *= month_sign; // undo abs
+
+      switch (month) {
+        case 1: return 31;
+        case 2: return is_leap_year(year) ? 29 : 28;
+        case 3: return 31;
+        case 4: return 30;
+        case 5: return 31;
+        case 6: return 30;
+        case 7: return 31;
+        case 8: return 31;
+        case 9: return 30;
+        case 10: return 31;
+        case 11: return 30;
+        case 12: return 31;
+        default: assert(false); // Algorithm error.
+      }
+    }
+
     struct tm
     calendar_values_to_tm(const DateTime::CalendarValues& cal) {
       struct tm t = {0};
       t.tm_year = cal.year - 1900;
+
+      // TODO: timegm gives an error when wrapping old dates, for some weird reason
       t.tm_mon = cal.month - 1;
       t.tm_mday = cal.day;
+
       t.tm_hour = cal.hour;
       t.tm_min = cal.minute;
       t.tm_sec = cal.second;
@@ -93,39 +129,6 @@ namespace wayward {
       cal.microsecond = us % 1000;
       cal.nanosecond = ns_rem;
       return cal;
-    }
-
-    bool
-    is_leap_year(int64_t year) {
-      // It's leap year every 4 years, except every 100 years, but then again every 400 years.
-      // Source: http://en.wikipedia.org/wiki/Leap_year
-      return ((year % 4) == 0) && (((year % 100) != 0) || ((year % 400) == 0));
-    }
-
-    uint32_t
-    days_in_month(int64_t year, int64_t month) {
-      int64_t month_sign = month < 0 ? -1 : 1;
-
-      month *= month_sign; // abs
-      year += month_sign * ((month - 1) / 12);
-      month = ((month - 1) % 12) + 1;
-      month *= month_sign; // undo abs
-
-      switch (month) {
-        case 1: return 31;
-        case 2: return is_leap_year(year) ? 29 : 28;
-        case 3: return 31;
-        case 4: return 30;
-        case 5: return 31;
-        case 6: return 30;
-        case 7: return 31;
-        case 8: return 31;
-        case 9: return 30;
-        case 10: return 31;
-        case 11: return 30;
-        case 12: return 31;
-        default: assert(false); // Algorithm error.
-      }
     }
   }
 
