@@ -3,8 +3,7 @@
 using p::PrimaryKey;
 using p::HasMany;
 using p::BelongsTo;
-using p::DateTime;
-using p::Scope;
+using w::DateTime;
 
 struct User;
 struct Post;
