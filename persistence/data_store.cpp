@@ -4,22 +4,42 @@
 #include <persistence/adapter.hpp>
 
 #include <map>
+#include <iostream>
 
 namespace persistence {
   using wayward::URI;
+  using wayward::ILogger;
 
   DataStore::DataStore(std::string name, std::string connection_url, const DataStoreOptions& options)
   : name(std::move(name))
   , connection_url(connection_url)
+  , logger_(options.logger)
   , pool(make_limited_connection_pool(adapter_or_error(connection_url), connection_url, options.pool_size))
   {}
 
   AcquiredConnection DataStore::acquire() {
-    return pool->acquire();
+    auto conn = pool->acquire();
+    conn.set_logger(logger());
+    return conn;
   }
 
   Maybe<AcquiredConnection> DataStore::try_acquire() {
-    return pool->try_acquire();
+    auto mconn = pool->try_acquire();
+    if (mconn) {
+      mconn->set_logger(logger());
+    }
+    return mconn;
+  }
+
+  const std::shared_ptr<ILogger>& DataStore::logger() {
+    if (logger_ == nullptr) {
+      logger_ = wayward::make_logger<wayward::ConsoleStreamLogger>(std::cout, std::cerr);
+    }
+    return logger_;
+  }
+
+  void DataStore::set_logger(std::shared_ptr<ILogger> l) {
+    logger_ = std::move(l);
   }
 
   const IAdapter& DataStore::adapter_or_error(const std::string& connection_url) {

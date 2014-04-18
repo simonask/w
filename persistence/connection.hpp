@@ -4,10 +4,17 @@
 
 #include <persistence/result_set.hpp>
 
+#include <memory>
+
+namespace wayward {
+  struct ILogger;
+}
+
 namespace persistence {
   namespace ast {
     struct IQuery;
   }
+  using wayward::ILogger;
 
   struct IConnection {
     virtual ~IConnection() {}
@@ -16,6 +23,9 @@ namespace persistence {
     virtual std::string database() const = 0;
     virtual std::string user() const = 0;
     virtual std::string host() const = 0;
+
+    virtual std::shared_ptr<ILogger> logger() const = 0;
+    virtual void set_logger(std::shared_ptr<ILogger> l) = 0;
 
     // Queries
     virtual std::string to_sql(const ast::IQuery& q) = 0;

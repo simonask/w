@@ -3,6 +3,7 @@
 #define PERSISTENCE_CONNECTION_RETAINER_HPP_INCLUDED
 
 #include <persistence/connection_provider.hpp>
+#include <wayward/support/error.hpp>
 
 #include <vector>
 #include <string>
@@ -36,8 +37,8 @@ namespace persistence {
     std::unique_ptr<Impl> impl;
   };
 
-  struct ConnectionRetainerError : std::runtime_error {
-    ConnectionRetainerError(const std::string& message) : std::runtime_error(message) {}
+  struct ConnectionRetainerError : wayward::Error {
+    ConnectionRetainerError(const std::string& message) : wayward::Error(message) {}
   };
 }
 

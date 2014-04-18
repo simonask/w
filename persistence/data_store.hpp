@@ -5,14 +5,19 @@
 #include <string>
 
 #include <persistence/connection_pool.hpp>
+#include <wayward/support/logger.hpp>
+#include <wayward/support/error.hpp>
 
 namespace persistence {
+  using wayward::ILogger;
+
   struct DataStoreOptions {
     size_t pool_size = 5;
+    std::shared_ptr<ILogger> logger = nullptr; // Uses console output if left as null.
   };
 
-  struct DataStoreError : std::runtime_error {
-    DataStoreError(const std::string& message) : std::runtime_error(message) {}
+  struct DataStoreError : wayward::Error {
+    DataStoreError(const std::string& message) : wayward::Error(message) {}
   };
 
   class DataStore {
@@ -21,9 +26,13 @@ namespace persistence {
 
     AcquiredConnection acquire();
     Maybe<AcquiredConnection> try_acquire();
+
+    const std::shared_ptr<ILogger>& logger();
+    void set_logger(std::shared_ptr<ILogger>);
   private:
     std::string name;
     std::string connection_url;
+    std::shared_ptr<ILogger> logger_;
     std::unique_ptr<IConnectionPool> pool;
 
     const IAdapter& adapter_or_error(const std::string& connection_url);

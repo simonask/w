@@ -4,16 +4,19 @@
 
 #include <persistence/connection.hpp>
 #include <persistence/adapter.hpp>
-#include <stdexcept>
+
+#include <wayward/support/error.hpp>
 
 namespace persistence {
-  struct PostgreSQLError : std::runtime_error {
-    PostgreSQLError(const std::string& message) : std::runtime_error{message} {}
+  struct PostgreSQLError : wayward::Error {
+    PostgreSQLError(const std::string& message) : wayward::Error{message} {}
   };
 
   struct PostgreSQLAdapter : IAdapter {
     std::unique_ptr<IConnection> connect(std::string connection_string) const final;
   };
+
+  using wayward::ILogger;
 
   struct PostgreSQLConnection : IConnection {
     virtual ~PostgreSQLConnection();
@@ -22,6 +25,8 @@ namespace persistence {
     std::string database() const final;
     std::string user() const final;
     std::string host() const final;
+    std::shared_ptr<ILogger> logger() const final;
+    void set_logger(std::shared_ptr<ILogger> l) final;
 
     // Querying
     std::string sanitize(std::string sql_fragment) final;

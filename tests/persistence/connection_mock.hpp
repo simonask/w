@@ -11,11 +11,15 @@
 
 namespace persistence {
   namespace test {
+    using wayward::ILogger;
+
     struct ConnectionMock : persistence::IConnection {
       // Info
       std::string database() const override { return database_; }
       std::string user() const override { return user_; }
       std::string host() const override { return host_; }
+      std::shared_ptr<ILogger> logger() const override { return logger_; }
+      void set_logger(std::shared_ptr<ILogger> l) override { logger_ = std::move(l); }
 
       // Queries
       std::string to_sql(const ast::IQuery& q) override;
@@ -27,6 +31,7 @@ namespace persistence {
       std::string user_;
       std::string host_;
       ResultSetMock results_;
+      std::shared_ptr<ILogger> logger_;
 
       size_t sanitize_called = 0;
       size_t to_sql_called   = 0;

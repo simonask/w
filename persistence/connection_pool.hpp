@@ -4,6 +4,7 @@
 
 #include <persistence/connection.hpp>
 #include <wayward/support/maybe.hpp>
+#include <wayward/support/error.hpp>
 
 namespace persistence {
   struct IConnectionPool;
@@ -25,6 +26,8 @@ namespace persistence {
     std::string sanitize(std::string input) final { return connection_->sanitize(std::move(input)); }
     std::unique_ptr<IResultSet> execute(std::string sql) final { return connection_->execute(std::move(sql)); }
     std::unique_ptr<IResultSet> execute(const ast::IQuery& query) final { return connection_->execute(query); }
+    std::shared_ptr<ILogger> logger() const final { return connection_->logger(); }
+    void set_logger(std::shared_ptr<ILogger> l) final { connection_->set_logger(std::move(l)); }
   private:
     IConnectionPool* pool_ = nullptr;
     IConnection* connection_ = nullptr;
@@ -40,8 +43,8 @@ namespace persistence {
     virtual void release(IConnection*) = 0;
   };
 
-  struct ConnectionPoolError : std::runtime_error {
-    ConnectionPoolError(const std::string& str) : std::runtime_error(str) {}
+  struct ConnectionPoolError : wayward::Error {
+    ConnectionPoolError(const std::string& str) : wayward::Error(str) {}
   };
 
   std::unique_ptr<IConnectionPool> make_limited_connection_pool(const IAdapter& adapter, std::string connection_string, size_t pool_size);

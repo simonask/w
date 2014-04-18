@@ -3,12 +3,14 @@
 #include <libpq-fe.h>
 
 #include <wayward/support/format.hpp>
+#include <wayward/support/logger.hpp>
 #include <sstream>
 #include <iostream>
 
 namespace persistence {
   struct PostgreSQLConnection::Private {
     PGconn* conn = nullptr;
+    std::shared_ptr<ILogger> logger;
   };
 
   static const AdapterRegistrar<PostgreSQLAdapter> registrar_ = AdapterRegistrar<PostgreSQLAdapter>("postgresql");
@@ -82,9 +84,20 @@ namespace persistence {
     return PQhost(priv->conn);
   }
 
+  std::shared_ptr<ILogger>
+  PostgreSQLConnection::logger() const {
+    return priv->logger;
+  }
+
+  void
+  PostgreSQLConnection::set_logger(std::shared_ptr<ILogger> l) {
+    priv->logger = std::move(l);
+  }
+
   std::unique_ptr<IResultSet>
   PostgreSQLConnection::execute(std::string sql) {
     PGresult* results = PQexec(priv->conn, sql.c_str());
+    priv->logger->log(wayward::Severity::Debug, "SQL", sql);
     switch (PQresultStatus(results)) {
       case PGRES_EMPTY_QUERY:
       case PGRES_COMMAND_OK:
