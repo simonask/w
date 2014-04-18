@@ -3,6 +3,67 @@
 #include <utility>
 
 namespace wayward {
+  Years DateTimeInterval::years() const {
+    double seconds = value_ * num_ / denom_;
+    using Ratio = Years::RatioToSeconds;
+    return Years{(int64_t)(seconds * Ratio::num / Ratio::den)};
+  }
+
+  Months DateTimeInterval::months() const {
+    double seconds = value_ * num_ / denom_;
+    using Ratio = Months::RatioToSeconds;
+    return Months{(int64_t)(seconds * Ratio::num / Ratio::den)};
+  }
+
+  Weeks DateTimeInterval::weeks() const {
+    double seconds = value_ * num_ / denom_;
+    using Ratio = Weeks::RatioToSeconds;
+    return Weeks{(int64_t)(seconds * Ratio::num / Ratio::den)};
+  }
+
+  Days DateTimeInterval::days() const {
+    double seconds = value_ * num_ / denom_;
+    using Ratio = Days::RatioToSeconds;
+    return Days{(int64_t)(seconds * Ratio::num / Ratio::den)};
+  }
+
+  Hours DateTimeInterval::hours() const {
+    double seconds = value_ * num_ / denom_;
+    using Ratio = Hours::RatioToSeconds;
+    return Hours{(int64_t)(seconds * Ratio::num / Ratio::den)};
+  }
+
+  Minutes DateTimeInterval::minutes() const {
+    double seconds = value_ * num_ / denom_;
+    using Ratio = Minutes::RatioToSeconds;
+    return Minutes{(int64_t)(seconds * Ratio::num / Ratio::den)};
+  }
+
+  Seconds DateTimeInterval::seconds() const {
+    double seconds = value_ * num_ / denom_;
+    using Ratio = Seconds::RatioToSeconds;
+    return Seconds{(int64_t)(seconds * Ratio::num / Ratio::den)};
+  }
+
+  Milliseconds DateTimeInterval::milliseconds() const {
+    double seconds = value_ * num_ / denom_;
+    using Ratio = Milliseconds::RatioToSeconds;
+    return Milliseconds{(int64_t)(seconds * Ratio::num / Ratio::den)};
+  }
+
+  Microseconds DateTimeInterval::microseconds() const {
+    double seconds = value_ * num_ / denom_;
+    using Ratio = Microseconds::RatioToSeconds;
+    return Microseconds{(int64_t)(seconds * Ratio::num / Ratio::den)};
+  }
+
+  Nanoseconds DateTimeInterval::nanoseconds() const {
+    double seconds = value_ * num_ / denom_;
+    using Ratio = Nanoseconds::RatioToSeconds;
+    return Nanoseconds{(int64_t)(seconds * Ratio::num / Ratio::den)};
+  }
+
+
   namespace {
     std::pair<double, double>
     common_unit(const DateTimeInterval& a, const DateTimeInterval& b, uint32_t& out_numerator, uint32_t& out_denominator) {
