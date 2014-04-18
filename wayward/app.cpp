@@ -110,6 +110,7 @@ namespace wayward {
 
       Response r;
       r.code = HTTPStatusCode::InternalServerError;
+      r.headers["Content-Type"] = "text/plain";
       r.body = wayward::format("Internal Server Error\n\n{0}: {1}\n\nBacktrace:\n{2}", type, what, backtrace);
       return std::move(r);
     }
