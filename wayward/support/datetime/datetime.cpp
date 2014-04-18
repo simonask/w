@@ -45,6 +45,10 @@ namespace wayward {
     return copy;
   }
 
+  DateTimeInterval DateTime::operator-(DateTime other) const {
+    return Nanoseconds{repr_ - other.repr_};
+  }
+
   DateTime& DateTime::operator+=(const DateTimeInterval& interval) {
     DateTimeArithmetic<DateTimeInterval>::adjust(*this, interval);
     return *this;

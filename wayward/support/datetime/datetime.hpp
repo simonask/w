@@ -59,7 +59,7 @@ namespace wayward {
     DateTime& operator+=(const DateTimeInterval& interval);
     DateTime& operator-=(const DateTimeInterval& interval);
 
-    DateTimeInterval operator-(DateTime other);
+    DateTimeInterval operator-(DateTime other) const;
 
     bool operator==(const DateTime& other) const { return r_utc() == other.r_utc(); }
     bool operator!=(const DateTime& other) const { return r_utc() != other.r_utc(); }
