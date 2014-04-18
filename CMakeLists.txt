@@ -15,6 +15,7 @@ set(WAYWARD_SUPPORT_SOURCES
   wayward/support/datetime/clock.cpp
   wayward/support/datetime/interval.cpp
   wayward/support/logger.cpp
+  wayward/support/error.cpp
 )
 
 set(WAYWARD_SOURCES

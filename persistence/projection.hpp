@@ -13,6 +13,8 @@
 #include <persistence/connection.hpp>
 #include <persistence/connection_provider.hpp>
 
+#include <wayward/support/error.hpp>
+
 #include <functional>
 
 namespace persistence {
@@ -21,12 +23,10 @@ namespace persistence {
   using wayward::Maybe;
   using wayward::Nothing;
 
-  struct UnregisteredPropertyError : std::runtime_error {
-    UnregisteredPropertyError(std::string type_name) : std::runtime_error(nullptr) {
-      what_ = wayward::format("Attempted to use unregistered property on type {0}. Use property(member, column) in the PERSISTENCE block for the type to register the property.", type_name);
-    }
-    const char* what() const noexcept final { return what_.c_str(); }
-    std::string what_;
+  struct UnregisteredPropertyError : wayward::Error {
+    UnregisteredPropertyError(std::string type_name)
+    : wayward::Error(wayward::format("Attempted to use unregistered property on type {0}. Use property(member, column) in the PERSISTENCE block for the type to register the property.", type_name))
+    {}
   };
 
   template <typename T, typename M> struct Column;

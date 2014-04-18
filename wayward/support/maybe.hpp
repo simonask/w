@@ -3,11 +3,12 @@
 #define WAYWARD_SUPPORT_MAYBE_HPP_INCLUDED
 
 #include <type_traits>
-#include <stdexcept>
+
+#include <wayward/support/error.hpp>
 
 namespace wayward {
-  struct EmptyMaybeDereference : std::runtime_error {
-    EmptyMaybeDereference() : std::runtime_error("Attempt to dereference a Maybe object that was empty.") {}
+  struct EmptyMaybeDereference : Error {
+    EmptyMaybeDereference() : Error("Attempt to dereference a Maybe object that was empty.") {}
   };
 
   struct NothingType { constexpr NothingType() {} };

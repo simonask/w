@@ -3,11 +3,11 @@
 #define WAYWARD_SUPPORT_JSON_HPP_INCLUDED
 
 #include <wayward/support/node.hpp>
-#include <stdexcept>
+#include <wayward/support/error.hpp>
 
 namespace wayward {
-  struct JSONSerializationError : std::runtime_error {
-    JSONSerializationError(const char* what) : std::runtime_error(what) {}
+  struct JSONSerializationError : Error {
+    JSONSerializationError(const char* what) : Error(what) {}
   };
 
   enum class JSONMode {

@@ -12,6 +12,7 @@ set(wayward_support_test_CASES
   wayward/support/format_test
   wayward/support/json_test
   wayward/support/datetime_test
+  wayward/support/error_test
 )
 set(wayward_support_test_LINK wayward_support)
 

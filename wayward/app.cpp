@@ -1,15 +1,20 @@
 #include "wayward/w.hpp"
 #include "wayward/private.hpp"
+#include <wayward/support/datetime.hpp>
 
-#include <map>
-#include <vector>
 #include <event2/event.h>
 #include <event2/http.h>
 #include <event2/keyvalq_struct.h>
 #include <event2/buffer.h>
+
+#include <cxxabi.h>
+
+#include <map>
+#include <vector>
 #include <sstream>
 #include <iostream>
 #include <regex>
+#include <exception>
 
 namespace wayward {
   namespace {
@@ -79,7 +84,43 @@ namespace wayward {
       respond_to_request(r, req);
     }
 
+    Response respond_to_error(std::exception_ptr exception, const std::type_info* exception_type) {
+      std::string type = demangle_symbol(exception_type->name());
+      std::string what = "(unfamiliar exception type)";
+      std::string backtrace = "(unsupported exception type)";
+
+      try {
+        std::rethrow_exception(exception);
+      }
+      catch (const wayward::Error& error) {
+        what = error.what();
+        std::stringstream backtrace_ss;
+        for (auto& line: error.backtrace()) {
+          backtrace_ss << line << "\n";
+        }
+        backtrace = backtrace_ss.str();
+      }
+      catch (const std::exception& error) {
+        what = error.what();
+      }
+      catch (...) {
+      }
+
+      log::error("w", wayward::format("{0}: {1}\nBACKTRACE:\n{2}", type, what, backtrace));
+
+      Response r;
+      r.code = HTTPStatusCode::InternalServerError;
+      r.body = wayward::format("Internal Server Error\n\n{0}: {1}\n\nBacktrace:\n{2}", type, what, backtrace);
+      return std::move(r);
+    }
+
     void respond_to_request(Request& req, evhttp_request* handle) {
+      auto t0 = DateTime::now();
+
+      if (app->config.log_requests) {
+        log::debug("w", wayward::format("Starting {0} {1}", req.method, req.uri.path()));
+      }
+
       auto handlers_it = method_handlers.find(req.method);
       Handler* h = nullptr;
       if (handlers_it != method_handlers.end()) {
@@ -92,7 +133,11 @@ namespace wayward {
 
       Response response;
       if (h) {
-        response = h->handler(req);
+        try {
+          response = h->handler(req);
+        } catch (...) {
+          response = respond_to_error(std::current_exception(), __cxxabiv1::__cxa_current_exception_type());
+        }
       } else {
         response = wayward::not_found();
       }
@@ -102,14 +147,18 @@ namespace wayward {
         evhttp_add_header(headers, pair.first.c_str(), pair.second.c_str());
       }
 
-      if (app->config.log_requests) {
-        log::info("w", wayward::format("{0} {1} {2}", req.method, req.uri.path(), (int)response.code));
-      }
-
       evbuffer* body_buffer = evbuffer_new();
       evbuffer_add(body_buffer, response.body.c_str(), response.body.size());
       evhttp_send_reply(handle, (int)response.code, response.reason.size() ? response.reason.c_str() : nullptr, body_buffer);
       evbuffer_free(body_buffer);
+
+      auto t1 = DateTime::now();
+      if (app->config.log_requests) {
+        auto time_elapsed = t1 - t0;
+        double us = time_elapsed.microseconds().repr_.count();
+        double ms = us / 1000.0;
+        log::info("w", wayward::format("Finished {0} {1} with {2} in {3} ms", req.method, req.uri.path(), (int)response.code, ms));
+      }
     }
   };
 
