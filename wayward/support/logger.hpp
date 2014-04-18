@@ -42,7 +42,7 @@ namespace wayward {
     void set_format(std::string fmt) { format_ = std::move(fmt); }
   private:
     Severity level_ = Severity::Debug;
-    std::string format_ = "{start_color}{severity}: [{timestamp}] <{tag}>{end_color} {message}\n";
+    std::string format_ = "{start_color}[{timestamp}] <{tag}> {severity}:{end_color} {message}\n";
   };
 
   struct FileLogger : FormattedLogger {

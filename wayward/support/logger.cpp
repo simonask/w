@@ -42,8 +42,11 @@ namespace wayward {
       TerminalGreen,
       TerminalMagenta,
       TerminalCyan,
+      TerminalBlack,
+      TerminalMagenta,
+      TerminalCyan,
     };
-    static size_t NumCycleColors = sizeof(CycleColors) / sizeof(const char*);
+    static size_t NumCycleColors = 7;
   }
 
   void ConsoleStreamLogger::log(Severity severity, std::string tag, std::string message) {
@@ -52,7 +55,6 @@ namespace wayward {
       const char* end_color = "";
 
       if (colorize_) {
-        uint32_t hash;
         if (severity == Severity::Error) {
           start_color = TerminalRed;
         } else {
