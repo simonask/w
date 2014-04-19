@@ -17,6 +17,7 @@ namespace persistence {
   };
 
   using wayward::ILogger;
+  struct Private;
 
   struct PostgreSQLConnection : IConnection {
     virtual ~PostgreSQLConnection();

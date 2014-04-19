@@ -58,6 +58,9 @@ namespace wayward {
   }
 
   #else
+  std::string demangle_symbol(const std::string& mangled) {
+    return mangled;
+  }
   #warning No backtrace support for this platform.
   std::vector<std::string> current_backtrace() {
     return {};

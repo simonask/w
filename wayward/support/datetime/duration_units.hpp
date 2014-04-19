@@ -101,31 +101,31 @@ namespace wayward {
   template <> struct GetTimeUnitName<Nanoseconds> { static constexpr const char Value[] = "nanoseconds"; };
 
   namespace units {
-    inline Years        operator""_years(unsigned long long years)     { return Years{(int64_t)years}; }
-    inline Months       operator""_months(unsigned long long months)   { return Months{(int64_t)months}; }
-    inline Weeks        operator""_weeks(unsigned long long weeks)     { return Weeks{(int64_t)weeks}; }
-    inline Days         operator""_days(unsigned long long days)       { return Days{(int64_t)days}; }
-    inline Hours        operator""_hours(unsigned long long hours)     { return Hours{(int64_t)hours}; }
-    inline Minutes      operator""_minutes(unsigned long long minutes) { return Minutes{(int64_t)minutes}; }
-    inline Seconds      operator""_seconds(unsigned long long seconds) { return Seconds{(int64_t)seconds}; }
-    inline Milliseconds operator""_milliseconds(unsigned long long ms) { return Milliseconds{(int64_t)ms}; }
-    inline Milliseconds operator""_ms(unsigned long long ms)           { return Milliseconds{(int64_t)ms}; }
-    inline Microseconds operator""_microseconds(unsigned long long us) { return Microseconds{(int64_t)us}; }
-    inline Microseconds operator""_us(unsigned long long us)           { return Microseconds{(int64_t)us}; }
-    inline Nanoseconds  operator""_nanoseconds(unsigned long long ns)  { return Nanoseconds{(int64_t)ns}; }
-    inline Nanoseconds  operator""_ns(unsigned long long ns)           { return Nanoseconds{(int64_t)ns}; }
+    inline Years        operator"" _years(unsigned long long years)     { return Years{(int64_t)years}; }
+    inline Months       operator"" _months(unsigned long long months)   { return Months{(int64_t)months}; }
+    inline Weeks        operator"" _weeks(unsigned long long weeks)     { return Weeks{(int64_t)weeks}; }
+    inline Days         operator"" _days(unsigned long long days)       { return Days{(int64_t)days}; }
+    inline Hours        operator"" _hours(unsigned long long hours)     { return Hours{(int64_t)hours}; }
+    inline Minutes      operator"" _minutes(unsigned long long minutes) { return Minutes{(int64_t)minutes}; }
+    inline Seconds      operator"" _seconds(unsigned long long seconds) { return Seconds{(int64_t)seconds}; }
+    inline Milliseconds operator"" _milliseconds(unsigned long long ms) { return Milliseconds{(int64_t)ms}; }
+    inline Milliseconds operator"" _ms(unsigned long long ms)           { return Milliseconds{(int64_t)ms}; }
+    inline Microseconds operator"" _microseconds(unsigned long long us) { return Microseconds{(int64_t)us}; }
+    inline Microseconds operator"" _us(unsigned long long us)           { return Microseconds{(int64_t)us}; }
+    inline Nanoseconds  operator"" _nanoseconds(unsigned long long ns)  { return Nanoseconds{(int64_t)ns}; }
+    inline Nanoseconds  operator"" _ns(unsigned long long ns)           { return Nanoseconds{(int64_t)ns}; }
 
     // Singular versions:
-    inline Years        operator""_year(unsigned long long years)      { return Years{(int64_t)years}; }
-    inline Months       operator""_month(unsigned long long months)    { return Months{(int64_t)months}; }
-    inline Weeks        operator""_week(unsigned long long weeks)      { return Weeks{(int64_t)weeks}; }
-    inline Days         operator""_day(unsigned long long days)        { return Days{(int64_t)days}; }
-    inline Hours        operator""_hour(unsigned long long hours)      { return Hours{(int64_t)hours}; }
-    inline Minutes      operator""_minute(unsigned long long minutes)  { return Minutes{(int64_t)minutes}; }
-    inline Seconds      operator""_second(unsigned long long seconds)  { return Seconds{(int64_t)seconds}; }
-    inline Milliseconds operator""_millisecond(unsigned long long ms)  { return Milliseconds{(int64_t)ms}; }
-    inline Microseconds operator""_microsecond(unsigned long long us)  { return Microseconds{(int64_t)us}; }
-    inline Nanoseconds  operator""_nanosecond(unsigned long long ns)   { return Nanoseconds{(int64_t)ns}; }
+    inline Years        operator"" _year(unsigned long long years)      { return Years{(int64_t)years}; }
+    inline Months       operator"" _month(unsigned long long months)    { return Months{(int64_t)months}; }
+    inline Weeks        operator"" _week(unsigned long long weeks)      { return Weeks{(int64_t)weeks}; }
+    inline Days         operator"" _day(unsigned long long days)        { return Days{(int64_t)days}; }
+    inline Hours        operator"" _hour(unsigned long long hours)      { return Hours{(int64_t)hours}; }
+    inline Minutes      operator"" _minute(unsigned long long minutes)  { return Minutes{(int64_t)minutes}; }
+    inline Seconds      operator"" _second(unsigned long long seconds)  { return Seconds{(int64_t)seconds}; }
+    inline Milliseconds operator"" _millisecond(unsigned long long ms)  { return Milliseconds{(int64_t)ms}; }
+    inline Microseconds operator"" _microsecond(unsigned long long us)  { return Microseconds{(int64_t)us}; }
+    inline Nanoseconds  operator"" _nanosecond(unsigned long long ns)   { return Nanoseconds{(int64_t)ns}; }
   }
 }
 
