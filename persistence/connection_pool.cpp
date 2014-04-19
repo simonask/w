@@ -2,6 +2,7 @@
 #include <persistence/adapter.hpp>
 #include <wayward/support/format.hpp>
 
+#include <condition_variable>
 #include <mutex>
 
 namespace persistence {

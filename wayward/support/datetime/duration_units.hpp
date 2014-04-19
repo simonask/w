@@ -81,9 +81,9 @@ namespace wayward {
   using Months       = DateTimeDuration<std::chrono::duration<int64_t, std::ratio<30*24*60*60>>>;
   using Weeks        = DateTimeDuration<std::chrono::duration<int64_t, std::ratio<7*24*60*60>>>;
   using Days         = DateTimeDuration<std::chrono::duration<int64_t, std::ratio<24*60*60>>>;
-  using Hours        = DateTimeDuration<std::chrono::hours>;
-  using Minutes      = DateTimeDuration<std::chrono::minutes>;
-  using Seconds      = DateTimeDuration<std::chrono::seconds>;
+  using Hours        = DateTimeDuration<std::chrono::duration<int64_t, std::ratio<60*60>>>;
+  using Minutes      = DateTimeDuration<std::chrono::duration<int64_t, std::ratio<60>>>;
+  using Seconds      = DateTimeDuration<std::chrono::duration<int64_t, std::ratio<1>>>;
   using Milliseconds = DateTimeDuration<std::chrono::milliseconds>;
   using Microseconds = DateTimeDuration<std::chrono::microseconds>;
   using Nanoseconds  = DateTimeDuration<std::chrono::nanoseconds>;
