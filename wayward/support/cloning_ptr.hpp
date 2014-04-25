@@ -11,6 +11,13 @@ namespace wayward {
 
   template <typename T, typename Base = ICloneable>
   struct Cloneable : Base {
+    using Self_ = Cloneable<T, Base>;
+
+    template <typename... Args>
+    Cloneable(Args&&... args) : Base(std::forward<Args>(args)...) {}
+    Cloneable(const Self_&) = default;
+    Cloneable(Self_&&) = default;
+
     Base* clone() const { return new T(dynamic_cast<const T&>(*this)); }
   };
 

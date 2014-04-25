@@ -26,8 +26,8 @@ namespace {
 
     std::string string_value;
     Maybe<std::string> nullable_string_value;
-    int32_t int32_value;
-    double double_value;
+    int32_t int32_value = -1;
+    double double_value = -1;
   };
 
   PERSISTENCE(Foo) {
@@ -39,7 +39,9 @@ namespace {
   }
 
   struct ProjectionTest : ::testing::Test {
+    virtual ~ProjectionTest() {}
     AdapterRegistrar<AdapterMock> adapter_registrar_ = "test";
+    Context context;
 
     ConnectionMock& connection() {
       return adapter_registrar_.adapter_.connection;
@@ -51,8 +53,6 @@ namespace {
   };
 
   struct ProjectionReturningSimpleColumns : ProjectionTest {
-    Context context;
-
     void SetUp() override {
       ProjectionTest::SetUp();
 
@@ -77,6 +77,7 @@ namespace {
       EXPECT_EQ(foo.id, counter+1);
       ++counter;
     });
+    EXPECT_NE(0, counter);
   }
 
   TEST_F(ProjectionReturningSimpleColumns, maps_string_value) {
@@ -86,6 +87,7 @@ namespace {
       EXPECT_EQ(foo.string_value, *connection().results_.rows_.at(counter).at(1));
       ++counter;
     });
+    EXPECT_NE(0, counter);
   }
 
   TEST_F(ProjectionReturningSimpleColumns, maps_nullable_string_value) {
@@ -95,6 +97,7 @@ namespace {
       EXPECT_EQ((bool)foo.nullable_string_value, (bool)connection().results_.rows_.at(counter).at(2));
       ++counter;
     });
+    EXPECT_NE(0, counter);
   }
 
   TEST_F(ProjectionReturningSimpleColumns, maps_int32_value) {
@@ -108,6 +111,7 @@ namespace {
       EXPECT_EQ(foo.int32_value, n);
       ++counter;
     });
+    EXPECT_NE(0, counter);
   }
 
   TEST_F(ProjectionReturningSimpleColumns, maps_double_value) {
@@ -121,6 +125,7 @@ namespace {
       EXPECT_EQ(foo.double_value, n);
       ++counter;
     });
+    EXPECT_NE(0, counter);
   }
 
   using persistence::BelongsTo;
@@ -159,8 +164,6 @@ namespace {
   namespace w = wayward;
 
   struct ProjectionReturningArticlesWithUsers : ProjectionTest {
-    Context context;
-
     void SetUp() override {
       ProjectionTest::SetUp();
 
