@@ -15,6 +15,7 @@ namespace {
   using wayward::Nothing;
   using persistence::from;
   using persistence::column;
+  using persistence::Context;
 
   using persistence::AdapterRegistrar;
   using persistence::test::ConnectionMock;
@@ -37,7 +38,7 @@ namespace {
     property(&Foo::double_value, "double_value");
   }
 
-  struct ProjectionWithConnectionMock : ::testing::Test {
+  struct ProjectionTest : ::testing::Test {
     AdapterRegistrar<AdapterMock> adapter_registrar_ = "test";
 
     ConnectionMock& connection() {
@@ -46,6 +47,14 @@ namespace {
 
     void SetUp() override {
       persistence::setup("test://test");
+    }
+  };
+
+  struct ProjectionReturningSimpleColumns : ProjectionTest {
+    Context context;
+
+    void SetUp() override {
+      ProjectionTest::SetUp();
 
       connection().results_.columns_ = {"t0_c0", "t0_c1", "t0_c2", "t0_c3", "t0_c4"};
       for (size_t i = 0; i < 5; ++i) {
@@ -61,8 +70,8 @@ namespace {
     }
   };
 
-  TEST_F(ProjectionWithConnectionMock, maps_primary_key) {
-    auto q = from<Foo>();
+  TEST_F(ProjectionReturningSimpleColumns, maps_primary_key) {
+    auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       EXPECT_EQ(foo.id, counter+1);
@@ -70,8 +79,8 @@ namespace {
     });
   }
 
-  TEST_F(ProjectionWithConnectionMock, maps_string_value) {
-    auto q = from<Foo>();
+  TEST_F(ProjectionReturningSimpleColumns, maps_string_value) {
+    auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       EXPECT_EQ(foo.string_value, *connection().results_.rows_.at(counter).at(1));
@@ -79,8 +88,8 @@ namespace {
     });
   }
 
-  TEST_F(ProjectionWithConnectionMock, maps_nullable_string_value) {
-    auto q = from<Foo>();
+  TEST_F(ProjectionReturningSimpleColumns, maps_nullable_string_value) {
+    auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       EXPECT_EQ((bool)foo.nullable_string_value, (bool)connection().results_.rows_.at(counter).at(2));
@@ -88,8 +97,8 @@ namespace {
     });
   }
 
-  TEST_F(ProjectionWithConnectionMock, maps_int32_value) {
-    auto q = from<Foo>();
+  TEST_F(ProjectionReturningSimpleColumns, maps_int32_value) {
+    auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       std::stringstream ss;
@@ -101,8 +110,8 @@ namespace {
     });
   }
 
-  TEST_F(ProjectionWithConnectionMock, maps_double_value) {
-    auto q = from<Foo>();
+  TEST_F(ProjectionReturningSimpleColumns, maps_double_value) {
+    auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       std::stringstream ss;
@@ -113,4 +122,77 @@ namespace {
       ++counter;
     });
   }
+
+  using persistence::BelongsTo;
+  using persistence::HasMany;
+
+  struct User;
+
+  struct Article {
+    PrimaryKey id;
+    std::string title;
+    std::string text;
+    BelongsTo<User> author;
+  };
+
+  struct User {
+    PrimaryKey id;
+    std::string name;
+    HasMany<Article> articles;
+    BelongsTo<User> supervisor;
+  };
+
+  PERSISTENCE(Article) {
+    property(&Article::id, "id");
+    property(&Article::title, "title");
+    property(&Article::text, "text");
+    belongs_to(&Article::author, "author_id");
+  }
+
+  PERSISTENCE(User) {
+    property(&User::id, "id");
+    property(&User::name, "name");
+    has_many(&User::articles, "author_id");
+    belongs_to(&User::supervisor, "supervisor_id");
+  }
+
+  namespace w = wayward;
+
+  struct ProjectionReturningArticlesWithUsers : ProjectionTest {
+    Context context;
+
+    void SetUp() override {
+      ProjectionTest::SetUp();
+
+      connection().results_.columns_ = {"t0_c0", "t0_c1", "t0_c2", "t0_c3", "t1_c0", "t1_c1"};
+      for (size_t i = 0; i < 5; ++i) {
+        std::vector<Maybe<std::string>> row {
+          w::format("{0}", i+1), // Article::id
+          w::format("Article {0}", i+1), // Article::title
+          w::format("Text for article {0}.", i+1), // Article::text
+          w::format("{0}", i+100), // Article::author_id
+          w::format("{0}", i+100), // User::id
+          w::format("User {0}", i+100), // User::name
+          w::format("{0}", i+101) // User::supervisor_id
+        };
+        connection().results_.rows_.push_back(std::move(row));
+      }
+    }
+  };
+
+  TEST_F(ProjectionReturningArticlesWithUsers, joins_simple_belongs_to) {
+    auto articles = from<Article>(context).inner_join(&Article::author);
+  }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, uses_simple_join_in_conditions) {
+    auto articles = from<Article>(context).inner_join(&Article::author).where(column(&User::name).ilike("foo"));
+  }
+
+  // TEST_F(ProjectionReturningArticlesWithUsers, joins_with_self) {
+  //   auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su");
+  // }
+
+  // TEST_F(ProjectionReturningArticlesWithUsers, refers_to_self_join_in_conditions) {
+  //   auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su").where(column("su", "name").ilike("foo"));
+  // }
 }

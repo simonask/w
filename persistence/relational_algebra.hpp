@@ -34,6 +34,8 @@ namespace persistence {
       Value(Value&&) = default;
       Value(const char* sql);
       Value(std::string sql);
+      Value& operator=(Value&&) = default;
+      Value& operator=(const Value&) = default;
 
       // Unary conditions:
       Condition is_null() &&;
@@ -95,6 +97,7 @@ namespace persistence {
     };
 
     struct Projection {
+      Projection() : query(new ast::SelectQuery) {}
       explicit Projection(std::string relation);
       Projection(const Projection&) = default;
       Projection(Projection&&) = default;
@@ -105,11 +108,12 @@ namespace persistence {
       Projection order(std::vector<Ordering>) &&;
       Projection reverse_order(bool reverse = true) const&;
       Projection reverse_order(bool reverse = true) &&;
-      Projection cross_join(std::string relation, std::string alias, Condition on) &&;
-      Projection inner_join(std::string relation, std::string alias, Condition on) &&;
-      Projection left_join(std::string relation, std::string alias, Condition on) &&;
-      Projection right_join(std::string relation, std::string alias, Condition on) &&;
-      Projection full_join(std::string relation, std::string alias, Condition on) &&;
+      Projection join(std::string relation, std::string alias, Condition on, ast::Join::Type) &&;
+      Projection cross_join(std::string relation, std::string alias, Condition on) && { return std::move(*this).join(std::move(relation), std::move(alias), std::move(on), ast::Join::Cross); }
+      Projection inner_join(std::string relation, std::string alias, Condition on) && { return std::move(*this).join(std::move(relation), std::move(alias), std::move(on), ast::Join::Inner); }
+      Projection left_join(std::string relation, std::string alias, Condition on) &&  { return std::move(*this).join(std::move(relation), std::move(alias), std::move(on), ast::Join::LeftOuter); }
+      Projection right_join(std::string relation, std::string alias, Condition on) && { return std::move(*this).join(std::move(relation), std::move(alias), std::move(on), ast::Join::RightOuter); }
+      Projection full_join(std::string relation, std::string alias, Condition on) &&  { return std::move(*this).join(std::move(relation), std::move(alias), std::move(on), ast::Join::FullOuter); }
       Projection limit(size_t n) const&;
       Projection limit(size_t n) &&;
       Projection offset(size_t n) const&;

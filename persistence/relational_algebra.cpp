@@ -60,6 +60,14 @@ namespace persistence {
       })};
     }
 
+    Condition Value::ilike(std::string literal) && {
+      return Condition{make_cloning_ptr(new ast::BinaryCondition{
+        std::move(value),
+        make_cloning_ptr(new ast::StringLiteral{literal}),
+        ast::BinaryCondition::ILike
+      })};
+    }
+
     Condition Value::operator==(Value&& other) && {
       return Condition{make_cloning_ptr(new ast::BinaryCondition{
         std::move(value),
@@ -182,9 +190,9 @@ namespace persistence {
       return std::move(p).select(std::move(selects));
     }
 
-    Projection Projection::left_join(std::string relation, std::string as, Condition on) && {
+    Projection Projection::join(std::string relation, std::string as, Condition on, ast::Join::Type type) && {
       query->joins.push_back(make_cloning_ptr(new ast::Join{
-        ast::Join::LeftOuter,
+        type,
         std::move(relation),
         std::move(as),
         std::move(on.cond)

@@ -4,7 +4,8 @@
 
 #include <cstdint>
 #include <persistence/type.hpp>
-#include <persistence/projection.hpp>
+#include <persistence/column_abilities.hpp>
+#include <persistence/result_set.hpp>
 
 namespace persistence {
   using int64 = std::int64_t;
