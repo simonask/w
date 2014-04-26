@@ -14,6 +14,7 @@
 #include <persistence/connection_provider.hpp>
 #include <persistence/belongs_to.hpp>
 #include <persistence/context.hpp>
+#include <persistence/type_list.hpp>
 
 #include <wayward/support/error.hpp>
 
@@ -36,30 +37,6 @@ namespace persistence {
   template <typename... Relations> struct Joins;
 
   template <typename T, typename Jx = Joins<>> struct Projection;
-
-  template <typename... Tx> struct TypeList {};
-
-  template <typename T, typename TL> struct Contains;
-  template <typename T>
-  struct Contains<T, TypeList<>> {
-    static constexpr bool Value = false;
-  };
-  template <typename T, typename Head, typename... Rest>
-  struct Contains<T, TypeList<Head, Rest...>> {
-    static constexpr bool Value = std::is_same<T, Head>::value || Contains<T, TypeList<Rest...>>::Value;
-  };
-
-  template <typename T, typename TL, size_t I = 0> struct IndexOf;
-  template <typename T, size_t I>
-  struct IndexOf<T, TypeList<>, I> {}; // Does not exist.
-  template <typename T, size_t I, typename... Rest>
-  struct IndexOf<T, TypeList<T, Rest...>, I> {
-    static constexpr size_t Value = I;
-  };
-  template <typename T, size_t I, typename Head, typename... Rest>
-  struct IndexOf<T, TypeList<Head, Rest...>, I> {
-    static constexpr size_t Value = IndexOf<T, TypeList<Rest...>, I + 1>::Value;
-  };
 
   template <typename Type, typename ColumnType>
   struct Column : ColumnAbilities<Column<Type, ColumnType>, ColumnType> {
@@ -217,7 +194,12 @@ namespace persistence {
     }
 
     // Common operations:
-    std::string to_sql() const;
+    std::string to_sql() {
+      update_select_expressions();
+      auto conn = current_connection_provider().acquire_connection_for_data_store(get_type<Primary>()->data_store());
+      return conn.to_sql(*p_.query);
+    }
+
     size_t count() const;
     void each(std::function<void(std::string)> callback); // TODO: TypedRow type.
 
@@ -273,15 +255,15 @@ namespace persistence {
     // Association Joins:
     template <typename Owner, typename Association>
     SelfJoining<Association> inner_join(BelongsTo<Association> Owner::*assoc) && {
-      return inner_join(assoc, wayward::format("t{0}", q_.entry_points_.size()));
+      return inner_join(assoc, get_type<Association>()->relation());
     }
     template <typename Owner, typename Association>
     SelfJoining<Association> left_outer_join(BelongsTo<Association> Owner::*assoc) && {
-      return left_outer_join(assoc, wayward::format("t{0}", q_.entry_points_.size()));
+      return left_outer_join(assoc, get_type<Association>()->relation());
     }
     template <typename Owner, typename Association>
     SelfJoining<Association> right_outer_join(BelongsTo<Association> Owner::*assoc) && {
-      return right_outer_join(assoc, wayward::format("t{0}", q_.entry_points_.size()));
+      return right_outer_join(assoc, get_type<Association>()->relation());
     }
 
     template <typename Owner, typename Association>
@@ -377,12 +359,6 @@ namespace persistence {
       }
     }
 
-    std::string to_sql() {
-      update_select_expressions();
-      auto conn = current_connection_provider().acquire_connection_for_data_store(get_type<Primary>()->data_store());
-      return conn.to_sql(*p_.query);
-    }
-
     void materialize() {
       if (materialized_ == nullptr) {
         update_select_expressions();
@@ -414,7 +390,7 @@ namespace persistence {
         }
       }
 
-      p_.select(std::move(selects));
+      p_ = std::move(p_).select(std::move(selects));
     }
 
     // Things that can't be copied:
