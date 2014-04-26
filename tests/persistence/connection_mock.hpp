@@ -30,7 +30,7 @@ namespace persistence {
       std::string database_;
       std::string user_;
       std::string host_;
-      ResultSetMock results_;
+      std::shared_ptr<ResultSetMock> results_;
       std::shared_ptr<ILogger> logger_;
 
       size_t sanitize_called = 0;
@@ -75,7 +75,7 @@ namespace persistence {
     }
 
     inline std::unique_ptr<IResultSet> ConnectionMock::execute_impl(std::string sql) {
-      return std::unique_ptr<IResultSet>(new ResultSetMock(results_));
+      return std::unique_ptr<IResultSet>(new ResultSetMock(*results_));
     }
   }
 }

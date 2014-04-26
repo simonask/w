@@ -43,8 +43,8 @@ namespace {
     AdapterRegistrar<AdapterMock> adapter_registrar_ = "test";
     Context context;
 
-    ConnectionMock& connection() {
-      return adapter_registrar_.adapter_.connection;
+    persistence::test::ResultSetMock& results() {
+      return *adapter_registrar_.adapter_.result_set_;
     }
 
     void SetUp() override {
@@ -65,7 +65,7 @@ namespace {
           wayward::format("{0}", (int32_t)(i*2)),
           wayward::format("{0}", ((double)i * 123.4))
         };
-        connection().results_.rows_.push_back(std::move(row));
+        results().rows_.push_back(std::move(row));
       }
     }
   };
@@ -84,7 +84,7 @@ namespace {
     auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
-      EXPECT_EQ(foo.string_value, *connection().results_.rows_.at(counter).at(1));
+      EXPECT_EQ(foo.string_value, *results().rows_.at(counter).at(1));
       ++counter;
     });
     EXPECT_NE(0, counter);
@@ -94,7 +94,7 @@ namespace {
     auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
-      EXPECT_EQ((bool)foo.nullable_string_value, (bool)connection().results_.rows_.at(counter).at(2));
+      EXPECT_EQ((bool)foo.nullable_string_value, (bool)results().rows_.at(counter).at(2));
       ++counter;
     });
     EXPECT_NE(0, counter);
@@ -105,7 +105,7 @@ namespace {
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       std::stringstream ss;
-      ss.str(*connection().results_.rows_.at(counter).at(3));
+      ss.str(*results().rows_.at(counter).at(3));
       int32_t n;
       ss >> n;
       EXPECT_EQ(foo.int32_value, n);
@@ -119,7 +119,7 @@ namespace {
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       std::stringstream ss;
-      ss.str(*connection().results_.rows_.at(counter).at(4));
+      ss.str(*results().rows_.at(counter).at(4));
       double n;
       ss >> n;
       EXPECT_EQ(foo.double_value, n);
@@ -167,7 +167,7 @@ namespace {
     void SetUp() override {
       ProjectionTest::SetUp();
 
-      connection().results_.columns_ = {"t0_c0", "t0_c1", "t0_c2", "t0_c3", "t1_c0", "t1_c1"};
+      results().columns_ = {"t0_c0", "t0_c1", "t0_c2", "t0_c3", "t1_c0", "t1_c1"};
       for (size_t i = 0; i < 5; ++i) {
         std::vector<Maybe<std::string>> row {
           w::format("{0}", i+1), // Article::id
@@ -178,7 +178,7 @@ namespace {
           w::format("User {0}", i+100), // User::name
           w::format("{0}", i+101) // User::supervisor_id
         };
-        connection().results_.rows_.push_back(std::move(row));
+        results().rows_.push_back(std::move(row));
       }
     }
   };
