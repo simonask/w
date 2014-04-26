@@ -167,7 +167,7 @@ namespace {
     void SetUp() override {
       ProjectionTest::SetUp();
 
-      results().columns_ = {"articles_id", "articles_title", "articles_text", "articles_author_id", "users_name", "users_supervisor_id"};
+      results().columns_ = {"articles_id", "articles_title", "articles_text", "articles_author_id", "users_id", "users_name", "users_supervisor_id"};
       for (size_t i = 0; i < 5; ++i) {
         std::vector<Maybe<std::string>> row {
           w::format("{0}", i+1), // Article::id
@@ -185,6 +185,13 @@ namespace {
 
   TEST_F(ProjectionReturningArticlesWithUsers, joins_simple_belongs_to) {
     auto articles = from<Article>(context).inner_join(&Article::author);
+    size_t counter = 0;
+    articles.each([&](Article& article) {
+      EXPECT_EQ(wayward::format("Article {0}", counter+1), article.title);
+      EXPECT_NE(article.author, nullptr);
+      EXPECT_EQ(wayward::format("User {0}", counter+100), article.author->name);
+      ++counter;
+    });
   }
 
   TEST_F(ProjectionReturningArticlesWithUsers, uses_simple_join_in_conditions) {
