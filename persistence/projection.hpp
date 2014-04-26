@@ -128,11 +128,11 @@ namespace persistence {
     void rebuild_column_aliases() final {
       if (column_aliases_.size()) {
         column_aliases_.clear();
-        auto record_type = get_type<T>();
-        for (auto& property: record_type->properties_) {
-          auto alias = wayward::format("{0}_{1}", this->relation_alias(), property->column());
-          column_aliases_.push_back(std::make_pair(property.get(), std::move(alias)));
-        }
+      }
+      auto record_type = get_type<T>();
+      for (auto& property: record_type->properties_) {
+        auto alias = wayward::format("{0}_{1}", this->relation_alias(), property->column());
+        column_aliases_.push_back(std::make_pair(property.get(), std::move(alias)));
       }
     }
 

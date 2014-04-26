@@ -56,7 +56,7 @@ namespace {
     void SetUp() override {
       ProjectionTest::SetUp();
 
-      connection().results_.columns_ = {"t0_c0", "t0_c1", "t0_c2", "t0_c3", "t0_c4"};
+      results().columns_ = {"foos_id", "foos_string_value", "foos_nullable_string_value", "foos_int32_value", "foos_double_value"};
       for (size_t i = 0; i < 5; ++i) {
         std::vector<Maybe<std::string>> row {
           wayward::format("{0}", i+1),
@@ -167,7 +167,7 @@ namespace {
     void SetUp() override {
       ProjectionTest::SetUp();
 
-      results().columns_ = {"t0_c0", "t0_c1", "t0_c2", "t0_c3", "t1_c0", "t1_c1"};
+      results().columns_ = {"articles_id", "articles_title", "articles_text", "articles_author_id", "users_name", "users_supervisor_id"};
       for (size_t i = 0; i < 5; ++i) {
         std::vector<Maybe<std::string>> row {
           w::format("{0}", i+1), // Article::id
