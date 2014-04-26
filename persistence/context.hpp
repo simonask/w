@@ -57,8 +57,10 @@ namespace persistence {
   };
 
   Context::~Context() {
-    if (sentinel_.use_count() > 1) {
-      throw LifetimeError(wayward::format("A RecordPtr outlived the context holding the record. Check that you aren't saving RecordPtr in global state."));
+    clear(); // Clear first to delete any RecordPtrs in associations.
+    auto count = sentinel_.use_count() - 1;
+    if (count > 0) {
+      throw LifetimeError(wayward::format("{0} RecordPtr{1} outlived the context holding the record. Check that you aren't saving RecordPtr in global state.", count, (count == 1) ? "" : "s"));
     }
   }
 }
