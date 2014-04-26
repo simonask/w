@@ -14,6 +14,11 @@ namespace persistence {
     RecordPtr<AssociatedType> ptr_;
     PrimaryKey id;
 
+    bool operator==(const RecordPtr<AssociatedType>& rhs) const { return ptr_ == rhs; }
+    bool operator!=(const RecordPtr<AssociatedType>& rhs) const { return ptr_ != rhs; }
+
+    AssociatedType* operator->() const { return ptr_.get(); } // TODO: Populate on-demand
+
     // ISingularAssociationTo<> interface
     void populate(RecordPtr<AssociatedType> ptr) final {
       ptr_ = std::move(ptr);
