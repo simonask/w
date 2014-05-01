@@ -40,42 +40,65 @@ namespace persistence {
 
   template <typename Type, typename ColumnType>
   struct Column : ColumnAbilities<Column<Type, ColumnType>, ColumnType> {
+    std::string column_name;
+    Maybe<std::string> explicit_alias;
+
     Column(ColumnType Type::*member) {
       const RecordType<Type>* t = get_type<Type>();
       Maybe<std::string> column = t->find_column_by_member_pointer(member);
       if (column) {
-        sql = relational_algebra::column(t->relation(), std::move(*column));
+        column_name = *column;
       } else {
         throw UnregisteredPropertyError(t->name());
       }
     }
 
-    explicit Column(std::string column_name) {
+    Column(std::string relation_alias, ColumnType Type::*member) : explicit_alias(std::move(relation_alias)) {
       const RecordType<Type>* t = get_type<Type>();
-      auto property = t->find_property_by_column_name(column_name);
-      if (property == nullptr) {
-        // TODO: Issue a warning?
+      Maybe<std::string> column = t->find_column_by_member_pointer(member);
+      if (column) {
+        column_name = *column;
+      } else {
+        throw UnregisteredPropertyError(t->name());
       }
-      sql = relational_algebra::column(t->relation(), std::move(column_name));
     }
 
-    Column(std::string relation_alias, std::string column_name) {
-      const RecordType<Type>* t = get_type<Type>();
-      auto property = t->find_property_by_column_name(column_name);
-      if (property == nullptr) {
-        // TODO: Issue a warning?
+    Column(std::string column_name) : column_name(std::move(column_name)) {}
+    Column(std::string relation_alias, std::string column_name) : column_name(std::move(column_name)), explicit_alias(std::move(relation_alias)) {}
+
+    relational_algebra::Value value() const& {
+      if (explicit_alias) {
+        return relational_algebra::column(*explicit_alias, column_name);
+      } else {
+        return relational_algebra::column(reinterpret_cast<ast::SymbolicRelation>(get_type<Type>()), column_name);
       }
-      sql = relational_algebra::column(std::move(relation_alias), std::move(column_name));
     }
 
-    relational_algebra::Value sql;
+    relational_algebra::Value value() && {
+      if (explicit_alias) {
+        return relational_algebra::column(std::move(*explicit_alias), std::move(column_name));
+      } else {
+        return relational_algebra::column(reinterpret_cast<ast::SymbolicRelation>(get_type<Type>()), std::move(column_name));
+      }
+    }
   };
 
   template <typename Type, typename ColumnType>
   Column<Type, ColumnType> column(ColumnType Type::*member) {
     return Column<Type, ColumnType>(member);
   }
-  using relational_algebra::column;
+  template <typename Type, typename ColumnType>
+  Column<Type, ColumnType> column(std::string alias, ColumnType Type::*member) {
+    return Column<Type, ColumnType>(std::move(alias), member);
+  }
+  template <typename Type, typename ColumnType>
+  Column<Type, ColumnType> column(std::string column) {
+    return Column<Type, ColumnType>(std::move(column));
+  }
+  template <typename Type, typename ColumnType>
+  Column<Type, ColumnType> column(std::string alias, std::string column) {
+    return Column<Type, ColumnType>(std::move(alias), std::move(column));
+  }
 
   struct AssociationTypeMismatchError : wayward::Error {
     AssociationTypeMismatchError(std::string msg) : Error(std::move(msg)) {}
@@ -253,7 +276,7 @@ namespace persistence {
     template <typename Table, typename T>
     Self order(Column<Table, T> column) && {
       static_assert(Contains<Table, TypesInProjection>::Value, "The specified order column belongs to a type that isn't part of this projection.");
-
+      return replace_p(std::move(p_).order(column(reinterpret_cast<ast::SymbolicRelation>(get_type<Table>()), column)));
     }
 
     template <typename T>
@@ -363,7 +386,9 @@ namespace persistence {
       std::string relation = target_type->relation();
 
       // Build the condition with the relational algebra DSL:
-      auto cond = (column(with_alias, target_type->primary_key()->column()) == column(source_alias, association->foreign_key()));
+      auto lhs = relational_algebra::column(source_alias, association->foreign_key());
+      auto rhs = relational_algebra::column(with_alias, target_type->primary_key()->column());
+      auto cond = (std::move(lhs) == std::move(rhs));
 
       // Combine it all to a join:
       switch (type) {

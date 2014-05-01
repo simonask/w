@@ -10,23 +10,23 @@ namespace persistence {
   template <typename Col, typename T>
   struct LiteralEqualityAbilities {
     using Cond = relational_algebra::Condition;
-    Cond operator==(T lit) { return std::move(this->value()) == relational_algebra::literal(std::move(lit)); }
-    Cond operator!=(T lit) { return std::move(this->value()) != relational_algebra::literal(std::move(lit)); }
+    Cond operator==(T lit) && { return std::move(*this).value() == relational_algebra::literal(std::move(lit)); }
+    Cond operator!=(T lit) && { return std::move(*this).value() != relational_algebra::literal(std::move(lit)); }
 
   private:
-    relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
+    relational_algebra::Value value() && { return static_cast<Col*>(this)->value(); }
   };
 
   template <typename Col, typename T>
   struct LiteralOrderingAbilities : LiteralEqualityAbilities<Col, T> {
     using Cond = relational_algebra::Condition;
-    Cond operator<(T lit) { return std::move(this->value()) < relational_algebra::literal(std::move(lit)); }
-    Cond operator>(T lit) { return std::move(this->value()) > relational_algebra::literal(std::move(lit)); }
-    Cond operator<=(T lit) { return std::move(this->value()) <= relational_algebra::literal(std::move(lit)); }
-    Cond operator>=(T lit) { return std::move(this->value()) >= relational_algebra::literal(std::move(lit)); }
+    Cond operator<(T lit) { return std::move(*this).value() < relational_algebra::literal(std::move(lit)); }
+    Cond operator>(T lit) { return std::move(*this).value() > relational_algebra::literal(std::move(lit)); }
+    Cond operator<=(T lit) { return std::move(*this).value() <= relational_algebra::literal(std::move(lit)); }
+    Cond operator>=(T lit) { return std::move(*this).value() >= relational_algebra::literal(std::move(lit)); }
 
   private:
-    relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
+    relational_algebra::Value value() && { return static_cast<Col*>(this)->value(); }
   };
 
   template <typename Col, typename T>
@@ -36,36 +36,36 @@ namespace persistence {
   struct StringAbilities : LiteralEqualityAbilities<Col, std::string> {
     using Cond = relational_algebra::Condition;
 
-    Cond like(std::string cmp) { return std::move(this->value()).like(std::move(cmp)); }
-    Cond ilike(std::string cmp) { return std::move(this->value()).ilike(std::move(cmp)); }
+    Cond like(std::string cmp) && { return std::move(*this).value().like(std::move(cmp)); }
+    Cond ilike(std::string cmp) && { return std::move(*this).value().ilike(std::move(cmp)); }
 
   private:
-    relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
+    relational_algebra::Value value() && { return static_cast<Col*>(this)->value(); }
   };
 
   template <typename Col>
   struct BooleanAbilities : LiteralEqualityAbilities<Col, bool> {
     using Cond = relational_algebra::Condition;
 
-    Cond is_true() && { return this->value().is_true(); }
-    Cond is_not_true() && { return this->value().is_not_true(); }
-    Cond is_false() && { return this->value().is_false(); }
-    Cond is_not_false() && { return this->value().is_not_false(); }
-    Cond is_unknown() { return this->value().is_unknown(); }
-    Cond is_not_unknown() { return this->value().is_not_unknown(); }
+    Cond is_true() && { return std::move(*this).value().is_true(); }
+    Cond is_not_true() && { return std::move(*this).value().is_not_true(); }
+    Cond is_false() && { return std::move(*this).value().is_false(); }
+    Cond is_not_false() && { return std::move(*this).value().is_not_false(); }
+    Cond is_unknown() { return std::move(*this).value().is_unknown(); }
+    Cond is_not_unknown() { return std::move(*this).value().is_not_unknown(); }
 
   private:
-    relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
+    relational_algebra::Value value() && { return static_cast<Col*>(this)->value(); }
   };
 
   template <typename Col, typename T>
   struct NullableAbilities {
     using Cond = relational_algebra::Condition;
 
-    Cond is_null() { return this->value().is_null(); }
-    Cond is_not_null() { return this->value().is_not_null(); }
+    Cond is_null() { return std::move(*this).value().is_null(); }
+    Cond is_not_null() { return std::move(*this).value().is_not_null(); }
   private:
-    relational_algebra::Value& value() { return static_cast<Col*>(this)->sql; }
+    relational_algebra::Value value() && { return static_cast<Col*>(this)->value(); }
   };
 
   // Unless specialized, only allow raw SQL abilities.

@@ -217,7 +217,7 @@ namespace {
   }
 
   TEST_F(ProjectionReturningArticlesWithUsers, refers_to_self_join_in_conditions) {
-    auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su").where(column("su", "name").ilike("foo"));
+    auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su").where(column("su", &User::name).ilike("foo"));
     auto sql = users_with_supervisors.to_sql();
     auto match = sql.find("WHERE \"su\".\"name\" ILIKE 'foo'");
     EXPECT_NE(std::string::npos, match);
