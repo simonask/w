@@ -3,7 +3,8 @@
 
 namespace app {
   w::Response index(w::Request& req) {
-    auto posts = p::from<Post>().where(p::column(&Post::published_at) <= DateTime::now()).order(&Post::published_at).reverse_order();
+    p::Context ctx;
+    auto posts = p::from<Post>(ctx).where(p::column(&Post::published_at) <= DateTime::now()).order(&Post::published_at).reverse_order();
     auto all = posts.all();
     return w::not_found();
   }
