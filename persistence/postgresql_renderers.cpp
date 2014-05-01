@@ -22,7 +22,7 @@ namespace persistence {
       }
       ss << " FROM " << x.relation;
       if (x.relation_alias) {
-        ss << " " << *x.relation_alias;
+        ss << " AS " << *x.relation_alias;
       }
 
       for (auto& join: x.joins) {
@@ -33,7 +33,7 @@ namespace persistence {
           case ast::Join::RightOuter: ss << " RIGHT OUTER JOIN "; break;
           case ast::Join::FullOuter:  ss << " FULL OUTER JOIN "; break;
         }
-        ss << join->relation << ' ' << join->alias << " ON ";
+        ss << join->relation << " AS " << join->alias << " ON ";
         ss << join->on->to_sql(renderer);
       }
 
