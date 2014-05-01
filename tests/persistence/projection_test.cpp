@@ -231,4 +231,11 @@ namespace {
     EXPECT_NE(std::string::npos, match1);
     EXPECT_NE(std::string::npos, match2);
   }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, performs_a_triple_self_join) {
+    auto users_with_supervisors_and_their_supervisors = from<User>(context, "u0").inner_join(&User::supervisor, "u1").inner_join("u1", &User::supervisor, "u2");
+    auto sql = users_with_supervisors_and_their_supervisors.to_sql();
+    auto match = sql.find("INNER JOIN users AS u1 ON \"u0\".\"supervisor_id\" = \"u1\".\"id\" INNER JOIN users AS u2 ON \"u1\".\"supervisor_id\" = \"u2\".\"id\"");
+    EXPECT_NE(std::string::npos, match);
+  }
 }

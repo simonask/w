@@ -34,6 +34,10 @@ namespace persistence {
     {}
   };
 
+  struct AssociationError : wayward::Error {
+    AssociationError(std::string msg) : wayward::Error(std::move(msg)) {}
+  };
+
   template <typename... Relations> struct Joins;
 
   template <typename T, typename Jx = Joins<>> struct Projection;
@@ -107,28 +111,22 @@ namespace persistence {
   struct RelationProjector : wayward::ICloneable {
     RelationProjector(std::string relation_alias) : relation_alias_(std::move(relation_alias)) {}
     virtual void project_and_populate_association(Context&, ISingularAssociationField&, const IResultSet& result_set, size_t row) = 0;
-    virtual void rebuild_column_aliases() {}
+
+    virtual void append_selects(std::vector<relational_algebra::SelectAlias>& out_selects) const = 0;
+    virtual void rebuild_joins(std::map<std::string, RelationProjector*>& out_joins) = 0;
 
     const std::string& relation_alias() const { return relation_alias_; }
-    void set_relation_alias(std::string new_relation_alias) {
-      relation_alias_ = std::move(new_relation_alias);
-      rebuild_column_aliases();
-    }
   private:
     std::string relation_alias_;
   };
 
   template <typename T>
   struct RelationProjectorFor : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector> {
-    RelationProjectorFor(std::string relation_alias) : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector>(std::move(relation_alias)) {}
-
     std::map<const ISingularAssociationFrom<T>*, CloningPtr<RelationProjector>> sub_projectors_;
     std::vector<std::pair<IPropertyOf<T>*, std::string>> column_aliases_;
 
-    void rebuild_column_aliases() final {
-      if (column_aliases_.size()) {
-        column_aliases_.clear();
-      }
+    RelationProjectorFor(std::string relation_alias) : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector>(std::move(relation_alias))
+    {
       auto record_type = get_type<T>();
       for (auto& property: record_type->properties_) {
         auto alias = wayward::format("{0}_{1}", this->relation_alias(), property->column());
@@ -136,9 +134,23 @@ namespace persistence {
       }
     }
 
-    RecordPtr<T> project(Context& ctx, const IResultSet& result_set, size_t row) {
-      rebuild_column_aliases();
+    void rebuild_joins(std::map<std::string, RelationProjector*>& out_joins) final {
+      out_joins[this->relation_alias()] = static_cast<RelationProjector*>(this);
+      for (auto& pair: sub_projectors_) {
+        pair.second->rebuild_joins(out_joins);
+      }
+    }
 
+    void append_selects(std::vector<relational_algebra::SelectAlias>& out_selects) const final {
+      for (auto& pair: column_aliases_) {
+        out_selects.emplace_back(relational_algebra::column(this->relation_alias(), pair.first->column()), pair.second);
+      }
+      for (auto& pair: sub_projectors_) {
+        pair.second->append_selects(out_selects);
+      }
+    }
+
+    RecordPtr<T> project(Context& ctx, const IResultSet& result_set, size_t row) {
       auto record = ctx.create<T>();
 
       // Populate fields
@@ -182,7 +194,8 @@ namespace persistence {
       auto relation = get_type<Primary>()->relation();
       q_.projector_ = make_cloning_ptr(new RelationProjectorFor<Primary>(relation));
       p_.query->relation = relation;
-      update_primary_entry_point();
+      q_.joins_[relation] = q_.projector_.get();
+      q_.first_relations_[get_type<Primary>()] = relation;
     }
 
     Projection(Context& ctx, std::string t0_alias)
@@ -191,7 +204,8 @@ namespace persistence {
       q_.projector_ = make_cloning_ptr(new RelationProjectorFor<Primary>(t0_alias));
       p_.query->relation = get_type<Primary>()->relation();
       p_.query->relation_alias = t0_alias;
-      update_primary_entry_point();
+      q_.joins_[t0_alias] = q_.projector_.get();
+      q_.first_relations_[get_type<Primary>()] = t0_alias;
     }
 
     Projection(const Self& other)
@@ -200,7 +214,7 @@ namespace persistence {
      , p_(other.p_)
      , q_(other.q_)
      {
-      update_primary_entry_point();
+      rebuild_joins();
      }
 
     Projection(Self&& other)
@@ -214,7 +228,7 @@ namespace persistence {
       q_ = other.q_;
       p_ = other.p_;
       materialized_ = nullptr; // reset because the query has changed.
-      update_primary_entry_point();
+      rebuild_joins();
       return *this;
     }
 
@@ -337,6 +351,58 @@ namespace persistence {
       return copy().right_outer_join(assoc, std::move(with_alias));
     }
 
+    template <typename Owner, typename Association>
+    SelfJoining<Association> inner_join(std::string from_alias, BelongsTo<Association> Owner::*assoc) && {
+      return add_join(std::move(from_alias), assoc, ast::Join::Type::Inner);
+    }
+    template <typename Owner, typename Association>
+    SelfJoining<Association> left_outer_join(std::string from_alias, BelongsTo<Association> Owner::*assoc) && {
+      return add_join(std::move(from_alias), assoc, ast::Join::Type::LeftOuter);
+    }
+    template <typename Owner, typename Association>
+    SelfJoining<Association> right_outer_join(std::string from_alias, BelongsTo<Association> Owner::*assoc) && {
+      return add_join(std::move(from_alias), assoc, ast::Join::Type::RightOuter);
+    }
+
+    template <typename Owner, typename Association>
+    SelfJoining<Association> inner_join(std::string from_alias, BelongsTo<Association> Owner::*assoc) const& {
+      return copy().inner_join(std::move(from_alias), assoc);
+    }
+    template <typename Owner, typename Association>
+    SelfJoining<Association> left_outer_join(std::string from_alias, BelongsTo<Association> Owner::*assoc) const& {
+      return copy().left_outer_join(std::move(from_alias), assoc);
+    }
+    template <typename Owner, typename Association>
+    SelfJoining<Association> right_outer_join(std::string from_alias, BelongsTo<Association> Owner::*assoc) const& {
+      return copy().right_outer_join(std::move(from_alias), assoc);
+    }
+
+    template <typename Owner, typename Association>
+    SelfJoining<Association> inner_join(std::string from_alias, BelongsTo<Association> Owner::*assoc, std::string with_alias) && {
+      return add_join(std::move(from_alias), assoc, std::move(with_alias), ast::Join::Type::Inner);
+    }
+    template <typename Owner, typename Association>
+    SelfJoining<Association> left_outer_join(std::string from_alias, BelongsTo<Association> Owner::*assoc, std::string with_alias) && {
+      return add_join(std::move(from_alias), assoc, std::move(with_alias), ast::Join::Type::LeftOuter);
+    }
+    template <typename Owner, typename Association>
+    SelfJoining<Association> right_outer_join(std::string from_alias, BelongsTo<Association> Owner::*assoc, std::string with_alias) && {
+      return add_join(std::move(from_alias), assoc, std::move(with_alias), ast::Join::Type::RightOuter);
+    }
+
+    template <typename Owner, typename Association>
+    SelfJoining<Association> inner_join(std::string from_alias, BelongsTo<Association> Owner::*assoc, std::string with_alias) const& {
+      return copy().inner_join(std::move(from_alias), assoc, std::move(with_alias));
+    }
+    template <typename Owner, typename Association>
+    SelfJoining<Association> left_outer_join(std::string from_alias, BelongsTo<Association> Owner::*assoc, std::string with_alias) const& {
+      return copy().left_outer_join(std::move(from_alias), assoc, std::move(with_alias));
+    }
+    template <typename Owner, typename Association>
+    SelfJoining<Association> right_outer_join(std::string from_alias, BelongsTo<Association> Owner::*assoc, std::string with_alias) const& {
+      return copy().right_outer_join(std::move(from_alias), assoc, std::move(with_alias));
+    }
+
   private:
     template <typename, typename> friend struct Projection;
 
@@ -347,8 +413,9 @@ namespace persistence {
     , materialized_(nullptr) // replace data because the query has changed.
     , p_(std::move(new_projection))
     {
-      q_.entry_points_ = std::move(other.q_.entry_points_);
       q_.projector_ = std::move(other.q_.projector_);
+      q_.joins_     = std::move(other.q_.joins_);
+      q_.first_relations_ = std::move(other.q_.first_relations_);
     }
 
     Self replace_p(relational_algebra::Projection p) {
@@ -366,37 +433,71 @@ namespace persistence {
 
     template <typename Owner, typename Association>
     SelfJoining<Association>
-    add_join(BelongsTo<Association> Owner::*assoc, std::string with_alias, ast::Join::Type type) {
+    add_join(BelongsTo<Association> Owner::*assoc, std::string to_alias, ast::Join::Type type) {
+      auto it = q_.first_relations_.find(get_type<Owner>());
+      if (it != q_.first_relations_.end()) {
+        auto from_alias = it->second;
+        return add_join(std::move(from_alias), assoc, std::move(to_alias), type);
+      } else {
+        assert(false); // Consistency error: first_relations_ has not been properly updated.
+      }
+    }
+
+    template <typename Owner, typename Association>
+    SelfJoining<Association>
+    add_join(std::string from_alias, BelongsTo<Association> Owner::*assoc, std::string to_alias, ast::Join::Type type) {
       static_assert(Contains<Owner, TypesInProjection>::Value, "Cannot add type-safe join from a field of a type that isn't already part of this projection.");
 
       auto source_type = get_type<Owner>();
       auto target_type = get_type<Association>();
       auto association = source_type->find_singular_association_by_member_pointer(assoc);
 
-      // Build the entry point and hook it up in all the right places:
-      auto entry_point = q_.entry_points_[source_type];
-      auto typed_entry_point = dynamic_cast<RelationProjectorFor<Owner>*>(entry_point);
-      assert(typed_entry_point != nullptr); // The type made it into the template parameter list, but its type info pointer didn't make it to the entry points list.
-      auto new_entry_point = new RelationProjectorFor<Association>(with_alias);
-      typed_entry_point->sub_projectors_[association] = make_cloning_ptr(new_entry_point);
-      q_.entry_points_[target_type] = new_entry_point;
+      // Look up where to hook up the join, and perform some sanity checks on the way:
+      auto it = q_.joins_.find(from_alias);
+      if (it == q_.joins_.end()) {
+        throw AssociationError(wayward::format("Unknown relation '{0}'.", from_alias));
+      }
+      auto projector = it->second;
+      auto typed_projector = dynamic_cast<RelationProjectorFor<Owner>*>(projector);
+      if (typed_projector == nullptr) {
+        throw AssociationError(wayward::format("The relation alias '{0}' does not describe objects of type '{1}'.", from_alias, source_type->name()));
+      }
 
-      // Prepare information for the JOIN:
-      auto& source_alias = entry_point->relation_alias();
+      // Hook it up in the projector hierarchy:
+      auto new_projector = new RelationProjectorFor<Association>(to_alias);
+      typed_projector->sub_projectors_[association] = make_cloning_ptr(new_projector);
+
+      // Add it to the list of joins:
+      q_.joins_[to_alias] = new_projector;
+
+      // If this is the first join with this relation, update the first_relations list:
+      if (q_.first_relations_.find(target_type) == q_.first_relations_.end()) {
+        q_.first_relations_[target_type] = to_alias;
+      }
+
+      // Prepare information for the JOIN condition:
       std::string relation = target_type->relation();
 
       // Build the condition with the relational algebra DSL:
-      auto lhs = relational_algebra::column(source_alias, association->foreign_key());
-      auto rhs = relational_algebra::column(with_alias, target_type->primary_key()->column());
+      auto lhs = relational_algebra::column(from_alias, association->foreign_key());
+      auto rhs = relational_algebra::column(to_alias, target_type->primary_key()->column());
       auto cond = (std::move(lhs) == std::move(rhs));
 
       // Combine it all to a join:
       switch (type) {
-        case ast::Join::Inner:      return SelfJoining<Association>(std::move(*this), std::move(p_).inner_join(std::move(relation), std::move(with_alias), std::move(cond)));
-        case ast::Join::LeftOuter:  return SelfJoining<Association>(std::move(*this), std::move(p_).left_join(std::move(relation), std::move(with_alias), std::move(cond)));
-        case ast::Join::RightOuter: return SelfJoining<Association>(std::move(*this), std::move(p_).right_join(std::move(relation), std::move(with_alias), std::move(cond)));
+        case ast::Join::Inner:      return SelfJoining<Association>(std::move(*this), std::move(p_).inner_join(std::move(relation), std::move(to_alias), std::move(cond)));
+        case ast::Join::LeftOuter:  return SelfJoining<Association>(std::move(*this), std::move(p_).left_join(std::move(relation), std::move(to_alias), std::move(cond)));
+        case ast::Join::RightOuter: return SelfJoining<Association>(std::move(*this), std::move(p_).right_join(std::move(relation), std::move(to_alias), std::move(cond)));
         default: assert(false); // NIY
       }
+    }
+
+    void rebuild_joins() {
+      // This is necessary because we're keeping raw pointers in q_.joins_, so when we're a freshly cloned Projection,
+      // we need to rebuild that lookup table.
+
+      q_.joins_.clear();
+      q_.projector_->rebuild_joins(q_.joins_);
     }
 
     void materialize() {
@@ -412,24 +513,9 @@ namespace persistence {
       return q_.projector_->project(context_, *materialized_, row);
     }
 
-    void update_primary_entry_point() {
-      q_.entry_points_[get_type<Primary>()] = q_.projector_.get();
-    }
-
     void update_select_expressions() {
       std::vector<relational_algebra::SelectAlias> selects;
-
-      for (auto& pair: q_.entry_points_) {
-        auto record_type = pair.first;
-        auto projector = pair.second;
-        auto& rel = projector->relation_alias();
-        for (size_t i = 0; i < record_type->num_properties(); ++i) {
-          auto col = record_type->property_at(i).column();
-          auto alias = wayward::format("{0}_{1}", rel, col);
-          selects.emplace_back(relational_algebra::column(rel, col), alias);
-        }
-      }
-
+      q_.projector_->append_selects(selects);
       p_ = std::move(p_).select(std::move(selects));
     }
 
@@ -439,15 +525,29 @@ namespace persistence {
 
     // Things that can:
     struct QueryInfo : relational_algebra::IResolveSymbolicRelation {
-      std::map<const IRecordType*, RelationProjector*> entry_points_;
-      CloningPtr<RelationProjectorFor<Primary>> projector_; // This lives on the heap to avoid having to fix up the primary entry point every time we move.
+      // The root projector. It is kept on the heap to avoid fixing up pointers every time
+      // we get moved around.
+      CloningPtr<RelationProjectorFor<Primary>> projector_;
+
+      // The map of joins is alias=>projector, and it needs to be rebuilt every time we make a copy of this Projection.
+      // Ownership of the RelationProjector pointer is held by the hierarchy of projectors.
+      // We keep track of these to find the proper RelationProjector on which to add a join.
+      std::map<std::string, RelationProjector*> joins_;
+
+      // An unnamed relation is a relation that is joined upon another without an alias.
+      // From the AST perspective, these are what ast::SymbolicRelation refer to.
+      // We keep track of this because it would be annoyingly verbose to have to refer to the relation alias
+      // in queries for every referenced column -- it is the rare case that it's ambiguous after all.
+      std::map<const IRecordType*, std::string> first_relations_;
 
       std::string relation_for_symbol(ast::SymbolicRelation relation) const final {
-        auto it = entry_points_.find(reinterpret_cast<const IRecordType*>(relation));
-        if (it == entry_points_.end()) {
+        auto t = reinterpret_cast<const IRecordType*>(relation);
+        auto it = first_relations_.find(t);
+        if (it != first_relations_.end()) {
+          return it->second;
+        } else {
           throw relational_algebra::SymbolicRelationError(wayward::format("Could not find relation for symbol {0}. Internal consistency error.", relation));
         }
-        return it->second->relation_alias();
       }
     };
 
