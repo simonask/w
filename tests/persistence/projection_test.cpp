@@ -208,7 +208,6 @@ namespace {
   TEST_F(ProjectionReturningArticlesWithUsers, renames_joined_table) {
     auto articles = from<Article>(context).inner_join(&Article::author, "lol");
     auto sql = articles.to_sql();
-    std::cout << sql << '\n';
     auto match = sql.find("INNER JOIN users AS lol ON");
     EXPECT_NE(std::string::npos, match);
   }
