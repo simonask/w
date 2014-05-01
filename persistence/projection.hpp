@@ -282,6 +282,18 @@ namespace persistence {
       }
     }
 
+    std::vector<RecordPtr<Primary>>
+    all() {
+      materialize();
+      size_t num_rows = materialized_->height();
+      std::vector<RecordPtr<Primary>> records;
+      records.reserve(num_rows);
+      for (size_t i = 0; i < num_rows; ++i) {
+        records.push_back(project(i));
+      }
+      return std::move(records);
+    }
+
     // Type-safe operations for tables representing T:
     // TODO: Do some type checking on Condition, to check that it only references tables mentioned in the TypeList.
     Self where(relational_algebra::Condition cond) && { return replace_p(std::move(p_).where(std::move(cond))); }
