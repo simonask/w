@@ -212,11 +212,23 @@ namespace {
     EXPECT_NE(std::string::npos, match);
   }
 
-  // TEST_F(ProjectionReturningArticlesWithUsers, joins_with_self) {
-  //   auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su");
-  // }
+  TEST_F(ProjectionReturningArticlesWithUsers, joins_with_self) {
+    auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su");
+  }
 
-  // TEST_F(ProjectionReturningArticlesWithUsers, refers_to_self_join_in_conditions) {
-  //   auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su").where(column("su", "name").ilike("foo"));
-  // }
+  TEST_F(ProjectionReturningArticlesWithUsers, refers_to_self_join_in_conditions) {
+    auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su").where(column("su", "name").ilike("foo"));
+    auto sql = users_with_supervisors.to_sql();
+    auto match = sql.find("WHERE \"su\".\"name\" ILIKE 'foo'");
+    EXPECT_NE(std::string::npos, match);
+  }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, selects_both_primary_and_joined_in_self_joins) {
+    auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su");
+    auto sql = users_with_supervisors.to_sql();
+    auto match1 = sql.find("\"u\".\"id\" AS \"u_id\"");
+    auto match2 = sql.find("\"su\".\"id\" AS \"su_id\"");
+    EXPECT_NE(std::string::npos, match1);
+    EXPECT_NE(std::string::npos, match2);
+  }
 }
