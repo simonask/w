@@ -288,14 +288,24 @@ namespace persistence {
     Self where(relational_algebra::Condition cond) const& { return copy().where(std::move(cond)); }
 
     template <typename Table, typename T>
-    Self order(Column<Table, T> column) && {
+    Self order(Column<Table, T> col) && {
       static_assert(Contains<Table, TypesInProjection>::Value, "The specified order column belongs to a type that isn't part of this projection.");
-      return replace_p(std::move(p_).order(column(reinterpret_cast<ast::SymbolicRelation>(get_type<Table>()), column)));
+      return replace_p(std::move(p_).order({col.value()}));
     }
 
-    template <typename T>
-    Self order(Column<Primary, T> column) const& {
+    template <typename Table, typename T>
+    Self order(Column<Table, T> column) const& {
       return copy().order(std::move(column));
+    }
+
+    template <typename Table, typename T>
+    Self order(T Table::*col) && {
+      return std::move(*this).order(Column<Table, T>(col));
+    }
+
+    template <typename Table, typename T>
+    Self order(T Table::*col) const& {
+      return copy().order(col);
     }
 
     // Association Joins:
