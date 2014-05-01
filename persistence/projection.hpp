@@ -264,15 +264,15 @@ namespace persistence {
     // Association Joins:
     template <typename Owner, typename Association>
     SelfJoining<Association> inner_join(BelongsTo<Association> Owner::*assoc) && {
-      return inner_join(assoc, get_type<Association>()->relation());
+      return add_join(assoc, ast::Join::Type::Inner);
     }
     template <typename Owner, typename Association>
     SelfJoining<Association> left_outer_join(BelongsTo<Association> Owner::*assoc) && {
-      return left_outer_join(assoc, get_type<Association>()->relation());
+      return add_join(assoc, ast::Join::Type::LeftOuter);
     }
     template <typename Owner, typename Association>
     SelfJoining<Association> right_outer_join(BelongsTo<Association> Owner::*assoc) && {
-      return right_outer_join(assoc, get_type<Association>()->relation());
+      return add_join(assoc, ast::Join::Type::RightOuter);
     }
 
     template <typename Owner, typename Association>
@@ -336,9 +336,15 @@ namespace persistence {
 
     template <typename Owner, typename Association>
     SelfJoining<Association>
+    add_join(BelongsTo<Association> Owner::*assoc, ast::Join::Type type) {
+      static_assert(!Contains<Association, TypesInProjection>::Value, "Cannot add a type-safe join without an alias for a relation that's already included in this projection. Provide an alias for this join.");
+      return add_join(assoc, get_type<Association>()->relation(), type);
+    }
+
+    template <typename Owner, typename Association>
+    SelfJoining<Association>
     add_join(BelongsTo<Association> Owner::*assoc, std::string with_alias, ast::Join::Type type) {
       static_assert(Contains<Owner, TypesInProjection>::Value, "Cannot add type-safe join from a field of a type that isn't already part of this projection.");
-      static_assert(!Contains<Association, TypesInProjection>::Value, "NIY: Cannot add type-safe join for this type, because it is already part of the joins for this projection. Use a type-unsafe named join instead.");
 
       auto source_type = get_type<Owner>();
       auto target_type = get_type<Association>();
