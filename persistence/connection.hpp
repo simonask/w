@@ -16,6 +16,10 @@ namespace persistence {
   }
   using wayward::ILogger;
 
+  namespace relational_algebra {
+    struct IResolveSymbolicRelation;
+  }
+
   struct IConnection {
     virtual ~IConnection() {}
 
@@ -29,9 +33,11 @@ namespace persistence {
 
     // Queries
     virtual std::string to_sql(const ast::IQuery& q) = 0;
+    virtual std::string to_sql(const ast::IQuery& q, const relational_algebra::IResolveSymbolicRelation&) = 0;
     virtual std::string sanitize(std::string input) = 0;
     virtual std::unique_ptr<IResultSet> execute(std::string sql) = 0;
     virtual std::unique_ptr<IResultSet> execute(const ast::IQuery& query) = 0;
+    virtual std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) = 0;
   };
 
   void set_connection(IConnection* conn);

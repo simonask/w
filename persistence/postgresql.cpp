@@ -116,15 +116,35 @@ namespace persistence {
     }
   }
 
+  namespace {
+    struct DummyResolveSymbolicRelation : relational_algebra::IResolveSymbolicRelation {
+      std::string relation_for_symbol(ast::SymbolicRelation rel) const final {
+        throw relational_algebra::SymbolicRelationError("No resolver provided for query containing symbolic relations.");
+      }
+    };
+  }
+
   std::unique_ptr<IResultSet>
   PostgreSQLConnection::execute(const ast::IQuery& query) {
-    std::string sql = to_sql(query);
+    return this->execute(query, DummyResolveSymbolicRelation());
+  }
+
+  std::unique_ptr<IResultSet>
+  PostgreSQLConnection::execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation& rel) {
+    std::string sql = to_sql(query, rel);
     return execute(std::move(sql));
   }
 
   std::string
+  PostgreSQLConnection::to_sql(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation& rel) {
+    PostgreSQLQueryRenderer renderer(*this, rel);
+    return query.to_sql(renderer);
+  }
+
+  std::string
   PostgreSQLConnection::to_sql(const ast::IQuery& query) {
-    PostgreSQLQueryRenderer renderer(*this);
+    DummyResolveSymbolicRelation dummy;
+    PostgreSQLQueryRenderer renderer(*this, dummy);
     return query.to_sql(renderer);
   }
 

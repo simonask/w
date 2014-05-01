@@ -23,9 +23,11 @@ namespace persistence {
 
       // Queries
       std::string to_sql(const ast::IQuery& q) override;
+      std::string to_sql(const ast::IQuery& q, const relational_algebra::IResolveSymbolicRelation&) override;
       std::string sanitize(std::string input) override;
       std::unique_ptr<IResultSet> execute(std::string sql) override;
       std::unique_ptr<IResultSet> execute(const ast::IQuery& query) override;
+      std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) override;
 
       std::string database_;
       std::string user_;
@@ -39,14 +41,26 @@ namespace persistence {
       size_t execute_called_with_query  = 0;
 
     private:
-      std::string to_sql_impl(const ast::IQuery& q);
+      std::string to_sql_impl(const ast::IQuery& q, const relational_algebra::IResolveSymbolicRelation&);
       std::string sanitize_impl(std::string input);
       std::unique_ptr<IResultSet> execute_impl(std::string sql);
     };
 
+    struct ResolveSymbolicRelationMock : relational_algebra::IResolveSymbolicRelation {
+      std::string relation_for_symbol(ast::SymbolicRelation relation) const final {
+        return "relation";
+      }
+    };
+
     inline std::string ConnectionMock::to_sql(const ast::IQuery& q) {
+      ResolveSymbolicRelationMock rel;
       ++to_sql_called;
-      return to_sql_impl(q);
+      return to_sql_impl(q, rel);
+    }
+
+    inline std::string ConnectionMock::to_sql(const ast::IQuery& q, const relational_algebra::IResolveSymbolicRelation& rel) {
+      ++to_sql_called;
+      return to_sql_impl(q, rel);
     }
 
     inline std::string ConnectionMock::sanitize(std::string input) {
@@ -61,11 +75,16 @@ namespace persistence {
 
     inline std::unique_ptr<IResultSet> ConnectionMock::execute(const ast::IQuery& query) {
       ++execute_called_with_query;
-      return execute_impl(to_sql_impl(query));
+      return execute_impl(to_sql_impl(query, ResolveSymbolicRelationMock()));
     }
 
-    inline std::string ConnectionMock::to_sql_impl(const ast::IQuery& q) {
-      PostgreSQLQueryRenderer renderer(*this);
+    inline std::unique_ptr<IResultSet> ConnectionMock::execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation& rel) {
+      ++execute_called_with_query;
+      return execute_impl(to_sql_impl(query, rel));
+    }
+
+    inline std::string ConnectionMock::to_sql_impl(const ast::IQuery& q, const relational_algebra::IResolveSymbolicRelation& rel) {
+      PostgreSQLQueryRenderer renderer(*this, rel);
       return q.to_sql(renderer);
     }
 

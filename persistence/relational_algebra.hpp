@@ -127,6 +127,7 @@ namespace persistence {
 
     Projection projection(std::string relation);
     Value      column(std::string relation, std::string column);
+    Value      column(ast::SymbolicRelation, std::string column);
     Value      aggregate_impl(std::string func, Value* args, size_t num_args);
     Value      literal(std::string str);
     Value      literal(double number);
@@ -168,6 +169,15 @@ namespace persistence {
       std::array<Value, sizeof...(Args)> a = {{{std::move(args)}...}};
       return aggregate_impl(std::move(func), a.data(), sizeof...(Args));
     }
+
+    struct SymbolicRelationError : wayward::Error {
+      SymbolicRelationError(std::string msg) : wayward::Error(std::move(msg)) {}
+    };
+
+    struct IResolveSymbolicRelation {
+      virtual ~IResolveSymbolicRelation() {}
+      virtual std::string relation_for_symbol(ast::SymbolicRelation relation) const = 0;
+    };
   }
 }
 

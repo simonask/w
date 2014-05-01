@@ -13,12 +13,14 @@ namespace persistence {
     using wayward::CloningPtr;
     using wayward::Cloneable;
     using wayward::ICloneable;
+    using wayward::Maybe;
 
     struct StarFrom;
     struct StringLiteral;
     struct NumericLiteral;
     struct BooleanLiteral;
     struct ColumnReference;
+    struct ColumnReferenceWithSymbolicRelation;
     struct Aggregate;
     struct List;
     struct CaseSimple;
@@ -40,6 +42,7 @@ namespace persistence {
       virtual std::string render(const NumericLiteral& x) = 0;
       virtual std::string render(const BooleanLiteral& x) = 0;
       virtual std::string render(const ColumnReference& x) = 0;
+      virtual std::string render(const ColumnReferenceWithSymbolicRelation& x) = 0;
       virtual std::string render(const Aggregate& x) = 0;
       virtual std::string render(const List& x) = 0;
       virtual std::string render(const CaseSimple& x) = 0;
@@ -110,6 +113,18 @@ namespace persistence {
       ColumnReference(std::string relation, std::string column) : relation(std::move(relation)), column(std::move(column)) {}
 
       std::string relation;
+      std::string column;
+
+      std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
+    };
+
+    using SymbolicRelation = std::uintptr_t;
+
+    struct ColumnReferenceWithSymbolicRelation : Cloneable<ColumnReferenceWithSymbolicRelation, SingleValue> {
+      virtual ~ColumnReferenceWithSymbolicRelation() {}
+      ColumnReferenceWithSymbolicRelation(SymbolicRelation relation, std::string column) : relation(relation), column(std::move(column)) {}
+
+      SymbolicRelation relation;
       std::string column;
 
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
@@ -312,6 +327,7 @@ namespace persistence {
       virtual ~SelectQuery() {}
       std::vector<SelectAlias> select;
       std::string relation;
+      Maybe<std::string> relation_alias;
       CloningPtr<ast::Condition> where;
       std::vector<CloningPtr<Join>> joins;
       std::vector<CloningPtr<ast::Value>> group;

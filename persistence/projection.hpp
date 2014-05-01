@@ -162,6 +162,15 @@ namespace persistence {
       update_primary_entry_point();
     }
 
+    Projection(Context& ctx, std::string t0_alias)
+    : context_(ctx)
+    {
+      q_.projector_ = make_cloning_ptr(new RelationProjectorFor<Primary>(t0_alias));
+      p_.query->relation = get_type<Primary>()->relation();
+      p_.query->relation_alias = t0_alias;
+      update_primary_entry_point();
+    }
+
     Projection(const Self& other)
      : context_(other.context_)
      , materialized_(nullptr)
@@ -197,7 +206,7 @@ namespace persistence {
     std::string to_sql() {
       update_select_expressions();
       auto conn = current_connection_provider().acquire_connection_for_data_store(get_type<Primary>()->data_store());
-      return conn.to_sql(*p_.query);
+      return conn.to_sql(*p_.query, q_);
     }
 
     size_t count() const;
@@ -363,7 +372,7 @@ namespace persistence {
       if (materialized_ == nullptr) {
         update_select_expressions();
         auto conn = current_connection_provider().acquire_connection_for_data_store(get_type<Primary>()->data_store());
-        materialized_ = conn.execute(*p_.query);
+        materialized_ = conn.execute(*p_.query, q_);
       }
     }
 
@@ -398,9 +407,17 @@ namespace persistence {
     std::unique_ptr<IResultSet> materialized_;
 
     // Things that can:
-    struct QueryInfo {
+    struct QueryInfo : relational_algebra::IResolveSymbolicRelation {
       std::map<const IRecordType*, RelationProjector*> entry_points_;
       CloningPtr<RelationProjectorFor<Primary>> projector_; // This lives on the heap to avoid having to fix up the primary entry point every time we move.
+
+      std::string relation_for_symbol(ast::SymbolicRelation relation) const final {
+        auto it = entry_points_.find(reinterpret_cast<const IRecordType*>(relation));
+        if (it == entry_points_.end()) {
+          throw relational_algebra::SymbolicRelationError(wayward::format("Could not find relation for symbol {0}. Internal consistency error.", relation));
+        }
+        return it->second->relation_alias();
+      }
     };
 
     relational_algebra::Projection p_;
@@ -413,7 +430,9 @@ namespace persistence {
   }
 
   template <typename T>
-  Projection<T> from(Context& ctx, std::string t0_alias);
+  Projection<T> from(Context& ctx, std::string t0_alias) {
+    return Projection<T>(ctx, std::move(t0_alias));
+  }
 }
 
 #endif // PERSISTENCE_PROJECTION_HPP_INCLUDED

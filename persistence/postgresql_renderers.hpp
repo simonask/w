@@ -5,12 +5,16 @@
 #include <persistence/ast.hpp>
 #include <persistence/postgresql.hpp>
 
+#include <persistence/relational_algebra.hpp>
+
 namespace persistence {
   using namespace persistence::ast;
+  using relational_algebra::IResolveSymbolicRelation;
 
   struct PostgreSQLQueryRenderer : ast::ISQLQueryRenderer {
     IConnection& conn;
-    PostgreSQLQueryRenderer(IConnection& conn) : conn(conn) {}
+    const IResolveSymbolicRelation& symbolic_relation_resolver;
+    PostgreSQLQueryRenderer(IConnection& conn, const IResolveSymbolicRelation& rel) : conn(conn), symbolic_relation_resolver(rel) {}
 
     std::string render(const ast::SelectQuery& x) final;
     std::string render(const ast::UpdateQuery& x) final;
@@ -20,13 +24,15 @@ namespace persistence {
 
   struct PostgreSQLValueRenderer : ast::ISQLValueRenderer {
     IConnection& conn;
-    PostgreSQLValueRenderer(IConnection& conn) : conn(conn) {}
+    const IResolveSymbolicRelation& symbolic_relation_resolver;
+    PostgreSQLValueRenderer(IConnection& conn, const IResolveSymbolicRelation& rel) : conn(conn), symbolic_relation_resolver(rel) {}
 
     std::string render(const ast::StarFrom& x) final;
     std::string render(const ast::StringLiteral& x) final;
     std::string render(const ast::NumericLiteral& x) final;
     std::string render(const ast::BooleanLiteral& x) final;
     std::string render(const ast::ColumnReference& x) final;
+    std::string render(const ast::ColumnReferenceWithSymbolicRelation& x) final;
     std::string render(const ast::Aggregate& x) final;
     std::string render(const ast::List& x) final;
     std::string render(const ast::CaseSimple& x) final;

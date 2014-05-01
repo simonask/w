@@ -4,7 +4,7 @@
 
 namespace persistence {
     std::string PostgreSQLQueryRenderer::render(const SelectQuery& x) {
-      PostgreSQLValueRenderer renderer{conn};
+      PostgreSQLValueRenderer renderer{conn, symbolic_relation_resolver};
       std::stringstream ss;
       ss << "SELECT ";
       if (x.select.size()) {
@@ -21,6 +21,9 @@ namespace persistence {
         ss << "*";
       }
       ss << " FROM " << x.relation;
+      if (x.relation_alias) {
+        ss << " " << *x.relation_alias;
+      }
 
       for (auto& join: x.joins) {
         switch (join->type) {
@@ -96,6 +99,10 @@ namespace persistence {
 
     std::string PostgreSQLValueRenderer::render(const ColumnReference& x) {
       return wayward::format("\"{0}\".\"{1}\"", x.relation, x.column);
+    }
+
+    std::string PostgreSQLValueRenderer::render(const ColumnReferenceWithSymbolicRelation& x) {
+      return wayward::format("\"{0}\".\"{1}\"", symbolic_relation_resolver.relation_for_symbol(x.relation), x.column);
     }
 
     std::string PostgreSQLValueRenderer::render(const Aggregate& x) {
@@ -185,7 +192,7 @@ namespace persistence {
     std::string PostgreSQLValueRenderer::render(const SelectQuery& x) {
       // TODO: Actually, the semantics here may have to be slightly different, because
       // a sub-SELECT is allowed to do different things from a toplevel select.
-      PostgreSQLQueryRenderer renderer{conn};
+      PostgreSQLQueryRenderer renderer{conn, symbolic_relation_resolver};
       return wayward::format("({0})", x.to_sql(renderer));
     }
 }

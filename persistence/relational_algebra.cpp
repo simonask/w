@@ -15,7 +15,19 @@ namespace persistence {
             std::move(relation),
             std::move(column)
           }
-        )};
+        )
+      };
+    }
+
+    Value column(ast::SymbolicRelation relation, std::string column) {
+      return Value {
+        make_cloning_ptr(
+          new ast::ColumnReferenceWithSymbolicRelation{
+            relation,
+            std::move(column)
+          }
+        )
+      };
     }
 
     Value literal(double n) {

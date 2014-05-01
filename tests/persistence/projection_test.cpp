@@ -198,6 +198,21 @@ namespace {
     auto articles = from<Article>(context).inner_join(&Article::author).where(column(&User::name).ilike("foo"));
   }
 
+  TEST_F(ProjectionReturningArticlesWithUsers, renames_primary_table) {
+    auto articles = from<Article>(context, "lol");
+    auto sql = articles.to_sql();
+    auto match = sql.find("FROM articles lol");
+    EXPECT_NE(std::string::npos, match);
+  }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, renames_joined_table) {
+    auto articles = from<Article>(context).inner_join(&Article::author, "lol");
+    auto sql = articles.to_sql();
+    std::cout << sql << '\n';
+    auto match = sql.find("INNER JOIN users lol ON");
+    EXPECT_NE(std::string::npos, match);
+  }
+
   // TEST_F(ProjectionReturningArticlesWithUsers, joins_with_self) {
   //   auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su");
   // }

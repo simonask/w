@@ -31,8 +31,10 @@ namespace persistence {
     // Querying
     std::string sanitize(std::string sql_fragment) final;
     std::string to_sql(const ast::IQuery& query) final;
+    std::string to_sql(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) final;
     std::unique_ptr<IResultSet> execute(const ast::IQuery& query) final;
     std::unique_ptr<IResultSet> execute(std::string sql) final;
+    std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) final;
 
     //
     static std::unique_ptr<PostgreSQLConnection>
