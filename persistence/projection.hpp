@@ -14,14 +14,15 @@
 #include <persistence/connection_provider.hpp>
 #include <persistence/belongs_to.hpp>
 #include <persistence/context.hpp>
-#include <persistence/type_list.hpp>
 
+#include <wayward/support/meta.hpp>
 #include <wayward/support/error.hpp>
 
 #include <functional>
 #include <cassert>
 
 namespace persistence {
+  namespace meta = ::wayward::meta;
   using relational_algebra::sql;
   using relational_algebra::SQL;
   using wayward::Maybe;
@@ -185,7 +186,7 @@ namespace persistence {
     using Self = Projection<Primary, Joins<Relations...>>;
     template <typename AddedAssociation>
     using SelfJoining = Projection<Primary, Joins<AddedAssociation, Relations...>>;
-    using TypesInProjection = TypeList<Primary, Relations...>;
+    using TypesInProjection = meta::TypeList<Primary, Relations...>;
 
     // We need to define some constructors, because we're holding a unique_ptr:
     explicit Projection(Context& ctx)
@@ -301,7 +302,7 @@ namespace persistence {
 
     template <typename Table, typename T>
     Self order(Column<Table, T> col) && {
-      static_assert(Contains<Table, TypesInProjection>::Value, "The specified order column belongs to a type that isn't part of this projection.");
+      static_assert(meta::Contains<Table, TypesInProjection>::Value, "The specified order column belongs to a type that isn't part of this projection.");
       return replace_p(std::move(p_).order({col.value()}));
     }
 
@@ -449,7 +450,7 @@ namespace persistence {
     template <typename Owner, typename Association>
     SelfJoining<Association>
     add_join(BelongsTo<Association> Owner::*assoc, ast::Join::Type type) {
-      static_assert(!Contains<Association, TypesInProjection>::Value, "Cannot add a type-safe join without an alias for a relation that's already included in this projection. Provide an alias for this join.");
+      static_assert(!meta::Contains<Association, TypesInProjection>::Value, "Cannot add a type-safe join without an alias for a relation that's already included in this projection. Provide an alias for this join.");
       return add_join(assoc, get_type<Association>()->relation(), type);
     }
 
@@ -468,7 +469,7 @@ namespace persistence {
     template <typename Owner, typename Association>
     SelfJoining<Association>
     add_join(std::string from_alias, BelongsTo<Association> Owner::*assoc, std::string to_alias, ast::Join::Type type) {
-      static_assert(Contains<Owner, TypesInProjection>::Value, "Cannot add type-safe join from a field of a type that isn't already part of this projection.");
+      static_assert(meta::Contains<Owner, TypesInProjection>::Value, "Cannot add type-safe join from a field of a type that isn't already part of this projection.");
 
       auto source_type = get_type<Owner>();
       auto target_type = get_type<Association>();

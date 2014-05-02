@@ -18,6 +18,7 @@
 #include <persistence/primary_key.hpp>
 #include <persistence/record_type_builder.hpp>
 #include <persistence/persistence_macro.hpp>
+#include <persistence/record_as_structured_data.hpp>
 
 #if !defined(PERSISTENCE_NO_SHORTHAND_NAMESPACE)
 namespace p = persistence;

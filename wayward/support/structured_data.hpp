@@ -6,6 +6,9 @@
 #include <vector>
 #include <string>
 
+#include <wayward/support/maybe.hpp>
+#include <wayward/support/meta.hpp>
+
 namespace wayward {
   using std::int64_t;
 
@@ -41,7 +44,9 @@ namespace wayward {
 
   template <typename T>
   std::shared_ptr<const IStructuredData> as_structured_data(T&& object) {
-    return std::static_pointer_cast<const IStructuredData>(std::make_shared<StructuredDataAdapter<T>>(std::forward<T>(object)));
+    using Adapter = StructuredDataAdapter<typename meta::RemoveConstRef<T>::Type>;
+    auto ptr = std::make_shared<Adapter>(std::forward<T>(object));
+    return std::static_pointer_cast<const IStructuredData>(std::move(ptr));
   }
 }
 

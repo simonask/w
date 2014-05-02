@@ -18,6 +18,7 @@ namespace persistence {
 
     bool operator==(const RecordPtr<T>& other) const { return record_ == other.record_; }
     bool operator!=(const RecordPtr<T>& other) const { return record_ != other.record_; }
+    explicit operator bool() const { return record_; }
 
     T* operator->() const { return record_; }
     T& operator*() const { return *record_; }
