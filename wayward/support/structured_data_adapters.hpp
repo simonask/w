@@ -3,10 +3,55 @@
 #define WAYWARD_SUPPORT_STRUCTURED_DATA_ADAPTERS_HPP_INCLUDED
 
 #include <wayward/support/structured_data.hpp>
+#include <wayward/support/maybe.hpp>
 #include <wayward/support/meta.hpp>
 #include <map>
 
 namespace wayward {
+  template <typename T>
+  struct StructuredDataAdapter<Maybe<T>> : IStructuredData {
+    StructuredDataAdapter(Maybe<T>&& value) : value_(std::move(value)), access_(value_) {}
+    StructuredDataAdapter(const Maybe<T>& value) : access_(value) {}
+    StructuredDataAdapter(Maybe<T>& value) : access_(value) {}
+
+    NodeType type() const final {
+      return value_ ? as_structured_data(*access_)->type() : NodeType::Nil;
+    }
+
+    size_t length() const final {
+      return value_ ? as_structured_data(*access_)->length() : 0;
+    }
+
+    std::vector<std::string> keys() const final {
+      return value_ ? as_structured_data(*access_)->keys() : std::vector<std::string>();
+    }
+
+    std::shared_ptr<const IStructuredData>
+    operator[](const std::string& key) const final {
+      return value_ ? as_structured_data(*access_)->operator[](key) : nullptr;
+    }
+
+    std::shared_ptr<const IStructuredData>
+    operator[](const size_t idx) const final {
+      return value_ ? as_structured_data(*access_)->operator[](idx) : nullptr;
+    }
+
+    Maybe<std::string> get_string() const final {
+      return value_ ? as_structured_data(*access_)->get_string() : Maybe<std::string>(Nothing);
+    }
+
+    Maybe<int64_t> get_integer() const final {
+      return value_ ? as_structured_data(*access_)->get_integer() : Maybe<int64_t>(Nothing);
+    }
+
+    Maybe<double> get_float() const final {
+      return value_ ? as_structured_data(*access_)->get_float() : Maybe<double>(Nothing);
+    }
+  private:
+    Maybe<T> value_;
+    const Maybe<T>& access_;
+  };
+
   struct StructuredDataValue : IStructuredData {
     size_t length() const override { return 0; }
     std::vector<std::string> keys() const override { return std::vector<std::string>(); }
@@ -32,6 +77,16 @@ namespace wayward {
 
   template <size_t N>
   struct StructuredDataAdapter<char const(&)[N]> : StructuredDataStringAdapter {
+    StructuredDataAdapter(const char* str) : StructuredDataStringAdapter(std::string(str, N ? N-1 : 0)) {}
+  };
+
+  template <size_t N>
+  struct StructuredDataAdapter<char (&)[N]> : StructuredDataStringAdapter {
+    StructuredDataAdapter(const char* str) : StructuredDataStringAdapter(std::string(str, N ? N-1 : 0)) {}
+  };
+
+  template <size_t N>
+  struct StructuredDataAdapter<char[N]> : StructuredDataStringAdapter {
     StructuredDataAdapter(const char* str) : StructuredDataStringAdapter(std::string(str, N ? N-1 : 0)) {}
   };
 
