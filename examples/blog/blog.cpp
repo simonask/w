@@ -12,6 +12,11 @@ namespace app {
     return response;
   }
 
+  template <typename T>
+  w::Response json_ok(const w::Request& req, T&& object) {
+    return json_response(req, std::forward<T>(object));
+  }
+
   w::Response index(w::Request& req) {
     p::Context ctx;
     auto posts = p::from<Post>(ctx)
@@ -20,7 +25,8 @@ namespace app {
       .order(&Post::published_at)
       .reverse_order();
     auto all = posts.all();
-    return json_response(req, all);
+
+    return json_ok(req, all);
   }
 
   w::Response get_post(w::Request& req) {
