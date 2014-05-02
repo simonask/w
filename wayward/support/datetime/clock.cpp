@@ -34,11 +34,11 @@ namespace wayward {
     ::gettimeofday(&tv, &tz);
 
     Timezone timezone;
-    timezone.utc_offset = Seconds{tz.tz_minuteswest * 60};
+    timezone.utc_offset = Seconds{-tz.tz_minuteswest * 60};
     timezone.is_dst = tz.tz_dsttime != 0;
 
     auto ns = std::chrono::seconds{tv.tv_sec} + std::chrono::microseconds{tv.tv_usec};
 
-    return DateTime{DateTime::Repr{ns}};
+    return DateTime{DateTime::Repr{ns}, timezone};
   }
 }
