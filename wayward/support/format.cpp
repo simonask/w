@@ -5,7 +5,7 @@
 
 namespace wayward {
   void stream_interpolate_indexed(std::ostream& os, const std::string& fmt, const Formattable* formatters, unsigned int num_formatters) {
-    static const std::regex find_placeholders {"\\{(\\d+)\\}"};
+    static const std::regex find_placeholders {"\\{([0-9]+)\\}"};
     wayward::regex_replace_stream(os, fmt, find_placeholders, [&](std::ostream& os, const MatchResults& match) {
       std::stringstream ss(std::string{match[1].first, match[1].second});
       unsigned int idx = num_formatters;
@@ -19,7 +19,7 @@ namespace wayward {
   }
 
   void stream_interpolate_named(std::ostream& os, const std::string& fmt, const FormattableParameters& params) {
-    static const std::regex find_placeholders {"\\{([\\w\\d]+)\\}"};
+    static const std::regex find_placeholders {"\\{([a-zA-Z0-9]+)\\}"};
     wayward::regex_replace_stream(os, fmt, find_placeholders, [&](std::ostream& os, const MatchResults& match) {
       std::string key {match[1].first, match[1].second};
       auto it = params.find(key);
