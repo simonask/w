@@ -252,7 +252,7 @@ namespace persistence {
 
     // Type-unsafe operations that always compile, but don't give you any compile-time checks:
     Self where(SQL sql) && { return replace_p(std::move(p_).where(std::move(sql))); }
-    Self order(SQL sql) && { return replace_p(std::move(p_).order(std::move(sql))); }
+    Self order(SQL sql) && { return replace_p(std::move(p_).order({persistence::relational_algebra::Value(std::move(sql))})); }
     Self reverse_order() && { return replace_p(std::move(p_).reverse_order()); }
     Self limit(size_t n) && { return replace_p(std::move(p_).limit(n)); }
     Self offset(size_t n) && { return replace_p(std::move(p_).offset(n)); }
