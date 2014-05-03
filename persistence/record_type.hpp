@@ -16,6 +16,8 @@ namespace persistence {
     virtual std::string data_store() const = 0;
     virtual void initialize_associations_in_object(void*) const = 0;
 
+    virtual const IProperty* find_property_by_column_name(const std::string& name) const = 0;
+
     virtual const IProperty* primary_key() const = 0;
 
     virtual size_t num_properties() const = 0;
@@ -62,11 +64,30 @@ namespace persistence {
     size_t num_associations() const final { return associations_.size(); }
     const IAssociation& association_at(size_t idx) const final { return *associations_.at(idx); }
 
+    const IProperty* find_property_by_column_name(const std::string& name) const {
+      for (auto& prop: properties_) {
+        if (prop->column() == name) {
+          return prop.get();
+        }
+      }
+      return nullptr;
+    }
+
     template <typename M>
     const PropertyOf<RT, M>*
     find_property_by_member_pointer(M RT::*member) const {
       for (auto& prop: properties_) {
         auto p = dynamic_cast<const PropertyOf<RT, M>*>(prop.get());
+        if (p) return p;
+      }
+      return nullptr;
+    }
+
+    template <typename M>
+    const SingularAssociation<RT, typename M::Type>*
+    find_singular_association_by_member_pointer(M RT::*member) const {
+      for (auto& assoc: associations_) {
+        auto p = dynamic_cast<const SingularAssociation<RT, typename M::Type>*>(assoc.get());
         if (p) return p;
       }
       return nullptr;

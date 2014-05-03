@@ -23,9 +23,11 @@ namespace persistence {
     std::string user() const final { return connection_->user(); }
     std::string host() const final { return connection_->host(); }
     std::string to_sql(const ast::IQuery& q) final { return connection_->to_sql(q); }
+    std::string to_sql(const ast::IQuery& q, const relational_algebra::IResolveSymbolicRelation& rel) final { return connection_->to_sql(q, rel); }
     std::string sanitize(std::string input) final { return connection_->sanitize(std::move(input)); }
     std::unique_ptr<IResultSet> execute(std::string sql) final { return connection_->execute(std::move(sql)); }
     std::unique_ptr<IResultSet> execute(const ast::IQuery& query) final { return connection_->execute(query); }
+    std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation& rel) final { return connection_->execute(query, rel); }
     std::shared_ptr<ILogger> logger() const final { return connection_->logger(); }
     void set_logger(std::shared_ptr<ILogger> l) final { connection_->set_logger(std::move(l)); }
   private:

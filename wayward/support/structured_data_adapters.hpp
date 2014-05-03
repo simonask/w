@@ -3,6 +3,7 @@
 #define WAYWARD_SUPPORT_STRUCTURED_DATA_ADAPTERS_HPP_INCLUDED
 
 #include <wayward/support/structured_data.hpp>
+#include <wayward/support/meta.hpp>
 #include <map>
 
 namespace wayward {
@@ -24,9 +25,9 @@ namespace wayward {
     std::string string_;
   };
 
-  template <typename T>
-  struct StructuredDataAdapter<T, typename std::enable_if<std::is_same<std::string, T>::value>::type> : StructuredDataStringAdapter {
-    StructuredDataAdapter(T value) : StructuredDataStringAdapter(std::move(value)) {}
+  template <>
+  struct StructuredDataAdapter<std::string> : StructuredDataStringAdapter {
+    StructuredDataAdapter(std::string value) : StructuredDataStringAdapter(std::move(value)) {}
   };
 
   template <size_t N>
@@ -46,7 +47,7 @@ namespace wayward {
   template <typename T>
   struct StructuredDataAdapter<T,
     typename std::enable_if<
-      std::is_integral<typename std::remove_reference<typename std::remove_const<T>::type>::type>::value
+      std::is_integral<T>::value
     >::type
   > : StructuredDataIntegerAdapter {
     StructuredDataAdapter(T number) : StructuredDataIntegerAdapter(number) {}
@@ -64,7 +65,7 @@ namespace wayward {
   template <typename T>
   struct StructuredDataAdapter<T,
     typename std::enable_if<
-      std::is_floating_point<typename std::remove_reference<typename std::remove_const<T>::type>::type>::value
+      std::is_floating_point<T>::value
     >::type
   > : StructuredDataFloatAdapter {
     StructuredDataAdapter(T number) : StructuredDataFloatAdapter(number) {}
@@ -85,19 +86,12 @@ namespace wayward {
 
   template <typename T>
   struct StructuredDataAdapter<std::vector<T>> : StructuredDataRandomAccessListReferenceAdapter<std::vector<T>> {
-    StructuredDataAdapter(std::vector<T> collection) : StructuredDataRandomAccessListReferenceAdapter<std::vector<T>>(collection_), collection_(std::move(collection)) {}
+    using Base = StructuredDataRandomAccessListReferenceAdapter<std::vector<T>>;
+    StructuredDataAdapter(std::vector<T>&& collection) : Base(collection_), collection_(std::move(collection)) {}
+    StructuredDataAdapter(const std::vector<T>& collection) : Base(collection) {}
+    StructuredDataAdapter(std::vector<T>& collection) : Base(collection) {}
   private:
     std::vector<T> collection_;
-  };
-
-  template <typename T>
-  struct StructuredDataAdapter<std::vector<T>&> : StructuredDataRandomAccessListReferenceAdapter<std::vector<T>> {
-    StructuredDataAdapter(const std::vector<T>& collection) : StructuredDataRandomAccessListReferenceAdapter<std::vector<T>>(collection) {}
-  };
-
-  template <typename T>
-  struct StructuredDataAdapter<const std::vector<T>&> : StructuredDataRandomAccessListReferenceAdapter<std::vector<T>> {
-    StructuredDataAdapter(const std::vector<T>& collection) : StructuredDataRandomAccessListReferenceAdapter<std::vector<T>>(collection) {}
   };
 
   template <typename T>
@@ -128,19 +122,12 @@ namespace wayward {
 
   template <typename T>
   struct StructuredDataAdapter<std::map<std::string, T>> : StructuredDataDictionaryReferenceAdapter<std::map<std::string, T>> {
-    StructuredDataAdapter(std::map<std::string, T> collection) : StructuredDataDictionaryReferenceAdapter<std::map<std::string, T>>(collection_), collection_(std::move(collection)) {}
+    using Base = StructuredDataDictionaryReferenceAdapter<std::map<std::string, T>>;
+    StructuredDataAdapter(std::map<std::string, T>&& collection) : Base(collection_), collection_(std::move(collection)) {}
+    StructuredDataAdapter(std::map<std::string, T>& collection) : Base(collection) {}
+    StructuredDataAdapter(const std::map<std::string, T>& collection) : Base(collection) {}
   private:
     std::map<std::string, T> collection_;
-  };
-
-  template <typename T>
-  struct StructuredDataAdapter<std::map<std::string, T>&> : StructuredDataDictionaryReferenceAdapter<std::map<std::string, T>> {
-    StructuredDataAdapter(const std::map<std::string, T>& collection) : StructuredDataDictionaryReferenceAdapter<std::map<std::string, T>>(collection) {}
-  };
-
-  template <typename T>
-  struct StructuredDataAdapter<const std::map<std::string, T>&> : StructuredDataDictionaryReferenceAdapter<std::map<std::string, T>> {
-    StructuredDataAdapter(const std::map<std::string, T>& collection) : StructuredDataDictionaryReferenceAdapter<std::map<std::string, T>>(collection) {}
   };
 }
 

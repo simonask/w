@@ -8,19 +8,42 @@
 
 namespace persistence {
   template <typename AssociatedType>
-  struct BelongsTo {
-    const IAssociationTo<AssociatedType>* association_ = nullptr;
+  struct BelongsTo : ISingularAssociationFieldTo<AssociatedType> {
+    using Type = AssociatedType;
+    const ISingularAssociationTo<AssociatedType>* association_ = nullptr;
+    RecordPtr<AssociatedType> ptr_;
     PrimaryKey id;
+
+    bool operator==(const RecordPtr<AssociatedType>& rhs) const { return ptr_ == rhs; }
+    bool operator!=(const RecordPtr<AssociatedType>& rhs) const { return ptr_ != rhs; }
+
+    AssociatedType* operator->() const { return ptr_.get(); } // TODO: Populate on-demand
+
+    // ISingularAssociationTo<> interface
+    void populate(RecordPtr<AssociatedType> ptr) final {
+      ptr_ = std::move(ptr);
+    }
+    const IRecordType& foreign_type() const final {
+      return *get_type<AssociatedType>();
+    }
   };
 
   template <typename O, typename A>
-  struct BelongsToAssociation : Association<O, A> {
+  struct BelongsToAssociation : SingularAssociation<O, A> {
     using MemberPointer = BelongsTo<A> O::*;
-    explicit BelongsToAssociation(std::string key, MemberPointer ptr) : Association<O, A>{std::move(key)}, ptr_(ptr) {}
+    explicit BelongsToAssociation(std::string key, MemberPointer ptr) : SingularAssociation<O, A>{std::move(key)}, ptr_(ptr) {}
     MemberPointer ptr_;
 
     void initialize_in_object(O& object) const final {
       (object.*ptr_).association_ = this;
+    }
+
+    ISingularAssociationField* get_field(O& object) const final {
+      return &(object.*ptr_);
+    }
+
+    const ISingularAssociationField* get_field(const O& object) const final {
+      return &(object.*ptr_);
     }
   };
 

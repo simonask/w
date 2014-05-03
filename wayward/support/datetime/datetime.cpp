@@ -186,6 +186,10 @@ namespace wayward {
     return DateTime{DateTime::Repr{calendar_values_to_nanoseconds_from_epoch(cal)}};
   }
 
+  DateTime DateTime::at(Timezone tz, const CalendarValues& cal) {
+    return DateTime{DateTime::Repr{calendar_values_to_nanoseconds_from_epoch(cal)}, tz};
+  }
+
   Seconds DateTime::unix_timestamp() const {
     auto ns = repr_.time_since_epoch().count();
     return Seconds{ns / 1000000000};
@@ -237,8 +241,11 @@ namespace wayward {
   }
 
   std::string DateTime::strftime(const std::string& fmt) const {
-    struct tm t = nanoseconds_to_tm(repr_.time_since_epoch());
-    std::array<char, 1000> buffer;
+    auto tz_adjust = timezone_.utc_offset.repr_ + (timezone_.is_dst ? 1_hour : 0_hours).repr_;
+    struct tm t = nanoseconds_to_tm(repr_.time_since_epoch() + tz_adjust);
+    t.tm_isdst = timezone_.is_dst;
+    t.tm_gmtoff = timezone_.utc_offset.repr_.count();
+    std::array<char, 128> buffer;
     size_t len = ::strftime(buffer.data(), buffer.size(), fmt.c_str(), &t);
     return std::string(buffer.data(), len);
   }
@@ -250,7 +257,7 @@ namespace wayward {
       // Conversion failed.
       return Nothing;
     } else {
-      return DateTime::at(tm_to_calendar_values(t));
+      return DateTime::at(Timezone{Seconds(t.tm_gmtoff), t.tm_isdst != 0}, tm_to_calendar_values(t));
     }
   }
 

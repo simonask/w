@@ -6,18 +6,35 @@
 
 namespace persistence {
   template <typename AssociatedType>
-  struct HasMany {
+  struct HasMany : IPluralAssociationFieldTo<AssociatedType> {
     const IAssociationTo<AssociatedType>* association_ = nullptr;
+    std::vector<RecordPtr<AssociatedType>> records_;
+
+    const IRecordType& foreign_type() const final {
+      return *get_type<AssociatedType>();
+    }
+
+    void populate(std::vector<RecordPtr<AssociatedType>> records) final {
+      records_ = std::move(records);
+    }
   };
 
   template <typename O, typename A>
-  struct HasManyAssociation : Association<O, A> {
+  struct HasManyAssociation : PluralAssociation<O, A> {
     using MemberPointer = HasMany<A> O::*;
-    explicit HasManyAssociation(std::string key, MemberPointer ptr) : Association<O, A>{std::move(key)}, ptr_(ptr) {}
+    explicit HasManyAssociation(std::string key, MemberPointer ptr) : PluralAssociation<O, A>{std::move(key)}, ptr_(ptr) {}
     MemberPointer ptr_;
 
     void initialize_in_object(O& object) const final {
       (object.*ptr_).association_ = this;
+    }
+
+    IPluralAssociationField* get_field(O& object) const final {
+      return &(object.*ptr_);
+    }
+
+    const IPluralAssociationField* get_field(const O& object) const final {
+      return &(object.*ptr_);
     }
   };
 }

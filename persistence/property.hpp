@@ -6,6 +6,8 @@
 #include <persistence/type.hpp>
 #include <persistence/result_set.hpp>
 
+#include <wayward/support/structured_data.hpp>
+
 namespace persistence {
   struct IProperty {
     virtual ~IProperty() {}
@@ -27,6 +29,9 @@ namespace persistence {
 
     virtual bool has_value(const T& record) const = 0;
     virtual void set(T& record, const IResultSet&, size_t row_num, const std::string& col_name) const = 0;
+
+    virtual std::shared_ptr<const ::wayward::IStructuredData>
+    get_value_as_structured_data(const T& record) const = 0;
   };
 
   template <typename T, typename M>
@@ -46,6 +51,12 @@ namespace persistence {
       M* value_ptr = &(record.*ptr_);
       get_type<M>()->extract_from_results(*value_ptr, results, row_num, col_name);
     };
+
+    std::shared_ptr<const ::wayward::IStructuredData>
+    get_value_as_structured_data(const T& record) const override {
+      const M* value_ptr = &(record.*ptr_);
+      return wayward::as_structured_data(*value_ptr);
+    }
   };
 }
 

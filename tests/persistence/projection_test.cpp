@@ -15,6 +15,7 @@ namespace {
   using wayward::Nothing;
   using persistence::from;
   using persistence::column;
+  using persistence::Context;
 
   using persistence::AdapterRegistrar;
   using persistence::test::ConnectionMock;
@@ -25,8 +26,8 @@ namespace {
 
     std::string string_value;
     Maybe<std::string> nullable_string_value;
-    int32_t int32_value;
-    double double_value;
+    int32_t int32_value = -1;
+    double double_value = -1;
   };
 
   PERSISTENCE(Foo) {
@@ -37,17 +38,25 @@ namespace {
     property(&Foo::double_value, "double_value");
   }
 
-  struct ProjectionWithConnectionMock : ::testing::Test {
+  struct ProjectionTest : ::testing::Test {
+    virtual ~ProjectionTest() {}
     AdapterRegistrar<AdapterMock> adapter_registrar_ = "test";
+    Context context;
 
-    ConnectionMock& connection() {
-      return adapter_registrar_.adapter_.connection;
+    persistence::test::ResultSetMock& results() {
+      return *adapter_registrar_.adapter_.result_set_;
     }
 
     void SetUp() override {
       persistence::setup("test://test");
+    }
+  };
 
-      connection().results_.columns_ = {"t0_c0", "t0_c1", "t0_c2", "t0_c3", "t0_c4"};
+  struct ProjectionReturningSimpleColumns : ProjectionTest {
+    void SetUp() override {
+      ProjectionTest::SetUp();
+
+      results().columns_ = {"foos_id", "foos_string_value", "foos_nullable_string_value", "foos_int32_value", "foos_double_value"};
       for (size_t i = 0; i < 5; ++i) {
         std::vector<Maybe<std::string>> row {
           wayward::format("{0}", i+1),
@@ -56,61 +65,177 @@ namespace {
           wayward::format("{0}", (int32_t)(i*2)),
           wayward::format("{0}", ((double)i * 123.4))
         };
-        connection().results_.rows_.push_back(std::move(row));
+        results().rows_.push_back(std::move(row));
       }
     }
   };
 
-  TEST_F(ProjectionWithConnectionMock, maps_primary_key) {
-    auto q = from<Foo>();
+  TEST_F(ProjectionReturningSimpleColumns, maps_primary_key) {
+    auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       EXPECT_EQ(foo.id, counter+1);
       ++counter;
     });
+    EXPECT_NE(0, counter);
   }
 
-  TEST_F(ProjectionWithConnectionMock, maps_string_value) {
-    auto q = from<Foo>();
+  TEST_F(ProjectionReturningSimpleColumns, maps_string_value) {
+    auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
-      EXPECT_EQ(foo.string_value, *connection().results_.rows_.at(counter).at(1));
+      EXPECT_EQ(foo.string_value, *results().rows_.at(counter).at(1));
       ++counter;
     });
+    EXPECT_NE(0, counter);
   }
 
-  TEST_F(ProjectionWithConnectionMock, maps_nullable_string_value) {
-    auto q = from<Foo>();
+  TEST_F(ProjectionReturningSimpleColumns, maps_nullable_string_value) {
+    auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
-      EXPECT_EQ((bool)foo.nullable_string_value, (bool)connection().results_.rows_.at(counter).at(2));
+      EXPECT_EQ((bool)foo.nullable_string_value, (bool)results().rows_.at(counter).at(2));
       ++counter;
     });
+    EXPECT_NE(0, counter);
   }
 
-  TEST_F(ProjectionWithConnectionMock, maps_int32_value) {
-    auto q = from<Foo>();
+  TEST_F(ProjectionReturningSimpleColumns, maps_int32_value) {
+    auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       std::stringstream ss;
-      ss.str(*connection().results_.rows_.at(counter).at(3));
+      ss.str(*results().rows_.at(counter).at(3));
       int32_t n;
       ss >> n;
       EXPECT_EQ(foo.int32_value, n);
       ++counter;
     });
+    EXPECT_NE(0, counter);
   }
 
-  TEST_F(ProjectionWithConnectionMock, maps_double_value) {
-    auto q = from<Foo>();
+  TEST_F(ProjectionReturningSimpleColumns, maps_double_value) {
+    auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
       std::stringstream ss;
-      ss.str(*connection().results_.rows_.at(counter).at(4));
+      ss.str(*results().rows_.at(counter).at(4));
       double n;
       ss >> n;
       EXPECT_EQ(foo.double_value, n);
       ++counter;
     });
+    EXPECT_NE(0, counter);
+  }
+
+  using persistence::BelongsTo;
+  using persistence::HasMany;
+
+  struct User;
+
+  struct Article {
+    PrimaryKey id;
+    std::string title;
+    std::string text;
+    BelongsTo<User> author;
+  };
+
+  struct User {
+    PrimaryKey id;
+    std::string name;
+    HasMany<Article> articles;
+    BelongsTo<User> supervisor;
+  };
+
+  PERSISTENCE(Article) {
+    property(&Article::id, "id");
+    property(&Article::title, "title");
+    property(&Article::text, "text");
+    belongs_to(&Article::author, "author_id");
+  }
+
+  PERSISTENCE(User) {
+    property(&User::id, "id");
+    property(&User::name, "name");
+    has_many(&User::articles, "author_id");
+    belongs_to(&User::supervisor, "supervisor_id");
+  }
+
+  namespace w = wayward;
+
+  struct ProjectionReturningArticlesWithUsers : ProjectionTest {
+    void SetUp() override {
+      ProjectionTest::SetUp();
+
+      results().columns_ = {"articles_id", "articles_title", "articles_text", "articles_author_id", "users_id", "users_name", "users_supervisor_id"};
+      for (size_t i = 0; i < 5; ++i) {
+        std::vector<Maybe<std::string>> row {
+          w::format("{0}", i+1), // Article::id
+          w::format("Article {0}", i+1), // Article::title
+          w::format("Text for article {0}.", i+1), // Article::text
+          w::format("{0}", i+100), // Article::author_id
+          w::format("{0}", i+100), // User::id
+          w::format("User {0}", i+100), // User::name
+          w::format("{0}", i+101) // User::supervisor_id
+        };
+        results().rows_.push_back(std::move(row));
+      }
+    }
+  };
+
+  TEST_F(ProjectionReturningArticlesWithUsers, joins_simple_belongs_to) {
+    auto articles = from<Article>(context).inner_join(&Article::author);
+    size_t counter = 0;
+    articles.each([&](Article& article) {
+      EXPECT_EQ(wayward::format("Article {0}", counter+1), article.title);
+      EXPECT_NE(article.author, nullptr);
+      EXPECT_EQ(wayward::format("User {0}", counter+100), article.author->name);
+      ++counter;
+    });
+  }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, uses_simple_join_in_conditions) {
+    auto articles = from<Article>(context).inner_join(&Article::author).where(column(&User::name).ilike("foo"));
+  }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, renames_primary_table) {
+    auto articles = from<Article>(context, "lol");
+    auto sql = articles.to_sql();
+    auto match = sql.find("FROM articles AS lol");
+    EXPECT_NE(std::string::npos, match);
+  }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, renames_joined_table) {
+    auto articles = from<Article>(context).inner_join(&Article::author, "lol");
+    auto sql = articles.to_sql();
+    auto match = sql.find("INNER JOIN users AS lol ON");
+    EXPECT_NE(std::string::npos, match);
+  }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, joins_with_self) {
+    auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su");
+  }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, refers_to_self_join_in_conditions) {
+    auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su").where(column("su", &User::name).ilike("foo"));
+    auto sql = users_with_supervisors.to_sql();
+    auto match = sql.find("WHERE \"su\".\"name\" ILIKE 'foo'");
+    EXPECT_NE(std::string::npos, match);
+  }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, selects_both_primary_and_joined_in_self_joins) {
+    auto users_with_supervisors = from<User>(context, "u").inner_join(&User::supervisor, "su");
+    auto sql = users_with_supervisors.to_sql();
+    auto match1 = sql.find("\"u\".\"id\" AS \"u_id\"");
+    auto match2 = sql.find("\"su\".\"id\" AS \"su_id\"");
+    EXPECT_NE(std::string::npos, match1);
+    EXPECT_NE(std::string::npos, match2);
+  }
+
+  TEST_F(ProjectionReturningArticlesWithUsers, performs_a_triple_self_join) {
+    auto users_with_supervisors_and_their_supervisors = from<User>(context, "u0").inner_join(&User::supervisor, "u1").inner_join("u1", &User::supervisor, "u2");
+    auto sql = users_with_supervisors_and_their_supervisors.to_sql();
+    auto match = sql.find("INNER JOIN users AS u1 ON \"u0\".\"supervisor_id\" = \"u1\".\"id\" INNER JOIN users AS u2 ON \"u1\".\"supervisor_id\" = \"u2\".\"id\"");
+    EXPECT_NE(std::string::npos, match);
   }
 }
