@@ -30,7 +30,16 @@ namespace app {
   }
 
   w::Response get_post(w::Request& req) {
-    w::fail<w::Error>("Hello, errors!");
+    p::Context ctx;
+    int64_t id;
+
+    if (req.params["id"] >> id) {
+      auto post = p::from<Post>(ctx).where(p::column(&Post::id) == id).first();
+      if (post) {
+        return json_response(req, post);
+      }
+    }
+
     return w::not_found();
   }
 }
