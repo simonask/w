@@ -97,7 +97,7 @@ namespace persistence {
   std::unique_ptr<IResultSet>
   PostgreSQLConnection::execute(std::string sql) {
     PGresult* results = PQexec(priv->conn, sql.c_str());
-    priv->logger->log(wayward::Severity::Debug, "SQL", sql);
+    priv->logger->log(wayward::Severity::Debug, "p", sql);
     switch (PQresultStatus(results)) {
       case PGRES_EMPTY_QUERY:
       case PGRES_COMMAND_OK:
