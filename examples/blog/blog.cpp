@@ -42,6 +42,12 @@ namespace app {
 
     return w::not_found();
   }
+
+  w::Response get_num_posts(w::Request& req) {
+    p::Context ctx;
+    auto count = p::from<Post>(ctx).where(p::column(&Post::published_at) <= DateTime::now()).count();
+    return json_ok(req, count);
+  }
 }
 
 int main(int argc, char const *argv[])
@@ -51,6 +57,7 @@ int main(int argc, char const *argv[])
   w::App app;
   app.get("/", app::index);
   app.get("/posts/:id", app::get_post);
+  app.get("/posts_num", app::get_num_posts);
 
   return app.listen_and_serve("0.0.0.0", 3000);
 }
