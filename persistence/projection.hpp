@@ -295,6 +295,20 @@ namespace persistence {
       return std::move(records);
     }
 
+    RecordPtr<Primary>
+    first() && {
+      auto p = std::move(*this).limit(1);
+      auto records = p.all();
+      return records.size() ? std::move(records[0]) : RecordPtr<Primary>(nullptr);
+    }
+
+    RecordPtr<Primary>
+    first() const& {
+      auto p = this->limit(1);
+      auto records = p.all();
+      return records.size() ? std::move(records[0]) : RecordPtr<Primary>(nullptr);
+    }
+
     // Type-safe operations for tables representing T:
     // TODO: Do some type checking on Condition, to check that it only references tables mentioned in the TypeList.
     Self where(relational_algebra::Condition cond) && { return replace_p(std::move(p_).where(std::move(cond))); }
