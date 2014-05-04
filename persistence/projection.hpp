@@ -14,6 +14,7 @@
 #include <persistence/connection_provider.hpp>
 #include <persistence/belongs_to.hpp>
 #include <persistence/context.hpp>
+#include <persistence/types.hpp>
 
 #include <wayward/support/meta.hpp>
 #include <wayward/support/error.hpp>
