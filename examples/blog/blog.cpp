@@ -19,55 +19,6 @@ namespace app {
     return json_response(req, std::forward<T>(object));
   }
 
-  w::Response index(w::Request& req) {
-    p::Context ctx;
-    auto posts = p::from<Post>(ctx)
-      .where(p::column(&Post::published_at) <= DateTime::now())
-      .inner_join(&Post::author)
-      .order(&Post::published_at)
-      .reverse_order();
-    auto all = posts.all();
-
-    return json_ok(req, all);
-  }
-
-  w::Response get_post(w::Request& req) {
-    p::Context ctx;
-    int64_t id;
-
-    if (req.params["id"] >> id) {
-      auto post = p::from<Post>(ctx).where(p::column(&Post::id) == id).first();
-      if (post) {
-        return json_response(req, post);
-      }
-    }
-
-    return w::not_found();
-  }
-
-  w::Response get_num_posts(w::Request& req) {
-    p::Context ctx;
-    auto count = p::from<Post>(ctx).where(p::column(&Post::published_at) <= DateTime::now()).count();
-    return json_ok(req, count);
-  }
-
-  w::Response create_post(w::Request& req) {
-    // p::Context ctx;
-    // auto post = ctx.create<Post>(req.params["post"]);
-    // return json_ok(req, p::save(post));
-    return w::not_found();
-  }
-
-  w::Response update_post(w::Request& req) {
-    // p::Context ctx;
-    // auto post = from<Post>(ctx).where(p::column(&POst::id) == id).first();
-    // if (post) {
-    //   p::update_attributes(post, req.params["post"]);
-    //   return json_ok(req, p::save(post));
-    // }
-    return w::not_found();
-  }
-
   struct PostRoutes : w::Routes {
     RecordPtr<Post> post;
 
@@ -137,14 +88,10 @@ int main(int argc, char const *argv[])
   p::setup("postgresql://wayward_examples@localhost/wayward_examples_blog");
 
   w::App app;
-  // app.get("/", app::index);
-  // app.get("/posts/:id", app::get_post);
-  // app.post("/posts", app::create_post);
-  // app.put("/posts/:id", app::update_post);
 
   app.get("/posts", &app::PostRoutes::get_all_posts);
   app.get("/posts/:post_id", &app::PostRoutes::get_post);
-  app.put("/posts/:post_id", &app::PostRoutes::put_post);
+  app.patch("/posts/:post_id", &app::PostRoutes::put_post);
   app.del("/posts/:post_id", &app::PostRoutes::delete_post);
   app.get("/posts/:post_id/comments", &app::PostRoutes::get_comments);
   app.post("/posts/:post_id/comments", &app::PostRoutes::post_comment);
