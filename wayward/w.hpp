@@ -7,10 +7,12 @@
 #include <vector>
 #include <memory>
 #include <map>
-#include "wayward/support/uri.hpp"
-#include "wayward/http.hpp"
+
+#include <wayward/http.hpp>
+#include <wayward/support/uri.hpp>
 #include <wayward/support/format.hpp>
 #include <wayward/support/logger.hpp>
+#include <wayward/support/node.hpp>
 
 #if !defined(WAYWARD_NO_SHORTHAND_NAMESPACE)
 namespace w = wayward;
@@ -19,7 +21,7 @@ namespace w = wayward;
 namespace wayward {
   struct Request {
     std::map<std::string, std::string> headers;
-    std::map<std::string, std::string> params;
+    std::map<std::string, Node> params;
     std::string method;
     URI uri;
     std::string body;

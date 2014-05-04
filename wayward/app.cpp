@@ -29,7 +29,7 @@ namespace wayward {
         MatchResults match;
         if (std::regex_match(req.uri.path(), match, regex)) {
           for (auto& group_name: regex_group_names) {
-            req.params[group_name.second] = match[group_name.first];
+            req.params[group_name.second] = std::string(match[group_name.first]);
           }
           return true;
         }
