@@ -17,6 +17,7 @@
 
 #include <wayward/support/meta.hpp>
 #include <wayward/support/error.hpp>
+#include <wayward/support/logger.hpp>
 
 #include <functional>
 #include <cassert>
@@ -541,6 +542,7 @@ namespace persistence {
       if (materialized_ == nullptr) {
         update_select_expressions();
         auto conn = current_connection_provider().acquire_connection_for_data_store(get_type<Primary>()->data_store());
+        //conn.logger()->log(wayward::Severity::Debug, "p", wayward::format("Load {0}", get_type<Primary>()->name()));
         materialized_ = conn.execute(*p_.query, q_);
       }
     }
