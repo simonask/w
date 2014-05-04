@@ -248,7 +248,18 @@ namespace persistence {
       return conn.to_sql(*p_.query, q_);
     }
 
-    size_t count() const;
+    size_t count() const {
+      auto p_copy = p_.select({
+        {relational_algebra::aggregate("COUNT", relational_algebra::column(q_.projector_->relation_alias(), get_type<Primary>()->primary_key()->column())),
+        "count"}
+      });
+      auto conn = current_connection_provider().acquire_connection_for_data_store(get_type<Primary>()->data_store());
+      auto results = conn.execute(*p_copy.query, q_);
+      uint64_t count = 0;
+      get_type<decltype(count)>()->extract_from_results(count, *results, 0, "count");
+      return count;
+    }
+
     void each(std::function<void(std::string)> callback); // TODO: TypedRow type.
 
     // Type-unsafe operations that always compile, but don't give you any compile-time checks:

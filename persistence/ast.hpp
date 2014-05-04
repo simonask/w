@@ -133,6 +133,7 @@ namespace persistence {
     // function(arguments...)
     struct Aggregate : Cloneable<Aggregate, SingleValue> {
       virtual ~Aggregate() {}
+      Aggregate(std::string function, std::vector<CloningPtr<SingleValue>> arguments) : function(std::move(function)), arguments(std::move(arguments)) {}
 
       std::string function;
       std::vector<CloningPtr<SingleValue>> arguments;
