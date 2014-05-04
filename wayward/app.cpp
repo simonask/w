@@ -190,28 +190,8 @@ namespace wayward {
     return event_base_dispatch(priv->base);
   }
 
-  void App::get(std::string path, std::function<Response(Request&)> handler) {
-    priv->add_handler(std::move(path), std::move(handler), "GET");
-  }
-
-  void App::put(std::string path, std::function<Response(Request&)> handler) {
-    priv->add_handler(std::move(path), std::move(handler), "PUT");
-  }
-
-  void App::post(std::string path, std::function<Response(Request&)> handler) {
-    priv->add_handler(std::move(path), std::move(handler), "POST");
-  }
-
-  void App::del(std::string path, std::function<Response(Request&)> handler) {
-    priv->add_handler(std::move(path), std::move(handler), "DELETE");
-  }
-
-  void App::head(std::string path, std::function<Response(Request&)> handler) {
-    priv->add_handler(std::move(path), std::move(handler), "HEAD");
-  }
-
-  void App::options(std::string path, std::function<Response(Request&)> handler) {
-    priv->add_handler(std::move(path), std::move(handler), "OPTIONS");
+  void App::add_route(std::string method, std::string path, std::function<Response(Request&)> handler) {
+    priv->add_handler(std::move(path), std::move(handler), std::move(method));
   }
 
   void App::print_routes() const {
