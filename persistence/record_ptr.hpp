@@ -27,7 +27,7 @@ namespace persistence {
     friend struct Context;
     RecordPtr(T* record, std::shared_ptr<ContextLifetimeSentinel> sentinel) : record_(record), sentinel_(std::move(sentinel)) {}
 
-    T* record_;
+    T* record_ = nullptr;
     std::shared_ptr<ContextLifetimeSentinel> sentinel_;
   };
 }
