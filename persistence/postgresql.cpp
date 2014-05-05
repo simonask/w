@@ -170,7 +170,7 @@ namespace persistence {
     }
 
     if (PQstatus(conn) != CONNECTION_OK) {
-      if (out_error) *out_error = "Connection failed.";
+      if (out_error) *out_error = PQerrorMessage(conn);
       PQfinish(conn);
       return nullptr;
     }
