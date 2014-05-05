@@ -136,11 +136,7 @@ int main(int argc, char const *argv[])
 {
   p::setup("postgresql://wayward_examples@localhost/wayward_examples_blog");
 
-  w::App app;
-  // app.get("/", app::index);
-  // app.get("/posts/:id", app::get_post);
-  // app.post("/posts", app::create_post);
-  // app.put("/posts/:id", app::update_post);
+  w::App app { argc, argv };
 
   app.get("/posts", &app::PostRoutes::get_all_posts);
   app.get("/posts/:post_id", &app::PostRoutes::get_post);
@@ -151,5 +147,5 @@ int main(int argc, char const *argv[])
   app.get("/posts/:post_id/comments/:comment_id", &app::PostCommentRoutes::get_comment);
   app.del("/posts/:post_id/comments/:comment_id", &app::PostCommentRoutes::delete_comment);
 
-  return app.listen_and_serve("0.0.0.0", 3000);
+  return app.run();
 }

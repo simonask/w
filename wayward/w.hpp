@@ -90,7 +90,7 @@ namespace wayward {
 
   class App : public Scope {
   public:
-    App();
+    App(int argc, char const* const* argv);
     virtual ~App();
 
     struct {
@@ -98,7 +98,7 @@ namespace wayward {
       bool parallel = false;
     } config;
 
-    int listen_and_serve(std::string address = "0.0.0.0", int port = 3000);
+    int run();
 
     void add_route(std::string method, std::string path, std::function<Response(Request&)> handler) final;
 

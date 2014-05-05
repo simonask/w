@@ -16,6 +16,7 @@ set(WAYWARD_SUPPORT_SOURCES
   wayward/support/datetime/interval.cpp
   wayward/support/logger.cpp
   wayward/support/error.cpp
+  wayward/support/command_line_options.cpp
 )
 
 set(WAYWARD_SOURCES
@@ -23,6 +24,11 @@ set(WAYWARD_SOURCES
   wayward/render.cpp
   wayward/request.cpp
   wayward/log.cpp
+)
+
+set(WAYWARD_DEV_SERVER_SOURCES
+  dev_server/server.cpp
+  dev_server/recompiler.cpp
 )
 
 set(WAYWARD_TESTING_SOURCES
@@ -48,16 +54,19 @@ add_library(wayward_support SHARED ${WAYWARD_SUPPORT_SOURCES})
 add_library(wayward SHARED ${WAYWARD_SOURCES})
 add_library(persistence SHARED ${PERSISTENCE_SOURCES})
 add_library(wayward_testing SHARED ${WAYWARD_TESTING_SOURCES})
+add_executable(w_dev ${WAYWARD_DEV_SERVER_SOURCES})
 
 target_link_libraries(wayward wayward_support)
 target_link_libraries(persistence wayward_support)
 target_link_libraries(wayward_testing wayward wayward_support)
+target_link_libraries(w_dev wayward_support)
 
 find_library(LIBEVENT event)
 find_library(LIBPQ pq)
 target_link_libraries(persistence ${LIBPQ})
 target_link_libraries(wayward ${LIBEVENT})
 target_link_libraries(wayward_support ${LIBEVENT})
+target_link_libraries(w_dev ${LIBEVENT})
 
 if (test)
   add_subdirectory(tests)

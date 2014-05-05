@@ -1,6 +1,7 @@
 #include "wayward/w.hpp"
 #include "wayward/private.hpp"
 #include <wayward/support/datetime.hpp>
+#include <wayward/support/command_line_options.hpp>
 
 #include <event2/event.h>
 #include <event2/http.h>
@@ -43,6 +44,13 @@ namespace wayward {
     std::map<std::string, std::vector<Handler>> method_handlers;
     event_base* base = nullptr;
     evhttp* http = nullptr;
+
+    std::string executable_path;
+    CommandLineOptions command_line_options;
+    std::string address = "0.0.0.0";
+    int port = 3000;
+    std::string environment = "development";
+    bool live_recompile = true;
 
     Handler handler_for_path(std::string path, std::function<Response(Request&)> callback) {
       Handler handler;
@@ -168,11 +176,35 @@ namespace wayward {
     app->priv->handle_request(req);
   }
 
-  App::App() : priv(new Private) {
+  App::App(int argc, char const* const* argv) : priv(new Private) {
     priv->app = this;
     priv->base = event_base_new();
     priv->http = evhttp_new(priv->base);
     evhttp_set_gencb(priv->http, app_http_request_cb, this);
+
+    priv->executable_path = argv[0];
+    priv->command_line_options.set(argc, argv);
+
+    auto& cmd = priv->command_line_options;
+
+    cmd.option("--environment", "-e", [&](const std::string& env) {
+      priv->environment = env;
+      if (env != "development") {
+        priv->live_recompile = false;
+      }
+    });
+
+    cmd.option("--port", "-p", [&](int64_t port) {
+      priv->port = port;
+    });
+
+    cmd.option("--address", [&](const std::string& address) {
+      priv->address = address;
+    });
+
+    cmd.option("--no-live-recompile", [&]() {
+      priv->live_recompile = false;
+    });
   }
 
   App::~App() {
@@ -180,13 +212,13 @@ namespace wayward {
     event_base_free(priv->base);
   }
 
-  int App::listen_and_serve(std::string address, int port) {
-    int fd = evhttp_bind_socket(priv->http, address.c_str(), (u_short)port);
+  int App::run() {
+    int fd = evhttp_bind_socket(priv->http, priv->address.c_str(), (u_short)priv->port);
     if (fd < 0) {
       log::error("w", "Could not bind to socket.");
       return fd;
     }
-    log::info("w", wayward::format("Listening for connections on {0}:{1}", address, port));
+    log::info("w", wayward::format("Listening for connections on {0}:{1}", priv->address, priv->port));
     return event_base_dispatch(priv->base);
   }
 
