@@ -7,6 +7,7 @@
 #include <persistence/belongs_to.hpp>
 #include <persistence/has_many.hpp>
 #include <persistence/has_one.hpp>
+#include <persistence/record_as_structured_data.hpp>
 
 namespace persistence {
   template <typename RT>

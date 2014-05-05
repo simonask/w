@@ -14,9 +14,11 @@
 #include <persistence/connection_provider.hpp>
 #include <persistence/belongs_to.hpp>
 #include <persistence/context.hpp>
+#include <persistence/types.hpp>
 
 #include <wayward/support/meta.hpp>
 #include <wayward/support/error.hpp>
+#include <wayward/support/logger.hpp>
 
 #include <functional>
 #include <cassert>
@@ -247,7 +249,18 @@ namespace persistence {
       return conn.to_sql(*p_.query, q_);
     }
 
-    size_t count() const;
+    size_t count() const {
+      auto p_copy = p_.select({
+        {relational_algebra::aggregate("COUNT", relational_algebra::column(q_.projector_->relation_alias(), get_type<Primary>()->primary_key()->column())),
+        "count"}
+      });
+      auto conn = current_connection_provider().acquire_connection_for_data_store(get_type<Primary>()->data_store());
+      auto results = conn.execute(*p_copy.query, q_);
+      uint64_t count = 0;
+      get_type<decltype(count)>()->extract_from_results(count, *results, 0, "count");
+      return count;
+    }
+
     void each(std::function<void(std::string)> callback); // TODO: TypedRow type.
 
     // Type-unsafe operations that always compile, but don't give you any compile-time checks:
@@ -293,6 +306,20 @@ namespace persistence {
         records.push_back(project(i));
       }
       return std::move(records);
+    }
+
+    RecordPtr<Primary>
+    first() && {
+      auto p = std::move(*this).limit(1);
+      auto records = p.all();
+      return records.size() ? std::move(records[0]) : RecordPtr<Primary>(nullptr);
+    }
+
+    RecordPtr<Primary>
+    first() const& {
+      auto p = this->limit(1);
+      auto records = p.all();
+      return records.size() ? std::move(records[0]) : RecordPtr<Primary>(nullptr);
     }
 
     // Type-safe operations for tables representing T:
@@ -527,6 +554,7 @@ namespace persistence {
       if (materialized_ == nullptr) {
         update_select_expressions();
         auto conn = current_connection_provider().acquire_connection_for_data_store(get_type<Primary>()->data_store());
+        //conn.logger()->log(wayward::Severity::Debug, "p", wayward::format("Load {0}", get_type<Primary>()->name()));
         materialized_ = conn.execute(*p_.query, q_);
       }
     }

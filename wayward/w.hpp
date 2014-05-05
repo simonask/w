@@ -7,10 +7,13 @@
 #include <vector>
 #include <memory>
 #include <map>
-#include "wayward/support/uri.hpp"
-#include "wayward/http.hpp"
+
+#include <wayward/http.hpp>
+#include <wayward/support/uri.hpp>
 #include <wayward/support/format.hpp>
 #include <wayward/support/logger.hpp>
+#include <wayward/support/node.hpp>
+#include <wayward/support/json.hpp>
 
 #if !defined(WAYWARD_NO_SHORTHAND_NAMESPACE)
 namespace w = wayward;
@@ -19,7 +22,7 @@ namespace w = wayward;
 namespace wayward {
   struct Request {
     std::map<std::string, std::string> headers;
-    std::map<std::string, std::string> params;
+    std::map<std::string, Node> params;
     std::string method;
     URI uri;
     std::string body;
@@ -52,17 +55,40 @@ namespace wayward {
   Response render_template(std::string templ);
   Response redirect(std::string new_location, HTTPStatusCode code = HTTPStatusCode::Found);
 
-  struct IScope {
-    virtual ~IScope() {}
-    virtual void get(std::string path, std::function<Response(Request&)> handler) = 0;
-    virtual void put(std::string path, std::function<Response(Request&)> handler) = 0;
-    virtual void post(std::string path, std::function<Response(Request&)> handler) = 0;
-    virtual void del(std::string path, std::function<Response(Request&)> handler) = 0;
-    virtual void head(std::string path, std::function<Response(Request&)> handler) = 0;
-    virtual void options(std::string path, std::function<Response(Request&)> handler) = 0;
+  struct Scope {
+    virtual ~Scope() {}
+    void get(std::string path, std::function<Response(Request&)> handler) { add_route("GET", std::move(path), std::move(handler)); }
+    void put(std::string path, std::function<Response(Request&)> handler) { add_route("PUT", std::move(path), std::move(handler)); }
+    void post(std::string path, std::function<Response(Request&)> handler) { add_route("POST", std::move(path), std::move(handler)); }
+    void del(std::string path, std::function<Response(Request&)> handler) { add_route("DELETE", std::move(path), std::move(handler)); }
+    void head(std::string path, std::function<Response(Request&)> handler) { add_route("HEAD", std::move(path), std::move(handler)); }
+    void options(std::string path, std::function<Response(Request&)> handler) { add_route("OPTIONS", std::move(path), std::move(handler)); }
+
+    template <typename R> using RouteMethodPointer = Response(R::*)(Request&);
+    template <typename R> void     get(std::string path, RouteMethodPointer<R> handler) {     get(std::move(path), make_handler_for_route_method(handler)); }
+    template <typename R> void     put(std::string path, RouteMethodPointer<R> handler) {     put(std::move(path), make_handler_for_route_method(handler)); }
+    template <typename R> void    post(std::string path, RouteMethodPointer<R> handler) {    post(std::move(path), make_handler_for_route_method(handler)); }
+    template <typename R> void     del(std::string path, RouteMethodPointer<R> handler) {     del(std::move(path), make_handler_for_route_method(handler)); }
+    template <typename R> void    head(std::string path, RouteMethodPointer<R> handler) {    head(std::move(path), make_handler_for_route_method(handler)); }
+    template <typename R> void options(std::string path, RouteMethodPointer<R> handler) { options(std::move(path), make_handler_for_route_method(handler)); }
+
+    virtual void add_route(std::string method, std::string path, std::function<Response(Request&)> handler) = 0;
+
+  private:
+    template <typename R>
+    std::function<Response(Request&)>
+    make_handler_for_route_method(RouteMethodPointer<R> handler) {
+      return [=](Request& req) -> Response {
+        R routes;
+        routes.before(req);
+        auto response = routes.around(req, [&](Request& r) { return (routes.*handler)(r); });
+        routes.after(req);
+        return std::move(response);
+      };
+    }
   };
 
-  class App : public IScope {
+  class App : public Scope {
   public:
     App();
     virtual ~App();
@@ -74,12 +100,7 @@ namespace wayward {
 
     int listen_and_serve(std::string address = "0.0.0.0", int port = 3000);
 
-    void get(std::string path, std::function<Response(Request&)> handler) override;
-    void put(std::string path, std::function<Response(Request&)> handler) override;
-    void post(std::string path, std::function<Response(Request&)> handler) override;
-    void del(std::string path, std::function<Response(Request&)> handler) override;
-    void head(std::string path, std::function<Response(Request&)> handler) override;
-    void options(std::string path, std::function<Response(Request&)> handler) override;
+    void add_route(std::string method, std::string path, std::function<Response(Request&)> handler) final;
 
     void print_routes() const;
 

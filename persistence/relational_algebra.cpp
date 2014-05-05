@@ -30,6 +30,20 @@ namespace persistence {
       };
     }
 
+    Value aggregate_impl(std::string func, Value* args, size_t num_args) {
+      std::vector<CloningPtr<ast::SingleValue>> ax;
+      ax.reserve(num_args);
+      for (size_t i = 0; i < num_args; ++i) {
+        ax.push_back(std::move(args[i].value));
+      }
+
+      return Value {
+        make_cloning_ptr(
+          new ast::Aggregate(std::move(func), std::move(ax))
+        )
+      };
+    }
+
     Value literal(double n) {
       return Value {
         make_cloning_ptr(new ast::NumericLiteral{n})

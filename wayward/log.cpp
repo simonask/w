@@ -52,7 +52,7 @@ namespace wayward {
     }
 
     void error(std::string message) {
-      error("app", message);
+      error("app", std::move(message));
     }
   }
 }

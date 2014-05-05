@@ -6,6 +6,7 @@
 #include <wayward/support/meta.hpp>
 #include <wayward/support/structured_data.hpp>
 #include <wayward/support/structured_data_adapters.hpp>
+#include <wayward/support/datetime.hpp>
 
 namespace persistence {
 
