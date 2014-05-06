@@ -13,3 +13,4 @@ CMakeScripts
 *.xcodeproj
 .DS_Store
 examples/blog/blog
+w_dev
