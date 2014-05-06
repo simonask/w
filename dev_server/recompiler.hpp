@@ -10,12 +10,15 @@ namespace wayward {
   };
 
   struct Recompiler {
-    explicit Recompiler(const std::string path);
+    explicit Recompiler(const std::string& directory) : directory_(directory) {}
 
     // This internally invokes `make -q` in the path.
     bool needs_rebuild();
 
     void rebuild();
+
+  private:
+    std::string directory_;
   };
 }
 
