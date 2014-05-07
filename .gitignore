@@ -11,3 +11,5 @@ Makefile
 CMakeScripts
 *.build
 *.xcodeproj
+.DS_Store
+examples/blog/blog
