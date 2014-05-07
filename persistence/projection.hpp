@@ -261,8 +261,6 @@ namespace persistence {
       return count;
     }
 
-    void each(std::function<void(std::string)> callback); // TODO: TypedRow type.
-
     // Type-unsafe operations that always compile, but don't give you any compile-time checks:
     Self where(SQL sql) && { return replace_p(std::move(p_).where(std::move(sql))); }
     Self order(SQL sql) && { return replace_p(std::move(p_).order(std::move(sql))); }
@@ -288,11 +286,16 @@ namespace persistence {
     // Templated versions:
     // Fetching results:
     void each(std::function<void(Primary&)> callback) {
+      each([&](RecordPtr<Primary>& ptr) {
+        callback(*ptr);
+      });
+    }
+    void each(std::function<void(RecordPtr<Primary>&)> callback) {
       materialize();
       size_t num_rows = materialized_->height();
       for (size_t i = 0; i < num_rows; ++i) {
         auto ptr = project(i);
-        callback(*ptr);
+        callback(ptr);
       }
     }
 
