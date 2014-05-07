@@ -83,6 +83,10 @@ namespace app {
       return w::not_found();
     }
   };
+
+  w::Response crash(w::Request& req) {
+    ::exit(1);
+  }
 }
 
 int main(int argc, char const *argv[])
@@ -99,6 +103,7 @@ int main(int argc, char const *argv[])
   app.post("/posts/:post_id/comments", &app::PostRoutes::post_comment);
   app.get("/posts/:post_id/comments/:comment_id", &app::PostCommentRoutes::get_comment);
   app.del("/posts/:post_id/comments/:comment_id", &app::PostCommentRoutes::delete_comment);
+  app.get("/crash", app::crash);
 
   app.get("/", [&](w::Request& req) -> w::Response {
     // TODO: A better way of reading templates/static files.
