@@ -38,7 +38,7 @@ Example app
 #include <w>
 
 int main(int argc, char** argv) {
-  w::App app;
+  w::App app { argv, argv };
 
   app.get("/", [](w::Request& req) -> w::Response {
     return w::render_text("Hello, World!");
@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     return w::render_text("You might have just created a new article!");
   });
 
-  app.listen_and_serve("0.0.0.0", 3000);
+  app.run();
 }
 ```
 
@@ -70,8 +70,12 @@ Example of binding a data structure to a table in an SQL database:
 ```C++
 #include <p>
 
+using p::PrimaryKey;
+using p::BelongsTo;
+using p::HasMany;
+
 struct Article {
-  p::PrimaryKey   id;     // Could also be a plain integer, though less safe.
+  PrimaryKey      id;     // Could also be a plain integer, though less safe.
   uint64_t        timestamp;
   std::string     title;
   std::string     text;
@@ -122,7 +126,7 @@ Dependencies
 
 Dependency management in C++ apps is a pain, so `<w>` tries to keep it to a minimum.
 
-- [libevent 2.0](http://libevent.org/)
+- [libevent 2.1-alpha](http://libevent.org/)
 - C++11 compatible compiler ([Clang](http://clang.llvm.org/) is recommended).
 - CMake 2.6 or newer.
 - For Persistence: `libpq` (from PostgreSQL).
