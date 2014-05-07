@@ -57,16 +57,18 @@ namespace wayward {
 
   struct Scope {
     virtual ~Scope() {}
-    void get(std::string path, std::function<Response(Request&)> handler) { add_route("GET", std::move(path), std::move(handler)); }
-    void put(std::string path, std::function<Response(Request&)> handler) { add_route("PUT", std::move(path), std::move(handler)); }
-    void post(std::string path, std::function<Response(Request&)> handler) { add_route("POST", std::move(path), std::move(handler)); }
-    void del(std::string path, std::function<Response(Request&)> handler) { add_route("DELETE", std::move(path), std::move(handler)); }
-    void head(std::string path, std::function<Response(Request&)> handler) { add_route("HEAD", std::move(path), std::move(handler)); }
+    void get(std::string path, std::function<Response(Request&)> handler)     { add_route("GET",     std::move(path), std::move(handler)); }
+    void put(std::string path, std::function<Response(Request&)> handler)     { add_route("PUT",     std::move(path), std::move(handler)); }
+    void patch(std::string path, std::function<Response(Request&)> handler)   { add_route("PATCH",   std::move(path), std::move(handler)); }
+    void post(std::string path, std::function<Response(Request&)> handler)    { add_route("POST",    std::move(path), std::move(handler)); }
+    void del(std::string path, std::function<Response(Request&)> handler)     { add_route("DELETE",  std::move(path), std::move(handler)); }
+    void head(std::string path, std::function<Response(Request&)> handler)    { add_route("HEAD",    std::move(path), std::move(handler)); }
     void options(std::string path, std::function<Response(Request&)> handler) { add_route("OPTIONS", std::move(path), std::move(handler)); }
 
     template <typename R> using RouteMethodPointer = Response(R::*)(Request&);
     template <typename R> void     get(std::string path, RouteMethodPointer<R> handler) {     get(std::move(path), make_handler_for_route_method(handler)); }
     template <typename R> void     put(std::string path, RouteMethodPointer<R> handler) {     put(std::move(path), make_handler_for_route_method(handler)); }
+    template <typename R> void   patch(std::string path, RouteMethodPointer<R> handler) {   patch(std::move(path), make_handler_for_route_method(handler)); }
     template <typename R> void    post(std::string path, RouteMethodPointer<R> handler) {    post(std::move(path), make_handler_for_route_method(handler)); }
     template <typename R> void     del(std::string path, RouteMethodPointer<R> handler) {     del(std::move(path), make_handler_for_route_method(handler)); }
     template <typename R> void    head(std::string path, RouteMethodPointer<R> handler) {    head(std::move(path), make_handler_for_route_method(handler)); }

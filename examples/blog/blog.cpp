@@ -2,6 +2,8 @@
 
 #include "models.hpp"
 
+#include <fstream>
+
 namespace app {
   using p::RecordPtr;
 
@@ -17,55 +19,6 @@ namespace app {
   template <typename T>
   w::Response json_ok(const w::Request& req, T&& object) {
     return json_response(req, std::forward<T>(object));
-  }
-
-  w::Response index(w::Request& req) {
-    p::Context ctx;
-    auto posts = p::from<Post>(ctx)
-      .where(p::column(&Post::published_at) <= DateTime::now())
-      .inner_join(&Post::author)
-      .order(&Post::published_at)
-      .reverse_order();
-    auto all = posts.all();
-
-    return json_ok(req, all);
-  }
-
-  w::Response get_post(w::Request& req) {
-    p::Context ctx;
-    int64_t id;
-
-    if (req.params["id"] >> id) {
-      auto post = p::from<Post>(ctx).where(p::column(&Post::id) == id).first();
-      if (post) {
-        return json_response(req, post);
-      }
-    }
-
-    return w::not_found();
-  }
-
-  w::Response get_num_posts(w::Request& req) {
-    p::Context ctx;
-    auto count = p::from<Post>(ctx).where(p::column(&Post::published_at) <= DateTime::now()).count();
-    return json_ok(req, count);
-  }
-
-  w::Response create_post(w::Request& req) {
-    // p::Context ctx;
-    // auto post = ctx.create<Post>(req.params["post"]);
-    // return json_ok(req, p::save(post));
-    return w::not_found();
-  }
-
-  w::Response update_post(w::Request& req) {
-    // p::Context ctx;
-    // auto post = from<Post>(ctx).where(p::column(&POst::id) == id).first();
-    // if (post) {
-    //   p::update_attributes(post, req.params["post"]);
-    //   return json_ok(req, p::save(post));
-    // }
-    return w::not_found();
   }
 
   struct PostRoutes : w::Routes {
@@ -140,12 +93,31 @@ int main(int argc, char const *argv[])
 
   app.get("/posts", &app::PostRoutes::get_all_posts);
   app.get("/posts/:post_id", &app::PostRoutes::get_post);
-  app.put("/posts/:post_id", &app::PostRoutes::put_post);
+  app.patch("/posts/:post_id", &app::PostRoutes::put_post);
   app.del("/posts/:post_id", &app::PostRoutes::delete_post);
   app.get("/posts/:post_id/comments", &app::PostRoutes::get_comments);
   app.post("/posts/:post_id/comments", &app::PostRoutes::post_comment);
   app.get("/posts/:post_id/comments/:comment_id", &app::PostCommentRoutes::get_comment);
   app.del("/posts/:post_id/comments/:comment_id", &app::PostCommentRoutes::delete_comment);
+
+  app.get("/", [&](w::Request& req) -> w::Response {
+    // TODO: A better way of reading templates/static files.
+    std::ifstream f("index.html");
+    if (!f.good()) {
+      return w::not_found();
+    }
+    f.seekg(0, std::ios::end);
+    size_t length = f.tellg();
+    f.seekg(0, std::ios::beg);
+    std::string resp;
+    resp.resize(length);
+    f.read(&resp[0], length);
+    f.close();
+    w::Response response;
+    response.headers["Content-Type"] = "text/html";
+    response.body = std::move(resp);
+    return response;
+  });
 
   return app.run();
 }
