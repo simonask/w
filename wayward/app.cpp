@@ -50,7 +50,7 @@ namespace wayward {
     std::string address = "0.0.0.0";
     int port = 3000;
     std::string environment = "development";
-    bool live_recompile = true;
+    Maybe<int> socket_from_parent_process;
 
     Handler handler_for_path(std::string path, std::function<Response(Request&)> callback) {
       Handler handler;
@@ -189,9 +189,6 @@ namespace wayward {
 
     cmd.option("--environment", "-e", [&](const std::string& env) {
       priv->environment = env;
-      if (env != "development") {
-        priv->live_recompile = false;
-      }
     });
 
     cmd.option("--port", "-p", [&](int64_t port) {
@@ -202,8 +199,8 @@ namespace wayward {
       priv->address = address;
     });
 
-    cmd.option("--no-live-recompile", [&]() {
-      priv->live_recompile = false;
+    cmd.option("--socketfd", [&](int64_t sockfd) {
+      priv->socket_from_parent_process = (int)sockfd;
     });
   }
 
@@ -213,12 +210,23 @@ namespace wayward {
   }
 
   int App::run() {
-    int fd = evhttp_bind_socket(priv->http, priv->address.c_str(), (u_short)priv->port);
-    if (fd < 0) {
-      log::error("w", "Could not bind to socket.");
-      return fd;
+    int fd;
+    if (priv->socket_from_parent_process) {
+      fd = *priv->socket_from_parent_process;
+      int r = evhttp_accept_socket(priv->http, fd);
+      if (r < 0) {
+        log::error("w", wayward::format("Could not listen on provided socket {0}.", fd));
+        return 1;
+      }
+    } else {
+      fd = evhttp_bind_socket(priv->http, priv->address.c_str(), (u_short)priv->port);
+      if (fd < 0) {
+        log::error("w", "Could not bind to socket.");
+        return 1;
+      }
+      log::info("w", wayward::format("Listening for connections on {0}:{1}", priv->address, priv->port));
     }
-    log::info("w", wayward::format("Listening for connections on {0}:{1}", priv->address, priv->port));
+
     return event_base_dispatch(priv->base);
   }
 
