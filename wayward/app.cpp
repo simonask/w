@@ -41,6 +41,8 @@ namespace wayward {
 
   struct App::Private {
     App* app = nullptr;
+    std::string root;
+    std::vector<std::pair<std::string, std::string>> asset_locations;
     std::map<std::string, std::vector<Handler>> method_handlers;
     event_base* base = nullptr;
     evhttp* http = nullptr;
@@ -123,13 +125,28 @@ namespace wayward {
       return std::move(r);
     }
 
-    void respond_to_request(Request& req, evhttp_request* handle) {
-      auto t0 = DateTime::now();
+    Maybe<Response> respond_with_static_file(Request& req, evhttp_request* handle) {
+      if (environment != "development")
+        return Nothing; // Only serve static files in development.
+      if (req.method != "GET")
+        return Nothing;
+      auto path = req.uri.path();
+      if (path.find("..") != std::string::npos)
+        return Nothing; // Never allow paths with '..'
 
-      if (app->config.log_requests) {
-        log::debug("w", wayward::format("Starting {0} {1}", req.method, req.uri.path()));
+      for (auto& pair: asset_locations) {
+        if (path.find(pair.first) == 0) {
+          std::string rem = path.substr(pair.first.size());
+          if (rem.back() != '/')
+            rem += '/';
+          std::string local_path = pair.second + rem;
+          return wayward::file(local_path);
+        }
       }
+      return Nothing;
+    }
 
+    Maybe<Response> respond_with_handler(Request& req, evhttp_request* handle) {
       auto handlers_it = method_handlers.find(req.method);
       Handler* h = nullptr;
       if (handlers_it != method_handlers.end()) {
@@ -143,14 +160,16 @@ namespace wayward {
       Response response;
       if (h) {
         try {
-          response = h->handler(req);
+          return h->handler(req);
         } catch (...) {
-          response = respond_to_error(std::current_exception(), __cxxabiv1::__cxa_current_exception_type());
+          return respond_to_error(std::current_exception(), __cxxabiv1::__cxa_current_exception_type());
         }
-      } else {
-        response = wayward::not_found();
       }
 
+      return Nothing;
+    }
+
+    void send_response(Response& response, evhttp_request* handle) {
       evkeyvalq* headers = evhttp_request_get_output_headers(handle);
       for (auto& pair: response.headers) {
         evhttp_add_header(headers, pair.first.c_str(), pair.second.c_str());
@@ -160,13 +179,35 @@ namespace wayward {
       evbuffer_add(body_buffer, response.body.c_str(), response.body.size());
       evhttp_send_reply(handle, (int)response.code, response.reason.size() ? response.reason.c_str() : nullptr, body_buffer);
       evbuffer_free(body_buffer);
+    }
+
+    void respond_to_request(Request& req, evhttp_request* handle) {
+      auto t0 = DateTime::now();
+
+      if (app->config.log_requests) {
+        log::debug("w", wayward::format("Starting {0} {1}", req.method, req.uri.path()));
+      }
+
+      Maybe<Response> response = Nothing;
+
+      response = respond_with_static_file(req, handle);
+
+      if (!response) {
+        response = respond_with_handler(req, handle);
+      }
+
+      if (!response) {
+        response = wayward::not_found();
+      }
+
+      send_response(*response, handle);
 
       auto t1 = DateTime::now();
       if (app->config.log_requests) {
         auto time_elapsed = t1 - t0;
         double us = time_elapsed.microseconds().repr_.count();
         double ms = us / 1000.0;
-        log::info("w", wayward::format("Finished {0} {1} with {2} in {3} ms", req.method, req.uri.path(), (int)response.code, ms));
+        log::info("w", wayward::format("Finished {0} {1} with {2} in {3} ms", req.method, req.uri.path(), (int)response->code, ms));
       }
     }
   };
@@ -202,6 +243,18 @@ namespace wayward {
     cmd.option("--socketfd", [&](int64_t sockfd) {
       priv->socket_from_parent_process = (int)sockfd;
     });
+
+    // Find absolute root:
+    std::string program_name = argv[0];
+    auto last_sep = program_name.find_last_of('/');
+    std::string path = last_sep == std::string::npos ? std::string(".") : program_name.substr(0, last_sep);
+    char* real_path = ::realpath(path.c_str(), nullptr);
+    priv->root = std::string(real_path);
+    ::free(real_path);
+
+    cmd.option("--root", [&](const std::string& root) {
+      priv->root = root;
+    });
   }
 
   App::~App() {
@@ -234,11 +287,19 @@ namespace wayward {
     priv->add_handler(std::move(path), std::move(handler), std::move(method));
   }
 
+  void App::assets(std::string uri_path, std::string filesystem_path) {
+    priv->asset_locations.push_back({std::move(uri_path), std::move(filesystem_path)});
+  }
+
   void App::print_routes() const {
     for (auto& method_handlers: priv->method_handlers) {
       for (auto& handler: method_handlers.second) {
         std::cout << method_handlers.first << " " << handler.path << "    " << handler.human_readable_regex << "\n";
       }
     }
+  }
+
+  std::string App::root() const {
+    return priv->root;
   }
 }

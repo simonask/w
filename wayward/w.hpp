@@ -54,6 +54,7 @@ namespace wayward {
 
   Response render_template(std::string templ);
   Response redirect(std::string new_location, HTTPStatusCode code = HTTPStatusCode::Found);
+  Response file(std::string path, Maybe<std::string> content_type = Nothing);
 
   struct Scope {
     virtual ~Scope() {}
@@ -100,9 +101,13 @@ namespace wayward {
       bool parallel = false;
     } config;
 
+    std::string root() const;
+
     int run();
 
     void add_route(std::string method, std::string path, std::function<Response(Request&)> handler) final;
+
+    void assets(std::string uri_path, std::string filesystem_path);
 
     void print_routes() const;
 

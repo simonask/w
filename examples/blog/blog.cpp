@@ -106,22 +106,7 @@ int main(int argc, char const *argv[])
   app.get("/crash", app::crash);
 
   app.get("/", [&](w::Request& req) -> w::Response {
-    // TODO: A better way of reading templates/static files.
-    std::ifstream f("index.html");
-    if (!f.good()) {
-      return w::not_found();
-    }
-    f.seekg(0, std::ios::end);
-    size_t length = f.tellg();
-    f.seekg(0, std::ios::beg);
-    std::string resp;
-    resp.resize(length);
-    f.read(&resp[0], length);
-    f.close();
-    w::Response response;
-    response.headers["Content-Type"] = "text/html";
-    response.body = std::move(resp);
-    return response;
+    return w::file("index.html");
   });
 
   return app.run();
