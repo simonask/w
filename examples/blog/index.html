@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Blog Example</title>
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" />
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.js"></script>
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.3.0/handlebars.js"></script>
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/ember.js/1.5.1/ember.js"></script>
+  <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/ember-data.js/1.0.0-beta.7/ember-data.min.js"></script>
+</head>
+<body>
+
+<script type="text/javascript">
+window.Blog = Ember.Application.create();
+
+Blog.Router.map(function() {
+  this.resource('posts', { path: '/' });
+});
+
+Blog.Post = DS.Model.extend({
+  title: DS.attr('string'),
+  text: DS.attr('string'),
+});
+
+Blog.PostRoute = Ember.Route.extend({
+  model: function() {
+    return this.modelFor('posts');
+  }
+});
+
+Blog.PostsRoute = Ember.Route.extend({
+  model: function() {
+    return this.modelFor('posts');
+  }
+});
+</script>
+
+<script type="text/x-handlebars">
+Hello, World!
+</script>
+
+<script type="text/x-handlebars" id="post">
+<div class="post">
+<h1>{{title}}</h1>
+<p>{{text}}</p>
+</div>
+</script>
+
+</body>
+</html>

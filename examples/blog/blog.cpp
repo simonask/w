@@ -2,6 +2,8 @@
 
 #include "models.hpp"
 
+#include <fstream>
+
 namespace app {
   using p::RecordPtr;
 
@@ -97,6 +99,25 @@ int main(int argc, char const *argv[])
   app.post("/posts/:post_id/comments", &app::PostRoutes::post_comment);
   app.get("/posts/:post_id/comments/:comment_id", &app::PostCommentRoutes::get_comment);
   app.del("/posts/:post_id/comments/:comment_id", &app::PostCommentRoutes::delete_comment);
+
+  app.get("/", [&](w::Request& req) -> w::Response {
+    // TODO: A better way of reading templates/static files.
+    std::ifstream f("index.html");
+    if (!f.good()) {
+      return w::not_found();
+    }
+    f.seekg(0, std::ios::end);
+    size_t length = f.tellg();
+    f.seekg(0, std::ios::beg);
+    std::string resp;
+    resp.resize(length);
+    f.read(&resp[0], length);
+    f.close();
+    w::Response response;
+    response.headers["Content-Type"] = "text/html";
+    response.body = std::move(resp);
+    return response;
+  });
 
   return app.listen_and_serve("0.0.0.0", 3000);
 }
