@@ -3,6 +3,7 @@
 #include <wayward/support/command_line_options.hpp>
 #include <wayward/support/format.hpp>
 #include <wayward/support/logger.hpp>
+#include <wayward/http.hpp>
 
 #include <iostream>
 #include <cstdlib>
@@ -38,14 +39,19 @@ static void usage(const std::string& program_name) {
 
 struct AppState {
   event_base* base = nullptr;
+  evhttp_connection* connection_to_child = nullptr;
+  std::string address = "0.0.0.0";
+  int port = 3000;
+  int child_server_fd = -1;
+  int child_server_port = -1;
+
+  pid_t child_server_pid = -1;
+  pid_t process_group = -1;
+
   std::string directory;
   std::string binary_path;
-  int internal_port;
-  int child_server_fd = -1;
+
   wayward::ConsoleStreamLogger logger = wayward::ConsoleStreamLogger{std::cout, std::cerr};
-  pid_t child_server = -1;
-  pid_t process_group = -1;
-  evhttp_connection* connection_to_child = nullptr;
 };
 
 void respond_with_compilation_error(evhttp_request* req, const wayward::CompilationError& error) {
@@ -55,24 +61,21 @@ void respond_with_compilation_error(evhttp_request* req, const wayward::Compilat
   evbuffer_free(buf);
 }
 
-static void copy_headers(const evkeyvalq* from, evkeyvalq* to) {
+static void copy_headers(evkeyvalq* to, const evkeyvalq* from) {
   for (evkeyval* header = from->tqh_first; header; header = header->next.tqe_next) {
     evhttp_add_header(to, header->key, header->value);
   }
 }
 
-static void child_request_callback(evhttp_request* req, void* userdata) {
+static void child_request_callback(evhttp_request* child_request, void* userdata) {
   evhttp_request* client_request = (evhttp_request*)userdata;
-  if (req) {
-    int response_code = evhttp_request_get_response_code(req);
-    evkeyvalq* response_headers = evhttp_request_get_input_headers(req);
-    evbuffer*  response_body    = evhttp_request_get_input_buffer(req);
+  int        response_code    = evhttp_request_get_response_code(child_request);
+  evkeyvalq* response_headers = evhttp_request_get_input_headers(child_request);
+  evbuffer*  response_body    = evhttp_request_get_input_buffer(child_request);
 
-    copy_headers(response_headers, evhttp_request_get_output_headers(client_request));
-    evhttp_send_reply(client_request, response_code, nullptr, response_body);
-  } else {
-    //evhttp_send_error(client_request, 500, "Error making request to app server");
-  }
+  copy_headers(evhttp_request_get_output_headers(client_request), response_headers);
+
+  evhttp_send_reply(client_request, response_code, nullptr, response_body);
 }
 
 static void child_request_close_callback(evhttp_connection* conn, void* userdata) {
@@ -81,48 +84,31 @@ static void child_request_close_callback(evhttp_connection* conn, void* userdata
 }
 
 static void child_request_error_callback(evhttp_request_error err, void* userdata) {
+  using wayward::HTTPStatusCode;
   evhttp_request* client_request = (evhttp_request*)userdata;
   switch (err) {
-    /**
-     * Timeout reached, also @see evhttp_connection_set_timeout()
-     */
     case EVREQ_HTTP_TIMEOUT: {
-      evhttp_send_error(client_request, 500, "Timeout");;
+      evhttp_send_error(client_request, (int)HTTPStatusCode::GatewayTimeout, "Timeout from app server");;
       break;
     }
-    /**
-     * EOF reached
-     */
     case EVREQ_HTTP_EOF: {
-      evhttp_send_error(client_request, 500, "Unexpected EOF");
+      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Unexpected EOF");
       break;
     }
-    /**
-     * Error while reading header, or invalid header
-     */
     case EVREQ_HTTP_INVALID_HEADER: {
-      evhttp_send_error(client_request, 500, "Invalid header");
+      evhttp_send_error(client_request, (int)HTTPStatusCode::BadRequest, "Invalid header");
       break;
     }
-    /**
-     * Error encountered while reading or writing
-     */
     case EVREQ_HTTP_BUFFER_ERROR: {
-      evhttp_send_error(client_request, 500, "Buffer error");
+      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Buffer error");
       break;
     }
-    /**
-     * The evhttp_cancel_request() called on this request.
-     */
     case EVREQ_HTTP_REQUEST_CANCEL: {
-      evhttp_send_error(client_request, 500, "Request Canceled");
+      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Request Cancelled");
       break;
     }
-    /**
-     * Body is greater then evhttp_connection_set_max_body_size()
-     */
     case EVREQ_HTTP_DATA_TOO_LONG: {
-      evhttp_send_error(client_request, 500, "Data Too Long");
+      evhttp_send_error(client_request, (int)HTTPStatusCode::RequestEntityTooLarge, nullptr);
       break;
     }
   }
@@ -136,67 +122,69 @@ static void renew_child_connection(AppState* state) {
   }
 
   if (state->connection_to_child == nullptr) {
-    state->connection_to_child = evhttp_connection_base_new(state->base, nullptr, "localhost", (short)state->internal_port);
+    state->connection_to_child = evhttp_connection_base_new(state->base, nullptr, "localhost", (short)state->child_server_port);
     evhttp_connection_set_closecb(state->connection_to_child, child_request_close_callback, state);
     evhttp_connection_set_timeout(state->connection_to_child, 600);
   }
 }
 
-static void request_callback(evhttp_request* req, void* userdata) {
-  using namespace wayward;
-
-  AppState* state = (AppState*)userdata;
-  Recompiler recompiler { state->directory };
-  int r;
-
-
-  if (state->child_server > 0) {
+static void validate_child_server(AppState* state) {
+  if (state->child_server_pid > 0) {
     // Re-validate child process (see if it's running):
-    r = ::kill(state->child_server, 0);
+    int r = ::kill(state->child_server_pid, 0);
     if (r < 0) {
-      state->logger.log(Severity::Error, "w_dev", "App server has died.");
-      state->child_server = -1;
+      state->logger.log(wayward::Severity::Error, "w_dev", "App server has died.");
+      state->child_server_pid = -1;
     }
   }
+}
 
+static bool rebuild_child_server_if_needed(AppState* state, evhttp_request* req) {
+  wayward::Recompiler recompiler { state->directory };
   try {
     if (recompiler.needs_rebuild()) {
-      state->logger.log(Severity::Information, "w_dev", wayward::format("Rebuilding '{0}'...", state->binary_path));
+      state->logger.log(wayward::Severity::Information, "w_dev", wayward::format("Rebuilding '{0}'...", state->binary_path));
       recompiler.rebuild();
-      if (state->child_server > 0) {
-        r = ::kill(state->child_server, 1);
+      if (state->child_server_pid > 0) {
+        int r = ::kill(state->child_server_pid, 1);
         if (r != 0) {
           ::perror("kill");
         } else {
-          state->child_server = -1;
+          state->child_server_pid = -1;
         }
       }
     }
+    return true;
   }
-  catch (const CompilationError& error) {
-    state->logger.log(Severity::Error, "w_dev", error.what());
+  catch (const wayward::CompilationError& error) {
+    state->logger.log(wayward::Severity::Error, "w_dev", error.what());
     respond_with_compilation_error(req, error);
-    return;
+    return false;
   }
+}
 
+static bool check_child_server_binary(AppState* state, evhttp_request* req) {
   struct stat bin_st;
-  r = ::stat(state->binary_path.c_str(), &bin_st);
+  int r = ::stat(state->binary_path.c_str(), &bin_st);
   if (r == ENOENT) {
-    auto error = CompilationError{"`make` did not generate the expected binary."};
-    state->logger.log(Severity::Error, "w_dev", error.what());
+    auto error = wayward::CompilationError{"`make` did not generate the expected binary."};
+    state->logger.log(wayward::Severity::Error, "w_dev", error.what());
     respond_with_compilation_error(req, error);
-    return;
+    return false;
   }
+  return true;
+}
 
-  if (state->child_server < 0) {
+static void spawn_child_server_if_needed(AppState* state) {
+  if (state->child_server_pid < 0) {
     // Spawn the child server
-    state->logger.log(Severity::Information, "w_dev", wayward::format("Spawning app server at port {0}...", state->internal_port));
-    state->child_server = fork();
-    if (state->child_server == 0) {
+    state->logger.log(wayward::Severity::Information, "w_dev", wayward::format("Spawning app server at port {0}...", state->child_server_port));
+    state->child_server_pid = fork();
+    if (state->child_server_pid == 0) {
       // We're the child!
 
       // Set the process group, so we get terminated when the parent terminates:
-      r = ::setpgid(0, state->process_group);
+      int r = ::setpgid(0, state->process_group);
       if (r < 0) {
         ::perror("setpgid");
         kill_all();
@@ -208,55 +196,42 @@ static void request_callback(evhttp_request* req, void* userdata) {
       r = ::execve(state->binary_path.c_str(), (char* const*)args, ::environ);
       ::perror("execve");
       kill_all();
-    } else if (state->child_server < 0) {
+    } else if (state->child_server_pid < 0) {
       ::perror("fork");
       kill_all();
     }
   }
+}
 
-  // Okay we're good, pass the request on to the child server.
-  renew_child_connection(state);
+static void forward_request_to_child(AppState* state, evhttp_request* req) {
   evhttp_request* child_req = evhttp_request_new(child_request_callback, req);
   evhttp_request_set_error_cb(child_req, child_request_error_callback);
   copy_headers(evhttp_request_get_input_headers(req), evhttp_request_get_output_headers(child_req));
   evbuffer_add_buffer(evhttp_request_get_output_buffer(child_req), evhttp_request_get_input_buffer(req));
-  r = evhttp_make_request(state->connection_to_child, child_req, evhttp_request_get_command(req), evhttp_request_get_uri(req));
+  int r = evhttp_make_request(state->connection_to_child, child_req, evhttp_request_get_command(req), evhttp_request_get_uri(req));
   if (r < 0) {
     fprintf(stderr, "Error making request to child server.\n");
     kill_all();
   }
 }
 
-int main(int argc, char const *argv[])
-{
-  using namespace wayward;
-  CommandLineOptions options {argc, argv};
+static void request_callback(evhttp_request* req, void* userdata) {
+  AppState* state = (AppState*)userdata;
+  validate_child_server(state);
+  if (!rebuild_child_server_if_needed(state, req))
+    return;
+  if (!check_child_server_binary(state, req))
+    return;
+  spawn_child_server_if_needed(state);
+  renew_child_connection(state);
+  forward_request_to_child(state, req);
+}
 
-  options.option("--help", "-h", [&]() {
-    usage(argv[0]);
-  });
-
-  int port = 3000;
-  options.option("--port", "-p", [&](int64_t p) {
-    port = p;
-  });
-
-  std::string address = "0.0.0.0";
-  options.option("--address", "-l", [&](const std::string& addr) {
-    address = addr;
-  });
-
-  int internal_port = 54987;
-  options.option("--internal-port", "-pp", [&](int64_t p) {
-    internal_port = p;
-  });
-
-  // Check that first argument is a path to a binary.
-  std::string path = argc >= 2 ? argv[1] : "";
+static std::vector<std::string> string_to_path_components(const std::string& path, const std::string& sep = "/") {
   std::vector<std::string> path_components;
   const char* p = path.c_str();
   while (*p) {
-    const char* next = strstr(p, "/");
+    const char* next = strstr(p, sep.c_str());
     if (next) {
       path_components.push_back(std::string(p, next - p));
       p = next+1;
@@ -265,52 +240,23 @@ int main(int argc, char const *argv[])
       break;
     }
   }
+  return path_components;
+}
 
-  if (path_components.empty()) {
-    usage(argv[0]);
-  }
+static bool path_exists(const std::string& path) {
+  struct stat s;
+  return ::stat(path.c_str(), &s) == 0;
+}
 
-  std::string directory;
-  for (size_t i = 0; i < path_components.size()-1; ++i) {
-    directory += path_components[i];
-  }
-  if (directory == "") {
-    directory = ".";
-  }
+static bool path_is_directory(const std::string& path) {
+  struct stat st;
+  int r = ::stat(path.c_str(), &st);
+  return r == 0 && S_ISDIR(st.st_mode);
+}
 
-  struct stat dir_st;
-  ::stat(directory.c_str(), &dir_st);
-  if (!S_ISDIR(dir_st.st_mode)) {
-    std::cerr << "Path must be a path to an app within a directory.\n";
-    kill_all();
-  }
-
-  struct stat bin_st;
-  int r = ::stat(path.c_str(), &bin_st);
-  if (r == 0) {
-    if (S_ISDIR(bin_st.st_mode)) {
-      std::cerr << "Path must be a path to an app binary.\n";
-      kill_all();
-    }
-  }
-
-  AppState state;
-  state.directory = directory;
-  state.binary_path = path;
-  state.internal_port = internal_port;
-  state.process_group = ::setpgrp();
-
-  // Create the event loop:
-  state.base = event_base_new();
-
-  // Create the front-facing HTTP server:
-  evhttp* http = evhttp_new(state.base);
-  evhttp_set_gencb(http, request_callback, &state);
-  state.logger.log(Severity::Information, "w_dev", wayward::format("Development server ready on {0}:{1}.", address, port));
-  evhttp_bind_socket(http, address.c_str(), (short)port);
-
-  // Create a listening socket for the backend:
+static int make_child_server_socket(short child_server_port) {
   int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+  int r;
   if (fd < 0) {
     ::perror("socket");
     kill_all();
@@ -333,7 +279,7 @@ int main(int argc, char const *argv[])
   }
   struct sockaddr_in sa;
   sa.sin_family = AF_INET;
-  sa.sin_port = htons(internal_port);
+  sa.sin_port = htons(child_server_port);
   sa.sin_addr.s_addr = htonl(INADDR_ANY);
   r = ::bind(fd, (struct sockaddr*)&sa, sizeof(sa));
   if (r < 0) {
@@ -345,8 +291,76 @@ int main(int argc, char const *argv[])
     ::perror("listen");
     kill_all();
   }
+  return fd;
+}
 
-  state.child_server_fd = fd;
+static void parse_command_line_options(int argc, char const* argv[], AppState* state) {
+  wayward::CommandLineOptions options {argc, argv};
+  options.option("--help", "-h", [&]() {
+    usage(argv[0]);
+  });
+
+  options.option("--port", "-p", [&](int64_t p) {
+    state->port = p;
+  });
+
+  options.option("--address", "-l", [&](const std::string& addr) {
+    state->address = addr;
+  });
+
+  state->child_server_port = 54987;
+  options.option("--internal-port", "-pp", [&](int64_t p) {
+    state->child_server_port = p;
+  });
+}
+
+int main(int argc, char const *argv[])
+{
+  using namespace wayward;
+  AppState state;
+  parse_command_line_options(argc, argv, &state);
+
+  // Check that first argument is a path to a binary.
+  std::string path = argc >= 2 ? argv[1] : "";
+  auto path_components = string_to_path_components(path);
+
+  if (path_components.empty()) {
+    usage(argv[0]);
+  }
+
+  std::string directory;
+  for (size_t i = 0; i < path_components.size()-1; ++i) {
+    directory += path_components[i];
+  }
+  if (directory == "") {
+    directory = ".";
+  }
+
+  if (!path_is_directory(directory)) {
+    std::cerr << "Path must be a path to an app within a directory.\n";
+    kill_all();
+  }
+
+  if (path_exists(path) && path_is_directory(path)) {
+    std::cerr << "Path must be a path to an app binary.\n";
+    kill_all();
+  }
+
+  state.directory = directory;
+  state.binary_path = path;
+  state.process_group = ::setpgrp();
+
+  // Create the event loop:
+  state.base = event_base_new();
+
+  // Create the front-facing HTTP server:
+  evhttp* http = evhttp_new(state.base);
+  evhttp_set_gencb(http, request_callback, &state);
+  state.logger.log(Severity::Information, "w_dev", wayward::format("Dev server listening on {0}:{1}...", state.address, state.port));
+  evhttp_bind_socket(http, state.address.c_str(), state.port);
+
+  // Create a listening socket for the backend:
+  state.child_server_fd = make_child_server_socket(state.child_server_port);
 
   return event_base_dispatch(state.base);
 }
