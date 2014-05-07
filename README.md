@@ -73,10 +73,11 @@ Example of binding a data structure to a table in an SQL database:
 using p::PrimaryKey;
 using p::BelongsTo;
 using p::HasMany;
+using w::DateTime;
 
 struct Article {
   PrimaryKey      id;     // Could also be a plain integer, though less safe.
-  uint64_t        timestamp;
+  DateTime        timestamp;
   std::string     title;
   std::string     text;
   BelongsTo<User> author; // Could also be an integer.
