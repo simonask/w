@@ -56,12 +56,12 @@ namespace wayward {
 
     Handler handler_for_path(std::string path, std::function<Response(Request&)> callback) {
       Handler handler;
-      static const std::regex escape {"[\\^\\.\\$\\|\\(\\)\\[\\]\\*\\+\\?\\/\\\\]"};
+      static const std::regex escape {"[.$|()[\\]*+?/\\\\^]"};
       static const std::string replacement = "\\\\\\1&";
       std::string escaped_path = std::regex_replace(path, escape, replacement);
       handler.path = std::move(path);
 
-      static const std::regex find_placeholder {"/\\:([\\w\\d]+)(/?)"};
+      static const std::regex find_placeholder {"/\\:([a-zA-Z0-9]+)(/?)"};
       static const std::string match_placeholder = "/(.+)";
       std::stringstream rs;
       size_t group_counter = 1;

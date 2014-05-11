@@ -346,7 +346,7 @@ namespace persistence {
       virtual ~UpdateQuery() {}
       std::string relation;
       CloningPtr<ast::Condition> where;
-      CloningPtr<size_t> limit;
+      size_t limit;
       std::vector<std::string> columns;
       std::vector<CloningPtr<SingleValue>> values;
 
@@ -357,7 +357,7 @@ namespace persistence {
       virtual ~DeleteQuery() {}
       std::string relation;
       CloningPtr<ast::Condition> where;
-      CloningPtr<size_t> limit;
+      size_t limit;
 
       std::string to_sql(ISQLQueryRenderer& visitor) const final { return visitor.render(*this); }
     };
