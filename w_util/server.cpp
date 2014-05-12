@@ -300,7 +300,7 @@ static int make_child_server_socket(unsigned short child_server_port) {
 }
 
 static std::vector<std::string>
-parse_command_line_options(int argc, char const* argv[], AppState* state) {
+parse_command_line_options(int argc, char const* const* argv, AppState* state) {
   wayward::CommandLineOptions options;
   options.usage([&]() {
     usage(argv[0]);
@@ -333,61 +333,62 @@ static void exit_handler() {
   }
 }
 
-int main(int argc, char const *argv[])
-{
-  using namespace wayward;
-  AppState state;
-  g_state = &state;
-  auto args = parse_command_line_options(argc, argv, &state);
+namespace w_dev {
+  int server(int argc, char const* const* argv) {
+    using namespace wayward;
+    AppState state;
+    g_state = &state;
+    auto args = parse_command_line_options(argc, argv, &state);
 
-  // Check that first argument is a path to a binary.
-  std::string path = args.size() >= 1 ? args.at(0) : std::string();
-  auto path_components = string_to_path_components(path);
+    // Check that first argument is a path to a binary.
+    std::string path = args.size() >= 1 ? args.at(0) : std::string();
+    auto path_components = string_to_path_components(path);
 
-  if (path_components.empty()) {
-    usage(argv[0]);
+    if (path_components.empty()) {
+      usage(argv[0]);
+    }
+
+    std::string directory;
+    for (size_t i = 0; i < path_components.size()-1; ++i) {
+      directory += path_components[i];
+    }
+    if (directory == "") {
+      directory = ".";
+    }
+
+    if (!path_is_directory(directory)) {
+      std::cerr << "Path must be a path to an app within a directory.\n";
+      kill_all();
+    }
+
+    if (path_exists(path) && path_is_directory(path)) {
+      std::cerr << "Path must be a path to an app binary.\n";
+      kill_all();
+    }
+
+    state.directory = directory;
+    state.binary_path = path;
+    state.process_group = ::setpgrp();
+
+    // Create the event loop:
+    state.base = event_base_new();
+
+    // Create the front-facing HTTP server:
+    int r;
+    evhttp* http = evhttp_new(state.base);
+    evhttp_set_gencb(http, request_callback, &state);
+    state.logger.log(Severity::Information, "w_dev", wayward::format("Dev server listening on {0}:{1}...", state.address, state.port));
+    r = evhttp_bind_socket(http, state.address.c_str(), state.port);
+    if (r != 0) {
+      std::cerr << wayward::format("evhttp_bind_socket: {0}\n", ::strerror(errno));
+      return 1;
+    }
+
+    // Create a listening socket for the backend:
+    state.child_server_fd = make_child_server_socket(state.child_server_port);
+
+    std::atexit(exit_handler);
+
+    return event_base_dispatch(state.base);
   }
-
-  std::string directory;
-  for (size_t i = 0; i < path_components.size()-1; ++i) {
-    directory += path_components[i];
-  }
-  if (directory == "") {
-    directory = ".";
-  }
-
-  if (!path_is_directory(directory)) {
-    std::cerr << "Path must be a path to an app within a directory.\n";
-    kill_all();
-  }
-
-  if (path_exists(path) && path_is_directory(path)) {
-    std::cerr << "Path must be a path to an app binary.\n";
-    kill_all();
-  }
-
-  state.directory = directory;
-  state.binary_path = path;
-  state.process_group = ::setpgrp();
-
-  // Create the event loop:
-  state.base = event_base_new();
-
-  // Create the front-facing HTTP server:
-  int r;
-  evhttp* http = evhttp_new(state.base);
-  evhttp_set_gencb(http, request_callback, &state);
-  state.logger.log(Severity::Information, "w_dev", wayward::format("Dev server listening on {0}:{1}...", state.address, state.port));
-  r = evhttp_bind_socket(http, state.address.c_str(), state.port);
-  if (r != 0) {
-    std::cerr << wayward::format("evhttp_bind_socket: {0}\n", ::strerror(errno));
-    return 1;
-  }
-
-  // Create a listening socket for the backend:
-  state.child_server_fd = make_child_server_socket(state.child_server_port);
-
-  std::atexit(exit_handler);
-
-  return event_base_dispatch(state.base);
 }

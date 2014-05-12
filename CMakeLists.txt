@@ -26,9 +26,10 @@ set(WAYWARD_SOURCES
   wayward/log.cpp
 )
 
-set(WAYWARD_DEV_SERVER_SOURCES
-  dev_server/server.cpp
-  dev_server/recompiler.cpp
+set(WAYWARD_DEV_UTIL_SOURCES
+  w_util/server.cpp
+  w_util/recompiler.cpp
+  w_util/main.cpp
 )
 
 set(WAYWARD_TESTING_SOURCES
@@ -54,7 +55,7 @@ add_library(wayward_support SHARED ${WAYWARD_SUPPORT_SOURCES})
 add_library(wayward SHARED ${WAYWARD_SOURCES})
 add_library(persistence SHARED ${PERSISTENCE_SOURCES})
 add_library(wayward_testing SHARED ${WAYWARD_TESTING_SOURCES})
-add_executable(w_dev ${WAYWARD_DEV_SERVER_SOURCES})
+add_executable(w_dev ${WAYWARD_DEV_UTIL_SOURCES})
 
 target_link_libraries(wayward wayward_support)
 target_link_libraries(persistence wayward_support)
