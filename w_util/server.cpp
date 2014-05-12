@@ -50,6 +50,7 @@ struct AppState {
 
   std::string directory;
   std::string binary_path;
+  bool run_in_debugger = false;
 
   wayward::ConsoleStreamLogger logger = wayward::ConsoleStreamLogger{std::cout, std::cerr};
 };
@@ -320,6 +321,11 @@ parse_command_line_options(int argc, char const* const* argv, AppState* state) {
   options.description("Spawn app server internally at port.");
   options.option("--internal-port", "-pp", [&](int64_t p) {
     state->child_server_port = p;
+  });
+
+  options.description("Run server under LLDB.");
+  options.option("--debugger", "-d", [&]() {
+    state->run_in_debugger = true;
   });
 
   return options.parse(argc, argv);
