@@ -67,72 +67,11 @@ static void copy_headers(evkeyvalq* to, const evkeyvalq* from) {
   }
 }
 
-static void child_request_callback(evhttp_request* child_request, void* userdata) {
-  evhttp_request* client_request = (evhttp_request*)userdata;
-  int        response_code    = evhttp_request_get_response_code(child_request);
-  evkeyvalq* response_headers = evhttp_request_get_input_headers(child_request);
-  evbuffer*  response_body    = evhttp_request_get_input_buffer(child_request);
-
-  copy_headers(evhttp_request_get_output_headers(client_request), response_headers);
-
-  evhttp_send_reply(client_request, response_code, nullptr, response_body);
-}
-
-static void child_request_close_callback(evhttp_connection* conn, void* userdata) {
-  AppState* state = (AppState*)userdata;
-  state->connection_to_child = nullptr;
-}
-
-static void child_request_error_callback(evhttp_request_error err, void* userdata) {
-  using wayward::HTTPStatusCode;
-  evhttp_request* client_request = (evhttp_request*)userdata;
-  switch (err) {
-    case EVREQ_HTTP_TIMEOUT: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::GatewayTimeout, "Timeout from app server");;
-      break;
-    }
-    case EVREQ_HTTP_EOF: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Unexpected EOF");
-      break;
-    }
-    case EVREQ_HTTP_INVALID_HEADER: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::BadRequest, "Invalid header");
-      break;
-    }
-    case EVREQ_HTTP_BUFFER_ERROR: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Buffer error");
-      break;
-    }
-    case EVREQ_HTTP_REQUEST_CANCEL: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Request Cancelled");
-      break;
-    }
-    case EVREQ_HTTP_DATA_TOO_LONG: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::RequestEntityTooLarge, nullptr);
-      break;
-    }
-  }
-}
-
-static void renew_child_connection(AppState* state) {
-  // We cannot actually reuse the connection, because a reused connection causes EOF.
-  // The connection_to_child is set to NULL in the 'close' callback for the connection.
-  if (state->connection_to_child != nullptr) {
-    evhttp_connection_free(state->connection_to_child);
-  }
-
-  if (state->connection_to_child == nullptr) {
-    state->connection_to_child = evhttp_connection_base_new(state->base, nullptr, "localhost", (short)state->child_server_port);
-    evhttp_connection_set_closecb(state->connection_to_child, child_request_close_callback, state);
-    evhttp_connection_set_timeout(state->connection_to_child, 600);
-  }
-}
-
 static void validate_child_server(AppState* state) {
   if (state->child_server_pid > 0) {
     // Re-validate child process (see if it's running):
     int r = ::kill(state->child_server_pid, 0);
-    if (r < 0) {
+    if (r != 0) {
       state->logger.log(wayward::Severity::Error, "w_dev", "App server has died.");
       state->child_server_pid = -1;
     }
@@ -146,6 +85,13 @@ static bool rebuild_child_server_if_needed(AppState* state, evhttp_request* req)
       state->logger.log(wayward::Severity::Information, "w_dev", wayward::format("Rebuilding '{0}'...", state->binary_path));
       recompiler.rebuild();
       if (state->child_server_pid > 0) {
+        // Close any existing connections.
+        if (state->connection_to_child != nullptr) {
+          evhttp_connection_free(state->connection_to_child);
+          state->connection_to_child = nullptr;
+        }
+
+        // Kill the child process.
         int r = ::kill(state->child_server_pid, 1);
         if (r != 0) {
           ::perror("kill");
@@ -179,6 +125,7 @@ static void spawn_child_server_if_needed(AppState* state) {
   if (state->child_server_pid < 0) {
     // Spawn the child server
     state->logger.log(wayward::Severity::Information, "w_dev", wayward::format("Spawning app server at port {0}...", state->child_server_port));
+
     state->child_server_pid = fork();
     if (state->child_server_pid == 0) {
       // We're the child!
@@ -192,7 +139,7 @@ static void spawn_child_server_if_needed(AppState* state) {
 
       // Replace self with the app server:
       std::string socketfd_str = wayward::format("{0}", state->child_server_fd);
-      const char* args[] = {state->binary_path.c_str(), "--socketfd", socketfd_str.c_str()};
+      const char* args[] = {state->binary_path.c_str(), "--socketfd", socketfd_str.c_str(), "--die-when-orphaned"};
       r = ::execve(state->binary_path.c_str(), (char* const*)args, ::environ);
       ::perror("execve");
       kill_all();
@@ -203,13 +150,69 @@ static void spawn_child_server_if_needed(AppState* state) {
   }
 }
 
+static void child_connection_close_callback(evhttp_connection* conn, void* userdata) {
+  AppState* state = (AppState*)userdata;
+  if (state->connection_to_child == conn)
+    state->connection_to_child = nullptr;
+}
+
+static void renew_child_connection(AppState* state) {
+  // We cannot actually reuse the connection, because a reused connection causes EOF.
+  // The memory gets freed automatically when whatever request gets completed and the connection is closed.
+  state->connection_to_child = evhttp_connection_base_new(state->base, nullptr, "localhost", (unsigned short)state->child_server_port);
+  evhttp_connection_set_closecb(state->connection_to_child, child_connection_close_callback, state);
+  evhttp_connection_set_timeout(state->connection_to_child, 600);
+}
+
+static void child_request_callback(evhttp_request* child_request, void* userdata) {
+  evhttp_request* client_request = (evhttp_request*)userdata;
+  int        response_code    = evhttp_request_get_response_code(child_request);
+  evkeyvalq* response_headers = evhttp_request_get_input_headers(child_request);
+  evbuffer*  response_body    = evhttp_request_get_input_buffer(child_request);
+
+  copy_headers(evhttp_request_get_output_headers(client_request), response_headers);
+
+  evhttp_send_reply(client_request, response_code, nullptr, response_body);
+}
+
+static void child_request_error_callback(evhttp_request_error err, void* userdata) {
+  using wayward::HTTPStatusCode;
+  evhttp_request* client_request = (evhttp_request*)userdata;
+  switch (err) {
+    case EVREQ_HTTP_TIMEOUT: {
+      evhttp_send_error(client_request, (int)HTTPStatusCode::GatewayTimeout, "Timeout from app server");;
+      break;
+    }
+    case EVREQ_HTTP_EOF: {
+      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Unexpected EOF");
+      break;
+    }
+    case EVREQ_HTTP_INVALID_HEADER: {
+      evhttp_send_error(client_request, (int)HTTPStatusCode::BadRequest, "Invalid header");
+      break;
+    }
+    case EVREQ_HTTP_BUFFER_ERROR: {
+      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Buffer error");
+      break;
+    }
+    case EVREQ_HTTP_REQUEST_CANCEL: {
+      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Request Cancelled");
+      break;
+    }
+    case EVREQ_HTTP_DATA_TOO_LONG: {
+      evhttp_send_error(client_request, (int)HTTPStatusCode::RequestEntityTooLarge, nullptr);
+      break;
+    }
+  }
+}
+
 static void forward_request_to_child(AppState* state, evhttp_request* req) {
   evhttp_request* child_req = evhttp_request_new(child_request_callback, req);
   evhttp_request_set_error_cb(child_req, child_request_error_callback);
-  copy_headers(evhttp_request_get_input_headers(req), evhttp_request_get_output_headers(child_req));
+  copy_headers(evhttp_request_get_output_headers(child_req), evhttp_request_get_input_headers(req));
   evbuffer_add_buffer(evhttp_request_get_output_buffer(child_req), evhttp_request_get_input_buffer(req));
   int r = evhttp_make_request(state->connection_to_child, child_req, evhttp_request_get_command(req), evhttp_request_get_uri(req));
-  if (r < 0) {
+  if (r != 0) {
     fprintf(stderr, "Error making request to child server.\n");
     kill_all();
   }
@@ -254,7 +257,7 @@ static bool path_is_directory(const std::string& path) {
   return r == 0 && S_ISDIR(st.st_mode);
 }
 
-static int make_child_server_socket(short child_server_port) {
+static int make_child_server_socket(unsigned short child_server_port) {
   int fd = ::socket(AF_INET, SOCK_STREAM, 0);
   int r;
   if (fd < 0) {
@@ -294,34 +297,49 @@ static int make_child_server_socket(short child_server_port) {
   return fd;
 }
 
-static void parse_command_line_options(int argc, char const* argv[], AppState* state) {
-  wayward::CommandLineOptions options {argc, argv};
-  options.option("--help", "-h", [&]() {
+static std::vector<std::string>
+parse_command_line_options(int argc, char const* argv[], AppState* state) {
+  wayward::CommandLineOptions options;
+  options.usage([&]() {
     usage(argv[0]);
   });
 
+  options.description("Listen at port.");
   options.option("--port", "-p", [&](int64_t p) {
     state->port = p;
   });
 
+  options.description("Listen at address.");
   options.option("--address", "-l", [&](const std::string& addr) {
     state->address = addr;
   });
 
   state->child_server_port = 54987;
+  options.description("Spawn app server internally at port.");
   options.option("--internal-port", "-pp", [&](int64_t p) {
     state->child_server_port = p;
   });
+
+  return options.parse(argc, argv);
+}
+
+static AppState* g_state = nullptr;
+
+static void exit_handler() {
+  if (g_state && g_state->child_server_pid >= 0) {
+    ::kill(g_state->child_server_pid, SIGHUP);
+  }
 }
 
 int main(int argc, char const *argv[])
 {
   using namespace wayward;
   AppState state;
-  parse_command_line_options(argc, argv, &state);
+  g_state = &state;
+  auto args = parse_command_line_options(argc, argv, &state);
 
   // Check that first argument is a path to a binary.
-  std::string path = argc >= 2 ? argv[1] : "";
+  std::string path = args.size() >= 1 ? args.at(0) : std::string();
   auto path_components = string_to_path_components(path);
 
   if (path_components.empty()) {
@@ -354,13 +372,20 @@ int main(int argc, char const *argv[])
   state.base = event_base_new();
 
   // Create the front-facing HTTP server:
+  int r;
   evhttp* http = evhttp_new(state.base);
   evhttp_set_gencb(http, request_callback, &state);
   state.logger.log(Severity::Information, "w_dev", wayward::format("Dev server listening on {0}:{1}...", state.address, state.port));
-  evhttp_bind_socket(http, state.address.c_str(), state.port);
+  r = evhttp_bind_socket(http, state.address.c_str(), state.port);
+  if (r != 0) {
+    std::cerr << wayward::format("evhttp_bind_socket: {0}\n", ::strerror(errno));
+    return 1;
+  }
 
   // Create a listening socket for the backend:
   state.child_server_fd = make_child_server_socket(state.child_server_port);
+
+  std::atexit(exit_handler);
 
   return event_base_dispatch(state.base);
 }

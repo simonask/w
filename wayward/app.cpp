@@ -9,6 +9,7 @@
 #include <event2/buffer.h>
 
 #include <cxxabi.h>
+#include <unistd.h>
 
 #include <map>
 #include <vector>
@@ -46,9 +47,9 @@ namespace wayward {
     std::map<std::string, std::vector<Handler>> method_handlers;
     event_base* base = nullptr;
     evhttp* http = nullptr;
+    event* die_when_orphaned_poll_event = nullptr;
 
     std::string executable_path;
-    CommandLineOptions command_line_options;
     std::string address = "0.0.0.0";
     int port = 3000;
     std::string environment = "development";
@@ -217,6 +218,16 @@ namespace wayward {
     app->priv->handle_request(req);
   }
 
+  static void app_die_if_orphaned(int fd, short ev, void* userdata) {
+    // If the parent process becomes 1, we have been orphaned.
+    pid_t parent_pid = ::getppid();
+    if (parent_pid == 1) {
+      App* app = static_cast<App*>(userdata);
+      w::log::error("App server orphaned, exiting.");
+      ::exit(1);
+    }
+  }
+
   App::App(int argc, char const* const* argv) : priv(new Private) {
     priv->app = this;
     priv->base = event_base_new();
@@ -224,25 +235,41 @@ namespace wayward {
     evhttp_set_gencb(priv->http, app_http_request_cb, this);
 
     priv->executable_path = argv[0];
-    priv->command_line_options.set(argc, argv);
 
-    auto& cmd = priv->command_line_options;
+    CommandLineOptions cmd;
 
+    cmd.description("Set the app server environment (development, production, staging).");
     cmd.option("--environment", "-e", [&](const std::string& env) {
       priv->environment = env;
     });
 
+    cmd.description("The app server port.");
     cmd.option("--port", "-p", [&](int64_t port) {
       priv->port = port;
     });
 
+    cmd.description("Listen address.");
     cmd.option("--address", [&](const std::string& address) {
       priv->address = address;
     });
 
+    cmd.description("Use a listening socket passed down by a parent process.");
     cmd.option("--socketfd", [&](int64_t sockfd) {
       priv->socket_from_parent_process = (int)sockfd;
     });
+
+    cmd.description("Periodically check if our parent process has died, and die with it.");
+    cmd.option("--die-when-orphaned", [&]() {
+      priv->die_when_orphaned_poll_event = event_new(priv->base, -1, EV_TIMEOUT | EV_PERSIST, app_die_if_orphaned, this);
+      struct timeval tv;
+      tv.tv_sec = 0;
+      tv.tv_usec = 100;
+      event_add(priv->die_when_orphaned_poll_event, &tv);
+    });
+
+    cmd.usage("--help", "-h");
+    cmd.parse(argc, argv);
+
 
     // Find absolute root:
     std::string program_name = argv[0];
