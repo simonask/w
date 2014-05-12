@@ -159,7 +159,9 @@ static void child_connection_close_callback(evhttp_connection* conn, void* userd
 static void renew_child_connection(AppState* state) {
   // We cannot actually reuse the connection, because a reused connection causes EOF.
   // The memory gets freed automatically when whatever request gets completed and the connection is closed.
-  state->connection_to_child = evhttp_connection_base_new(state->base, nullptr, "localhost", (unsigned short)state->child_server_port);
+  unsigned short port = (unsigned short)state->child_server_port;
+  const char* addr = "127.0.0.1";
+  state->connection_to_child = evhttp_connection_base_new(state->base, nullptr, addr, port);
   evhttp_connection_set_closecb(state->connection_to_child, child_connection_close_callback, state);
   evhttp_connection_set_timeout(state->connection_to_child, 600);
 }
