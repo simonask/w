@@ -1,6 +1,6 @@
 import os
 
-WAYWARD_PATH = '../../'
+WAYWARD_PATH = '../../' # Final slash important, otherwise rpath doesn't work.
 
 SConscript(os.path.join(WAYWARD_PATH, "SConstruct"))
 
