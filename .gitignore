@@ -14,3 +14,7 @@ CMakeScripts
 .DS_Store
 examples/blog/blog
 w_dev
+.build.development
+*.os
+*.o
+.sconsign.dblite

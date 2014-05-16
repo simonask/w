@@ -20,7 +20,7 @@ namespace wayward {
   bool Recompiler::needs_rebuild() {
     int r;
     in_directory(directory_, [&]() {
-      r = ::system("make -q");
+      r = ::system("scons -q");
     });
     return r != 0;
   }
@@ -28,7 +28,7 @@ namespace wayward {
   void Recompiler::rebuild() {
     int r;
     in_directory(directory_, [&]() {
-      r = ::system("make");
+      r = ::system("scons");
     });
     if (r != 0) {
       // TODO: Display actual output.

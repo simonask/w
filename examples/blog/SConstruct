@@ -1,0 +1,7 @@
+SConscript("../../SConstruct")
+
+Import('env', 'wayward', 'persistence', 'wayward_support')
+
+env.Append(CPPPATH = ['../..'])
+
+blog = env.Program('blog', ['blog.cpp'], LIBS = [wayward, persistence, wayward_support])
