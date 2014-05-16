@@ -1,7 +1,11 @@
-SConscript("../../SConstruct")
+import os
+
+WAYWARD_PATH = '../../'
+
+SConscript(os.path.join(WAYWARD_PATH, "SConstruct"))
 
 Import('env', 'wayward', 'persistence', 'wayward_support')
 
-env.Append(CPPPATH = ['../..'])
+env.Append(CPPPATH = WAYWARD_PATH)
 
-blog = env.Program('blog', ['blog.cpp'], LIBS = [wayward, persistence, wayward_support])
+blog = env.Program('blog', ['blog.cpp'], LIBS = [wayward, persistence, wayward_support], LINKFLAGS = ['-rpath', WAYWARD_PATH])

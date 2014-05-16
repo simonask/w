@@ -12,4 +12,4 @@ else:
   print "Error: Expected 'development', 'production', or 'staging', got: " + mode
   Exit(1)
 
-SConscript('SConscript', variant_dir = '.build.' + mode)
+SConscript('SConscript')
