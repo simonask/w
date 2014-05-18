@@ -107,7 +107,6 @@ namespace wayward {
       }
 
       // Check if we're been told to terminate.
-
       Fiber::Private* p_self = self.p_.get();
       if (p_self->sig == FiberSignal::Terminate) {
         throw FiberTermination{};

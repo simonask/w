@@ -23,10 +23,30 @@ namespace wayward {
     Fiber(Function function, ErrorHandler error_handler);
     ~Fiber();
 
+    /*
+      If the fiber throws an uncaught exception, the error handler function will be called.
+      If no error handler is set, std::abort() is called.
+    */
     void set_error_handler(ErrorHandler);
+
+    /*
+      The fiber 'new_owner' will be resumed upon natural return from the fiber function.
+      By default, the fiber that *started* this fiber will be resumed upon return.
+      NOTE: That fiber may be a different one from the one that last *resumed* the fiber.
+    */
     void set_on_exit(Fiber* new_owner);
-    void operator()() { resume(); }
+
+
+    /*
+      Resume the fiber (or start it if it hasn't run yet).
+    */
     void resume();
+    void operator()() { resume(); }
+
+    /*
+      terminate resumes the fiber with a signal that instructs it to unwind its stack,
+      before in turn resuming the caller of terminate.
+    */
     void terminate();
 
     struct Private;
