@@ -14,6 +14,7 @@ wayward_support_sources = Split("""
   wayward/support/logger.cpp
   wayward/support/error.cpp
   wayward/support/command_line_options.cpp
+  wayward/support/fiber.cpp
   """)
 
 wayward_sources = Split("""
