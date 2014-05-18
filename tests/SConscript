@@ -1,0 +1,37 @@
+import glob
+import os
+
+Import('env', 'wayward_support', 'wayward', 'persistence', 'wayward_testing')
+
+env = env.Clone()
+env.Append(CPPPATH = Split('googletest/include googletest ..'))
+
+gtest = env.SharedLibrary('gtest', source = ['googletest/src/gtest-all.cc'], CPPDEFINES = {'GTEST_HAS_PTHREAD': 1})
+test_main = env.StaticLibrary('test_main', source = ['test.cpp'])
+
+case_env = env.Clone()
+case_env.Append(LIBS = [wayward_support, wayward_testing, gtest, test_main])
+
+test_targets = []
+
+for f in glob.glob('wayward/support/*.cpp'):
+  target = case_env.Program(f.replace('.cpp', '', 1), source = [f], LINKFLAGS = Split('-rpath @executable_path/../../../ -rpath @executable_path/../../'))
+  test_targets.append(target)
+
+persistence_case_env = env.Clone()
+persistence_case_env.Append(LIBS = [persistence, wayward_support, wayward_testing, gtest, test_main])
+
+for f in glob.glob('persistence/*.cpp'):
+  target = persistence_case_env.Program(f.replace('.cpp', '', 1), source = [f], LINKFLAGS = Split('-rpath @executable_path/../../ -rpath @executable_path/../'))
+  test_targets.append(target)
+
+run_test_targets = []
+
+for t in test_targets:
+  alias = 'run_' + t[0].path.replace('/', '_')
+  t2 = env.Alias(alias, [t], t[0].path + " --gtest_color=yes")
+  env.AlwaysBuild(t2)
+  run_test_targets.append(t2)
+
+test_alias = env.Alias('test', run_test_targets, None)
+env.AlwaysBuild(test_alias)
