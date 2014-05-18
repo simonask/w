@@ -24,6 +24,7 @@ namespace wayward {
     ErrorHandler error_handler;
     bool started = false;
     FiberSignal sig = FiberSignal::Resume;
+    Fiber* resumed_from = nullptr;
     Fiber* on_exit = nullptr;
 
     Private() {}
@@ -97,6 +98,7 @@ namespace wayward {
     }
 
     void handle_return_from_fiber(Fiber* f) {
+      Fiber& self = Fiber::current();
       Fiber::Private* p = f->p_.get();
       if (!p->started) {
         // Fiber returned, so clean it up!
@@ -105,7 +107,7 @@ namespace wayward {
       }
 
       // Check if we're been told to terminate.
-      Fiber& self = Fiber::current();
+
       Fiber::Private* p_self = self.p_.get();
       if (p_self->sig == FiberSignal::Terminate) {
         throw FiberTermination{};
@@ -114,7 +116,6 @@ namespace wayward {
 
     void resume_fiber_with_signal(Fiber* f, FiberSignal sig) {
       Fiber& self = Fiber::current();
-
       if (&self == f)
         return;
 
@@ -123,10 +124,11 @@ namespace wayward {
       if (setjmp(p_self->portal) == 0) {
         Fiber::Private* p = f->p_.get();
         p->sig = sig;
+        p->resumed_from = &self;
         g_current_fiber = f;
         longjmp(p->portal, 1);
       } else {
-        handle_return_from_fiber(f);
+        handle_return_from_fiber(self.p_->resumed_from);
       }
     }
 
@@ -172,6 +174,8 @@ namespace wayward {
         assert(p->stack == nullptr);
         p->stack = allocate_stack();
         p->started = true;
+        p->sig = FiberSignal::Resume;
+        p->resumed_from = &self;
         g_current_fiber = f;
 
         // Set up stack and jump into fiber:
@@ -198,7 +202,7 @@ namespace wayward {
         #error Fibers are not supported yet on this platform. :(
         #endif
       } else {
-        handle_return_from_fiber(f);
+        handle_return_from_fiber(self.p_->resumed_from);
       }
     }
   }
