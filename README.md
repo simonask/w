@@ -122,6 +122,15 @@ Supported data stores:
 
 - PostgreSQL
 
+Why don't Wayward and Persistence use Boost?
+--------------------------------------------
+
+You can use Boost with Wayward, if you're so inclined. Wayward tries to avoid two things: Dependencies and complexity. Boost is a very complex dependency.
+
+At the same time, the Wayward Support library includes a number of classes that could be said to replicate Boost functionality (such as `Maybe`, `CommandLineOptions`, `w::format`, and the serialization components). Why not simply use the Boost equivalents? It comes down to a difference in philosophy: Boost tries to be everything to everyone. Boost components rely heavily on very complex template metaprogramming techniques in order to achieve the maximum possible flexibility and performance under all circumstances. The result is code that is hard to understand and debug, as well as APIs that are sometimes awkward or difficult to use. It can also drastically increase compile times, which goes against the goal of a quick turnaround time and smooth development experience that Wayward represents.
+
+Instead, Wayward often makes micro-sacrifices in performance, for instance by using runtime dynamic polymorphism instead of static template polymorphism, and as a consequence heap allocation in many places where Boost could have made do with faster stack allocation. The result is vastly more maintainable and readable code, which is important given the security concerns of an internet-facing web app, and the performance sacrifice is tolerable considering that most Wayward apps are strictly IO-bound, rather than CPU-bound.
+
 Dependencies
 ------------
 
