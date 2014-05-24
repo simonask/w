@@ -20,7 +20,7 @@ namespace wayward {
   bool Recompiler::needs_rebuild() {
     int r;
     in_directory(directory_, [&]() {
-      r = ::system("scons -q");
+      r = ::system("scons -q > /dev/null");
     });
     return r != 0;
   }
