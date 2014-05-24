@@ -32,7 +32,7 @@ namespace wayward {
     });
     if (r != 0) {
       // TODO: Display actual output.
-      throw CompilationError(wayward::format("Make returned an error."));
+      throw CompilationError(wayward::format("Build error."));
     }
   }
 }
