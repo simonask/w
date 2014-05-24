@@ -8,7 +8,7 @@
 #include <memory>
 #include <map>
 
-#include <wayward/http.hpp>
+#include <wayward/support/http.hpp>
 #include <wayward/support/uri.hpp>
 #include <wayward/support/format.hpp>
 #include <wayward/support/logger.hpp>
@@ -20,21 +20,6 @@ namespace w = wayward;
 #endif
 
 namespace wayward {
-  struct Request {
-    std::map<std::string, std::string> headers;
-    std::map<std::string, Node> params;
-    std::string method;
-    URI uri;
-    std::string body;
-  };
-
-  struct Response {
-    std::map<std::string, std::string> headers;
-    HTTPStatusCode code = HTTPStatusCode::OK;
-    std::string reason; // Keep empty to derive from `code`.
-    std::string body;
-  };
-
   template <typename... Args>
   Response render_text(std::string text, Args&&... args) {
     Response r;
@@ -102,14 +87,11 @@ namespace wayward {
     } config;
 
     std::string root() const;
-
     int run();
-
     void add_route(std::string method, std::string path, std::function<Response(Request&)> handler) final;
-
     void assets(std::string uri_path, std::string filesystem_path);
-
     void print_routes() const;
+    Response request(Request);
 
     struct Private;
     std::unique_ptr<Private> priv;

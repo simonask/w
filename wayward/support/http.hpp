@@ -1,7 +1,14 @@
 #ifndef W_HTTP_HPP_INCLUDED
 #define W_HTTP_HPP_INCLUDED
 
+#include <string>
+
+#include <wayward/support/node.hpp>
+#include <wayward/support/uri.hpp>
+
 namespace wayward {
+  struct IEventLoop;
+
   /*
     Source:
     http://en.wikipedia.org/wiki/List_of_HTTP_status_codes
@@ -98,6 +105,60 @@ namespace wayward {
     ATimeoutOccurred_Cloudflare = 524,
     NetworkReadTimeoutError_Microsoft = 598,
     NetworkConnectTimeoutError_Microsoft = 599,
+  };
+
+  struct Request {
+    std::map<std::string, std::string> headers;
+    std::map<std::string, Node> params;
+    std::string method;
+    URI uri;
+    std::string body;
+  };
+
+  struct Response {
+    std::map<std::string, std::string> headers;
+    HTTPStatusCode code = HTTPStatusCode::OK;
+    std::string reason; // Keep empty to derive from `code`.
+    std::string body;
+  };
+
+  struct HTTPError : Error {
+    HTTPError(const std::string& msg) : Error(msg) {}
+  };
+
+  struct HTTPServer {
+    HTTPServer(int socket_fd, std::function<Response(Request)> handler);
+    HTTPServer(std::string listen_host, int port, std::function<Response(Request)> handler);
+    ~HTTPServer();
+
+    void start(IEventLoop* loop);
+    void stop();
+
+    struct Private;
+    std::unique_ptr<Private> p_;
+  };
+
+  struct HTTPClient {
+    explicit HTTPClient(std::string host, int port = 80);
+
+    std::string host() const;
+    int port() const;
+
+    using Params = std::map<std::string, Node>;
+    using Headers = std::map<std::string, std::string>;
+
+    Response request(Request req);
+
+    Response get(std::string path, Params = Params{}, Headers = Headers{});
+    Response post(std::string path, Params = Params{}, Headers = Headers{});
+    Response put(std::string path, Params = Params{}, Headers = Headers{});
+    Response patch(std::string path, Params = Params{}, Headers = Headers{});
+    Response del(std::string path, Params = Params{}, Headers = Headers{});
+    Response options(std::string path, Params = Params{}, Headers = Headers{});
+    Response head(std::string path, Params = Params{}, Headers = Headers{});
+
+    struct Private;
+    std::unique_ptr<Private> p_;
   };
 }
 

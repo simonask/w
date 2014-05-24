@@ -15,12 +15,13 @@ wayward_support_sources = Split("""
   wayward/support/error.cpp
   wayward/support/command_line_options.cpp
   wayward/support/fiber.cpp
+  wayward/support/event_loop.cpp
+  wayward/support/http.cpp
   """)
 
 wayward_sources = Split("""
   wayward/app.cpp
   wayward/render.cpp
-  wayward/request.cpp
   wayward/log.cpp
   """)
 

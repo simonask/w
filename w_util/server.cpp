@@ -3,7 +3,7 @@
 #include <wayward/support/command_line_options.hpp>
 #include <wayward/support/format.hpp>
 #include <wayward/support/logger.hpp>
-#include <wayward/http.hpp>
+#include <wayward/support/http.hpp>
 
 #include <iostream>
 #include <cstdlib>

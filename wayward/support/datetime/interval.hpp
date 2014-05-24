@@ -5,6 +5,8 @@
 #include <wayward/support/datetime/duration_units.hpp>
 #include <ostream>
 
+struct timeval;
+
 namespace wayward {
   struct DateTimeInterval {
     DateTimeInterval() {}
@@ -46,6 +48,8 @@ namespace wayward {
     double value() const { return value_; }
     uint32_t numerator() const { return num_; }
     uint32_t denominator() const { return denom_; }
+
+    struct timeval to_timeval() const;
   private:
     double value_ = 0.0;
     uint32_t num_ = 1;

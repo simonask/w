@@ -1,12 +1,7 @@
 #include "wayward/w.hpp"
-#include "wayward/private.hpp"
 #include <wayward/support/datetime.hpp>
 #include <wayward/support/command_line_options.hpp>
-
-#include <event2/event.h>
-#include <event2/http.h>
-#include <event2/keyvalq_struct.h>
-#include <event2/buffer.h>
+#include <wayward/support/event_loop.hpp>
 
 #include <cxxabi.h>
 #include <unistd.h>
@@ -19,6 +14,8 @@
 #include <exception>
 
 namespace wayward {
+  using namespace wayward::units;
+
   namespace {
     struct Handler {
       std::string human_readable_regex;
@@ -45,9 +42,9 @@ namespace wayward {
     std::string root;
     std::vector<std::pair<std::string, std::string>> asset_locations;
     std::map<std::string, std::vector<Handler>> method_handlers;
-    event_base* base = nullptr;
-    evhttp* http = nullptr;
-    event* die_when_orphaned_poll_event = nullptr;
+
+    EventLoop loop;
+    std::unique_ptr<IEventHandle> die_when_orphaned_poll_event;
 
     std::string executable_path;
     std::string address = "0.0.0.0";
@@ -90,11 +87,6 @@ namespace wayward {
       handlers.push_back(handler_for_path(std::move(path), handler));
     }
 
-    void handle_request(evhttp_request* req) {
-      Request r = priv::make_request_from_evhttp_request(req);
-      respond_to_request(r, req);
-    }
-
     Response respond_to_error(std::exception_ptr exception, const std::type_info* exception_type) {
       std::string type = demangle_symbol(exception_type->name());
       std::string what = "(unfamiliar exception type)";
@@ -126,7 +118,7 @@ namespace wayward {
       return std::move(r);
     }
 
-    Maybe<Response> respond_with_static_file(Request& req, evhttp_request* handle) {
+    Maybe<Response> respond_with_static_file(Request& req) {
       if (environment != "development")
         return Nothing; // Only serve static files in development.
       if (req.method != "GET")
@@ -147,7 +139,7 @@ namespace wayward {
       return Nothing;
     }
 
-    Maybe<Response> respond_with_handler(Request& req, evhttp_request* handle) {
+    Maybe<Response> respond_with_handler(Request& req) {
       auto handlers_it = method_handlers.find(req.method);
       Handler* h = nullptr;
       if (handlers_it != method_handlers.end()) {
@@ -170,19 +162,7 @@ namespace wayward {
       return Nothing;
     }
 
-    void send_response(Response& response, evhttp_request* handle) {
-      evkeyvalq* headers = evhttp_request_get_output_headers(handle);
-      for (auto& pair: response.headers) {
-        evhttp_add_header(headers, pair.first.c_str(), pair.second.c_str());
-      }
-
-      evbuffer* body_buffer = evbuffer_new();
-      evbuffer_add(body_buffer, response.body.c_str(), response.body.size());
-      evhttp_send_reply(handle, (int)response.code, response.reason.size() ? response.reason.c_str() : nullptr, body_buffer);
-      evbuffer_free(body_buffer);
-    }
-
-    void respond_to_request(Request& req, evhttp_request* handle) {
+    Response respond_to_request(Request req) {
       auto t0 = DateTime::now();
 
       if (app->config.log_requests) {
@@ -191,17 +171,15 @@ namespace wayward {
 
       Maybe<Response> response = Nothing;
 
-      response = respond_with_static_file(req, handle);
+      response = respond_with_static_file(req);
 
       if (!response) {
-        response = respond_with_handler(req, handle);
+        response = respond_with_handler(req);
       }
 
       if (!response) {
         response = wayward::not_found();
       }
-
-      send_response(*response, handle);
 
       auto t1 = DateTime::now();
       if (app->config.log_requests) {
@@ -210,19 +188,15 @@ namespace wayward {
         double ms = us / 1000.0;
         log::info("w", wayward::format("Finished {0} {1} with {2} in {3} ms", req.method, req.uri.path(), (int)response->code, ms));
       }
+
+      return std::move(*response);
     }
   };
 
-  static void app_http_request_cb(evhttp_request* req, void* userdata) {
-    App* app = static_cast<App*>(userdata);
-    app->priv->handle_request(req);
-  }
-
-  static void app_die_if_orphaned(int fd, short ev, void* userdata) {
+  static void app_die_if_orphaned() {
     // If the parent process becomes 1, we have been orphaned.
     pid_t parent_pid = ::getppid();
     if (parent_pid == 1) {
-      App* app = static_cast<App*>(userdata);
       w::log::error("App server orphaned, exiting.");
       ::exit(1);
     }
@@ -230,10 +204,6 @@ namespace wayward {
 
   App::App(int argc, char const* const* argv) : priv(new Private) {
     priv->app = this;
-    priv->base = event_base_new();
-    priv->http = evhttp_new(priv->base);
-    evhttp_set_gencb(priv->http, app_http_request_cb, this);
-
     priv->executable_path = argv[0];
 
     CommandLineOptions cmd;
@@ -260,11 +230,7 @@ namespace wayward {
 
     cmd.description("Periodically check if our parent process has died, and die with it.");
     cmd.option("--die-when-orphaned", [&]() {
-      priv->die_when_orphaned_poll_event = event_new(priv->base, -1, EV_TIMEOUT | EV_PERSIST, app_die_if_orphaned, this);
-      struct timeval tv;
-      tv.tv_sec = 0;
-      tv.tv_usec = 100;
-      event_add(priv->die_when_orphaned_poll_event, &tv);
+      priv->die_when_orphaned_poll_event = priv->loop.call_in(100_milliseconds, app_die_if_orphaned, true);
     });
 
     cmd.usage("--help", "-h");
@@ -284,30 +250,31 @@ namespace wayward {
     });
   }
 
-  App::~App() {
-    evhttp_free(priv->http);
-    event_base_free(priv->base);
+  App::~App() {}
+
+  Response App::request(Request req) {
+    return priv->respond_to_request(std::move(req));
   }
 
   int App::run() {
+    using namespace std::placeholders;
+
+    std::unique_ptr<HTTPServer> server;
+
     int fd;
+    App* self = this;
+    std::function<Response(Request)> handler = std::bind(&App::request, this, _1);
     if (priv->socket_from_parent_process) {
       fd = *priv->socket_from_parent_process;
-      int r = evhttp_accept_socket(priv->http, fd);
-      if (r < 0) {
-        log::error("w", wayward::format("Could not listen on provided socket {0}.", fd));
-        return 1;
-      }
+      server = std::unique_ptr<HTTPServer>(new HTTPServer(fd, std::move(handler)));
     } else {
-      fd = evhttp_bind_socket(priv->http, priv->address.c_str(), (u_short)priv->port);
-      if (fd < 0) {
-        log::error("w", "Could not bind to socket.");
-        return 1;
-      }
+      server = std::unique_ptr<HTTPServer>(new HTTPServer(priv->address, priv->port, std::move(handler)));
       log::info("w", wayward::format("Listening for connections on {0}:{1}", priv->address, priv->port));
     }
 
-    return event_base_dispatch(priv->base);
+    server->start(&priv->loop);
+    priv->loop.run();
+    return 0;
   }
 
   void App::add_route(std::string method, std::string path, std::function<Response(Request&)> handler) {

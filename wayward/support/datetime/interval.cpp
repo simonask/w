@@ -208,4 +208,13 @@ namespace wayward {
     return os;
   }
 
+  struct timeval
+  DateTimeInterval::to_timeval() const {
+    struct timeval tv;
+    auto s = seconds();
+    auto us = microseconds() - seconds();
+    tv.tv_sec = s.repr_.count();
+    tv.tv_usec = us.repr_.count();
+    return tv;
+  }
 }

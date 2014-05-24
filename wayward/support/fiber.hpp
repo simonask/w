@@ -7,6 +7,7 @@
 #include <tuple>
 
 #include <wayward/support/error.hpp>
+#include <wayward/support/datetime.hpp>
 
 namespace wayward {
   struct FiberError : Error {
@@ -54,6 +55,10 @@ namespace wayward {
   private:
     Fiber();
   };
+
+  // NOTE: These functions require an event loop!
+  void yield();
+  void sleep(DateTimeInterval);
 }
 
 #endif // WAYWARD_SUPPORT_FIBER_HPP_INCLUDED
