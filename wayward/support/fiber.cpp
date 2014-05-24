@@ -15,8 +15,6 @@ namespace wayward {
     Terminate,
   };
 
-  struct FiberTermination {};
-
   struct Fiber::Private {
     jmp_buf portal;
     void* stack = nullptr;
@@ -207,7 +205,7 @@ namespace wayward {
   }
 
   void Fiber::terminate() {
-    if (p_->started) {
+    if (p_ && p_->started) {
       p_->on_exit = &Fiber::current(); // Make sure that we get resumed when the fiber is done terminating.
       resume_fiber_with_signal(this, FiberSignal::Terminate);
     }
@@ -218,6 +216,16 @@ namespace wayward {
       resume_fiber_with_signal(this, FiberSignal::Resume);
     } else {
       start_fiber(this);
+    }
+  }
+
+  namespace fiber {
+    void yield() {
+      Fiber& fiber = Fiber::current();
+      if (fiber.p_->resumed_from == nullptr) {
+        throw FiberError("This fiber was never resumed from another fiber. Cannot yield.");
+      }
+      fiber.p_->resumed_from->resume();
     }
   }
 }

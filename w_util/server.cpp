@@ -4,14 +4,13 @@
 #include <wayward/support/format.hpp>
 #include <wayward/support/logger.hpp>
 #include <wayward/support/http.hpp>
+#include <wayward/support/event_loop.hpp>
+#include <wayward/support/fiber.hpp>
 
 #include <iostream>
 #include <cstdlib>
 
-#include <event2/event.h>
-#include <event2/http.h>
-#include <event2/keyvalq_struct.h>
-#include <event2/buffer.h>
+#include <event2/util.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -20,6 +19,13 @@
 #include <arpa/inet.h>
 
 extern "C" char** environ;
+
+using wayward::Request;
+using wayward::Response;
+using wayward::HTTPServer;
+using wayward::HTTPClient;
+using wayward::HTTPStatusCode;
+using wayward::EventLoop;
 
 static void kill_all() {
   ::kill(0, SIGHUP);
@@ -38,8 +44,7 @@ static void usage(const std::string& program_name) {
 }
 
 struct AppState {
-  event_base* base = nullptr;
-  evhttp_connection* connection_to_child = nullptr;
+  EventLoop loop;
   std::string address = "0.0.0.0";
   int port = 3000;
   int child_server_fd = -1;
@@ -55,17 +60,26 @@ struct AppState {
   wayward::ConsoleStreamLogger logger = wayward::ConsoleStreamLogger{std::cout, std::cerr};
 };
 
-void respond_with_compilation_error(evhttp_request* req, const wayward::CompilationError& error) {
-  evbuffer* buf = evbuffer_new();
-  evbuffer_add_printf(buf, "Compilation Error:\n\n%s", error.what());
-  evhttp_send_reply(req, 500, nullptr, buf);
-  evbuffer_free(buf);
-}
-
-static void copy_headers(evkeyvalq* to, const evkeyvalq* from) {
-  for (evkeyval* header = from->tqh_first; header; header = header->next.tqe_next) {
-    evhttp_add_header(to, header->key, header->value);
+static Response response_for_error(AppState* state, std::exception_ptr exception) {
+  Response response;
+  response.code = HTTPStatusCode::InternalServerError;
+  response.headers["Content-Type"] = "text/plain";
+  try {
+    std::rethrow_exception(exception);
   }
+  catch (const wayward::CompilationError& error) {
+    state->logger.log(wayward::Severity::Error, "w_dev", error.what());
+    // TODO: Render a pretty template with the output from the compiler.
+    response.body = wayward::format("Compilation Error: {0}", error.what());
+  }
+  catch (const std::exception& error) {
+    state->logger.log(wayward::Severity::Error, "w_dev", error.what());
+    response.body = wayward::format("Error: {0}", error.what());
+  }
+  catch (...) {
+    response.body = "Unknown exception!";
+  }
+  return std::move(response);
 }
 
 static void validate_child_server(AppState* state) {
@@ -79,47 +93,29 @@ static void validate_child_server(AppState* state) {
   }
 }
 
-static bool rebuild_child_server_if_needed(AppState* state, evhttp_request* req) {
+static void rebuild_child_server_if_needed(AppState* state) {
   wayward::Recompiler recompiler { state->directory };
-  try {
-    if (recompiler.needs_rebuild()) {
-      state->logger.log(wayward::Severity::Information, "w_dev", wayward::format("Rebuilding '{0}'...", state->binary_path));
-      recompiler.rebuild();
-      if (state->child_server_pid > 0) {
-        // Close any existing connections.
-        if (state->connection_to_child != nullptr) {
-          evhttp_connection_free(state->connection_to_child);
-          state->connection_to_child = nullptr;
-        }
-
-        // Kill the child process.
-        int r = ::kill(state->child_server_pid, 1);
-        if (r != 0) {
-          ::perror("kill");
-        } else {
-          state->child_server_pid = -1;
-        }
+  if (recompiler.needs_rebuild()) {
+    state->logger.log(wayward::Severity::Information, "w_dev", wayward::format("Rebuilding '{0}'...", state->binary_path));
+    recompiler.rebuild();
+    if (state->child_server_pid > 0) {
+      // Kill the child process.
+      int r = ::kill(state->child_server_pid, 1);
+      if (r != 0) {
+        ::perror("kill");
+      } else {
+        state->child_server_pid = -1;
       }
     }
-    return true;
-  }
-  catch (const wayward::CompilationError& error) {
-    state->logger.log(wayward::Severity::Error, "w_dev", error.what());
-    respond_with_compilation_error(req, error);
-    return false;
   }
 }
 
-static bool check_child_server_binary(AppState* state, evhttp_request* req) {
+static void check_child_server_binary(AppState* state) {
   struct stat bin_st;
   int r = ::stat(state->binary_path.c_str(), &bin_st);
   if (r == ENOENT) {
-    auto error = wayward::CompilationError{"`make` did not generate the expected binary."};
-    state->logger.log(wayward::Severity::Error, "w_dev", error.what());
-    respond_with_compilation_error(req, error);
-    return false;
+    throw wayward::CompilationError{"`scons` did not generate the expected binary."};
   }
-  return true;
 }
 
 static void spawn_child_server_if_needed(AppState* state) {
@@ -151,86 +147,25 @@ static void spawn_child_server_if_needed(AppState* state) {
   }
 }
 
-static void child_connection_close_callback(evhttp_connection* conn, void* userdata) {
-  AppState* state = (AppState*)userdata;
-  if (state->connection_to_child == conn)
-    state->connection_to_child = nullptr;
+static Response forward_request_to_child(AppState* state, Request req) {
+  wayward::HTTPClient client { "127.0.0.1", state->child_server_port };
+  return client.request(std::move(req));
 }
 
-static void renew_child_connection(AppState* state) {
-  // We cannot actually reuse the connection, because a reused connection causes EOF.
-  // The memory gets freed automatically when whatever request gets completed and the connection is closed.
-  unsigned short port = (unsigned short)state->child_server_port;
-  const char* addr = "127.0.0.1";
-  state->connection_to_child = evhttp_connection_base_new(state->base, nullptr, addr, port);
-  evhttp_connection_set_closecb(state->connection_to_child, child_connection_close_callback, state);
-  evhttp_connection_set_timeout(state->connection_to_child, 600);
-}
-
-static void child_request_callback(evhttp_request* child_request, void* userdata) {
-  evhttp_request* client_request = (evhttp_request*)userdata;
-  int        response_code    = evhttp_request_get_response_code(child_request);
-  evkeyvalq* response_headers = evhttp_request_get_input_headers(child_request);
-  evbuffer*  response_body    = evhttp_request_get_input_buffer(child_request);
-
-  copy_headers(evhttp_request_get_output_headers(client_request), response_headers);
-
-  evhttp_send_reply(client_request, response_code, nullptr, response_body);
-}
-
-static void child_request_error_callback(evhttp_request_error err, void* userdata) {
-  using wayward::HTTPStatusCode;
-  evhttp_request* client_request = (evhttp_request*)userdata;
-  switch (err) {
-    case EVREQ_HTTP_TIMEOUT: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::GatewayTimeout, "Timeout from app server");;
-      break;
-    }
-    case EVREQ_HTTP_EOF: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Unexpected EOF");
-      break;
-    }
-    case EVREQ_HTTP_INVALID_HEADER: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::BadRequest, "Invalid header");
-      break;
-    }
-    case EVREQ_HTTP_BUFFER_ERROR: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Buffer error");
-      break;
-    }
-    case EVREQ_HTTP_REQUEST_CANCEL: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::InternalServerError, "Request Cancelled");
-      break;
-    }
-    case EVREQ_HTTP_DATA_TOO_LONG: {
-      evhttp_send_error(client_request, (int)HTTPStatusCode::RequestEntityTooLarge, nullptr);
-      break;
-    }
+static wayward::Response request_callback(AppState* state, wayward::Request req) {
+  try {
+    validate_child_server(state);
+    rebuild_child_server_if_needed(state);
+    check_child_server_binary(state);
+    spawn_child_server_if_needed(state);
+    return forward_request_to_child(state, std::move(req));
   }
-}
-
-static void forward_request_to_child(AppState* state, evhttp_request* req) {
-  evhttp_request* child_req = evhttp_request_new(child_request_callback, req);
-  evhttp_request_set_error_cb(child_req, child_request_error_callback);
-  copy_headers(evhttp_request_get_output_headers(child_req), evhttp_request_get_input_headers(req));
-  evbuffer_add_buffer(evhttp_request_get_output_buffer(child_req), evhttp_request_get_input_buffer(req));
-  int r = evhttp_make_request(state->connection_to_child, child_req, evhttp_request_get_command(req), evhttp_request_get_uri(req));
-  if (r != 0) {
-    fprintf(stderr, "Error making request to child server.\n");
-    kill_all();
+  catch (wayward::FiberTermination) {
+    throw;
   }
-}
-
-static void request_callback(evhttp_request* req, void* userdata) {
-  AppState* state = (AppState*)userdata;
-  validate_child_server(state);
-  if (!rebuild_child_server_if_needed(state, req))
-    return;
-  if (!check_child_server_binary(state, req))
-    return;
-  spawn_child_server_if_needed(state);
-  renew_child_connection(state);
-  forward_request_to_child(state, req);
+  catch (...) {
+    return response_for_error(state, std::current_exception());
+  }
 }
 
 static std::vector<std::string> string_to_path_components(const std::string& path, const std::string& sep = "/") {
@@ -376,17 +311,14 @@ namespace w_dev {
     state.binary_path = path;
     state.process_group = ::setpgrp();
 
-    // Create the event loop:
-    state.base = event_base_new();
-
     // Create the front-facing HTTP server:
-    int r;
-    evhttp* http = evhttp_new(state.base);
-    evhttp_set_gencb(http, request_callback, &state);
-    state.logger.log(Severity::Information, "w_dev", wayward::format("Dev server listening on {0}:{1}...", state.address, state.port));
-    r = evhttp_bind_socket(http, state.address.c_str(), state.port);
-    if (r != 0) {
-      std::cerr << wayward::format("evhttp_bind_socket: {0}\n", ::strerror(errno));
+    HTTPServer http { state.address, state.port, [&](Request req) { return request_callback(&state, std::move(req)); } };
+    try {
+      http.start(&state.loop);
+      state.logger.log(Severity::Information, "w_dev", wayward::format("Dev server listening on {0}:{1}...", state.address, state.port));
+    }
+    catch (const HTTPError& error) {
+      state.logger.log(Severity::Error, "w_dev", wayward::format("HTTPError: {0}", error.what()));
       return 1;
     }
 
@@ -394,7 +326,7 @@ namespace w_dev {
     state.child_server_fd = make_child_server_socket(state.child_server_port);
 
     std::atexit(exit_handler);
-
-    return event_base_dispatch(state.base);
+    state.loop.run();
+    return 0;
   }
 }

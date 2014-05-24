@@ -14,6 +14,8 @@ namespace wayward {
     FiberError(const std::string& msg) : Error(msg) {}
   };
 
+  struct FiberTermination {};
+
   struct Fiber {
     static Fiber& current();
 
@@ -22,6 +24,7 @@ namespace wayward {
 
     explicit Fiber(Function function);
     Fiber(Function function, ErrorHandler error_handler);
+    Fiber(Fiber&&) = default;
     ~Fiber();
 
     /*
@@ -57,8 +60,9 @@ namespace wayward {
   };
 
   // NOTE: These functions require an event loop!
-  void yield();
-  void sleep(DateTimeInterval);
+  namespace fiber {
+    void yield();
+  }
 }
 
 #endif // WAYWARD_SUPPORT_FIBER_HPP_INCLUDED

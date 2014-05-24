@@ -140,6 +140,7 @@ namespace wayward {
 
   struct HTTPClient {
     explicit HTTPClient(std::string host, int port = 80);
+    ~HTTPClient();
 
     std::string host() const;
     int port() const;
@@ -148,11 +149,15 @@ namespace wayward {
     using Headers = std::map<std::string, std::string>;
 
     Response request(Request req);
+    Response request(std::string method, std::string path, Maybe<std::string> body, Params = Params{}, Headers = Headers{});
 
     Response get(std::string path, Params = Params{}, Headers = Headers{});
     Response post(std::string path, Params = Params{}, Headers = Headers{});
+    Response post(std::string path, std::string body, Params = Params{}, Headers = Headers{});
     Response put(std::string path, Params = Params{}, Headers = Headers{});
+    Response put(std::string path, std::string body, Params = Params{}, Headers = Headers{});
     Response patch(std::string path, Params = Params{}, Headers = Headers{});
+    Response patch(std::string path, std::string body, Params = Params{}, Headers = Headers{});
     Response del(std::string path, Params = Params{}, Headers = Headers{});
     Response options(std::string path, Params = Params{}, Headers = Headers{});
     Response head(std::string path, Params = Params{}, Headers = Headers{});
