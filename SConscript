@@ -73,7 +73,7 @@ env_with_libevent.Append(CCFLAGS = libevent_cflags)
 env_with_libevent.Append(LINKFLAGS = libevent_libs)
 
 wayward_support = env_with_libevent.SharedLibrary("wayward_support", wayward_support_sources)
-wayward         = env_with_libevent.SharedLibrary("wayward", wayward_sources, LIBS = wayward_support)
+wayward         = env.SharedLibrary("wayward", wayward_sources, LIBS = wayward_support)
 wayward_testing = env_with_libevent.SharedLibrary("wayward_testing", wayward_testing_sources, LIBS = wayward_support)
 w_dev           = env_with_libevent.Program('w_dev', w_util_sources, LIBS = wayward_support)
 
