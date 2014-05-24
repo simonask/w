@@ -257,16 +257,10 @@ namespace wayward {
   }
 
   int App::run() {
-    using namespace std::placeholders;
-
     std::unique_ptr<HTTPServer> server;
-
-    int fd;
-    App* self = this;
-    std::function<Response(Request)> handler = std::bind(&App::request, this, _1);
+    std::function<Response(Request)> handler = std::bind(&App::request, this, std::placeholders::_1);
     if (priv->socket_from_parent_process) {
-      fd = *priv->socket_from_parent_process;
-      server = std::unique_ptr<HTTPServer>(new HTTPServer(fd, std::move(handler)));
+      server = std::unique_ptr<HTTPServer>(new HTTPServer(*priv->socket_from_parent_process, std::move(handler)));
     } else {
       server = std::unique_ptr<HTTPServer>(new HTTPServer(priv->address, priv->port, std::move(handler)));
       log::info("w", wayward::format("Listening for connections on {0}:{1}", priv->address, priv->port));
