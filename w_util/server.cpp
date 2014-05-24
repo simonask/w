@@ -57,6 +57,8 @@ struct AppState {
   std::string binary_path;
   bool run_in_debugger = false;
 
+  bool needs_rebuild = false;
+
   wayward::ConsoleStreamLogger logger = wayward::ConsoleStreamLogger{std::cout, std::cerr};
 };
 
@@ -93,9 +95,37 @@ static void validate_child_server(AppState* state) {
   }
 }
 
-static void rebuild_child_server_if_needed(AppState* state) {
+static bool path_exists(const std::string& path) {
+  struct stat s;
+  return ::stat(path.c_str(), &s) == 0;
+}
+
+static bool path_is_directory(const std::string& path) {
+  struct stat st;
+  int r = ::stat(path.c_str(), &st);
+  return r == 0 && S_ISDIR(st.st_mode);
+}
+
+static void check_child_needs_rebuild(AppState* state) {
+  using namespace wayward;
+
+  if (state->needs_rebuild)
+    return;
+  if (!path_exists(state->binary_path)) {
+    state->logger.log(Severity::Debug, "w_dev", "App needs rebuild (reason: target binary does not exist).");
+    state->needs_rebuild = true;
+  }
+
   wayward::Recompiler recompiler { state->directory };
   if (recompiler.needs_rebuild()) {
+    state->logger.log(Severity::Debug, "w_dev", "App needs rebuild (reason: target binary out of date).");
+    state->needs_rebuild = true;
+  }
+}
+
+static void rebuild_child_server_if_needed(AppState* state) {
+  if (state->needs_rebuild) {
+    wayward::Recompiler recompiler { state->directory };
     state->logger.log(wayward::Severity::Information, "w_dev", wayward::format("Rebuilding '{0}'...", state->binary_path));
     recompiler.rebuild();
     if (state->child_server_pid > 0) {
@@ -107,6 +137,7 @@ static void rebuild_child_server_if_needed(AppState* state) {
         state->child_server_pid = -1;
       }
     }
+    state->needs_rebuild = false;
   }
 }
 
@@ -182,17 +213,6 @@ static std::vector<std::string> string_to_path_components(const std::string& pat
     }
   }
   return path_components;
-}
-
-static bool path_exists(const std::string& path) {
-  struct stat s;
-  return ::stat(path.c_str(), &s) == 0;
-}
-
-static bool path_is_directory(const std::string& path) {
-  struct stat st;
-  int r = ::stat(path.c_str(), &st);
-  return r == 0 && S_ISDIR(st.st_mode);
 }
 
 static int make_child_server_socket(unsigned short child_server_port) {
@@ -277,6 +297,8 @@ static void exit_handler() {
 namespace w_dev {
   int server(int argc, char const* const* argv) {
     using namespace wayward;
+    using namespace wayward::units;
+
     AppState state;
     g_state = &state;
     auto args = parse_command_line_options(argc, argv, &state);
@@ -324,6 +346,8 @@ namespace w_dev {
 
     // Create a listening socket for the backend:
     state.child_server_fd = make_child_server_socket(state.child_server_port);
+
+    auto check_rebuild_task = state.loop.call_in(1_second, std::bind(check_child_needs_rebuild, &state), true);
 
     std::atexit(exit_handler);
     state.loop.run();
