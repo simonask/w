@@ -15,65 +15,60 @@ namespace wayward {
     Terminate,
   };
 
-  struct Fiber::Private {
+  using namespace fiber;
+
+  struct Fiber {
+    explicit Fiber(Function function);
+    Fiber(Function function, ErrorHandler error_handler);
+    Fiber(Fiber&&) = default;
+    Fiber();
+
+    bool is_main() const { return !function; }
+
+    FiberPtr invoker;
+
     jmp_buf portal;
     void* stack = nullptr;
     Function function;
     ErrorHandler error_handler;
     bool started = false;
+    bool being_deleted = false;
     FiberSignal sig = FiberSignal::Resume;
-    Fiber* resumed_from = nullptr;
-    Fiber* on_exit = nullptr;
-
-    Private() {}
-    explicit Private(Function function) : function(std::move(function)) {}
   };
 
-  Fiber::Fiber(Function function) : p_(new Private{std::move(function)}) {}
-
-  Fiber::Fiber(Function function, ErrorHandler error_handler) : Fiber(std::move(function)) {
-    set_error_handler(std::move(error_handler));
+  namespace {
+    void fiber_delete(Fiber* fiber) {
+      /*
+        So this is a bit weird and convoluted.
+        When a fiber gets deleted, we need to terminate it. However, the Fiber API
+        uses unique pointer semantics, and the this-pointer can never be converted to
+        a unique_ptr.
+        So we use the Deleter of the FiberPtr to flag the fiber for deletion, and then
+        we create another FiberPtr from it that we use to call terminate(). When that FiberPtr
+        exits scope, the Deleter will be called again, but this time the being_deleted flag
+        is already set, so it knows to do nothing.
+      */
+      if (fiber->started && !fiber->being_deleted && !fiber->is_main()) {
+        fiber->being_deleted = true;
+        FiberPtr f { fiber };
+        fiber::terminate(f);
+      } else {
+        delete fiber;
+      }
+    }
   }
+
+  Fiber::Fiber(Function function) : function{std::move(function)} {}
+
+  Fiber::Fiber(Function function, ErrorHandler error_handler) : function(std::move(function)), error_handler(std::move(error_handler)) {}
 
   Fiber::Fiber() {
     // This is the main fiber! We're being initialized in Fiber::current().
   }
 
-  Fiber::~Fiber() {
-    // Call terminate unless we're a "root" fiber (main or thread).
-    if (p_->function) {
-      terminate();
-    }
-    assert(p_->stack == nullptr);
-  }
-
-  void Fiber::set_error_handler(ErrorHandler error_handler) {
-    p_->error_handler = std::move(error_handler);
-  }
-
   namespace {
-    static __thread Fiber* g_current_fiber = nullptr;
-    // Poor man's TLS:
-    static __thread char g_fiber_storage[sizeof(Fiber)];
-    static __thread char g_fiber_storage_private[sizeof(Fiber::Private)];
-  }
+    FiberPtr g_current_fiber; // TODO: Thread-Local
 
-  Fiber& Fiber::current() {
-    if (g_current_fiber == nullptr) {
-      // We are being called from a new thread for the first time.
-      g_current_fiber = new(g_fiber_storage) Fiber;
-      // This is a bit hacky -- the destructor for Fiber will never get called, because we're not using
-      // proper C++11 TLS, but since all fields are empty in the "main" fiber, this shouldn't leak any
-      // resources.
-      g_current_fiber->p_ = std::unique_ptr<Fiber::Private>(new(g_fiber_storage_private) Fiber::Private);
-      auto p = g_current_fiber->p_.get();
-      p->started = true;
-    }
-
-    return *g_current_fiber;
-  }
-
-  namespace {
     void free_stack(void* p) {
       ::munmap(p, FIBER_STACK_SIZE);
     }
@@ -95,52 +90,80 @@ namespace wayward {
       return stack;
     }
 
-    void handle_return_from_fiber(Fiber* f) {
-      Fiber& self = Fiber::current();
-      Fiber::Private* p = f->p_.get();
-      if (!p->started) {
-        // Fiber returned, so clean it up!
-        free_stack(p->stack);
-        p->stack = nullptr;
+    void prepare_jump_into(FiberPtr fiber, FiberSignal sig) {
+      fiber->sig = sig;
+      fiber->invoker = g_current_fiber;
+      g_current_fiber = fiber;
+    }
+
+    void handle_return() {
+      // Clean-up a terminated fiber if necessary.
+      if (!g_current_fiber->invoker->started) {
+        free_stack(g_current_fiber->invoker->stack);
+        g_current_fiber->invoker->stack = nullptr;
+        g_current_fiber->invoker = nullptr;
       }
 
-      // Check if we're been told to terminate.
-      Fiber::Private* p_self = self.p_.get();
-      if (p_self->sig == FiberSignal::Terminate) {
+      if (g_current_fiber->sig == FiberSignal::Terminate) {
         throw FiberTermination{};
       }
     }
 
-    void resume_fiber_with_signal(Fiber* f, FiberSignal sig) {
-      Fiber& self = Fiber::current();
-      if (&self == f)
-        return;
+    void fiber_trampoline(Fiber*);
 
-      Fiber::Private* p_self = self.p_.get();
+    void resume_fiber_with_signal(FiberPtr f, FiberSignal sig) {
+      auto current = fiber::current();
+      if (setjmp(current->portal) == 0) {
+        // There...
+        prepare_jump_into(f, sig);
+        if (f->started) {
+          longjmp(f->portal, 1);
+        } else {
+          assert(f->stack == nullptr);
+          f->stack = allocate_stack();
+          f->started = true;
 
-      if (setjmp(p_self->portal) == 0) {
-        Fiber::Private* p = f->p_.get();
-        p->sig = sig;
-        p->resumed_from = &self;
-        g_current_fiber = f;
-        longjmp(p->portal, 1);
+          // Set up stack and jump into fiber:
+          void* sp;
+          if (STACK_GROWS_DOWN) {
+            sp = (void*)((intptr_t)f->stack + FIBER_STACK_SIZE);
+          } else {
+            sp = f->stack;
+          }
+
+          #if defined(__x86_64__)
+          __asm__ __volatile__
+          (
+           "movq %%rsp, %%rbx\n"
+           "movq %0, %%rsp\n"
+           "movq %1, %%rdi\n"
+           "callq *%2\n"
+           "movq %%rbx, %%rsp\n"
+           : // output registers
+           : "r"(sp), "r"(f.get()), "r"(fiber_trampoline) // input registers
+           : "rsp", "rbx", "rdi" // clobbered
+           );
+          #else
+          #error Fibers are not supported yet on this platform. :(
+          #endif
+        }
       } else {
-        handle_return_from_fiber(self.p_->resumed_from);
+        // and back.
+        handle_return();
       }
     }
 
     void fiber_trampoline(Fiber* f) {
-      Fiber::Private* p = f->p_.get();
       try {
-        p->function();
+        f->function();
       }
       catch (const FiberTermination& termination) {
       }
       catch (...) {
         auto eptr = std::current_exception();
-        if (p->error_handler) {
+        if (f->error_handler) {
           try {
-            p->error_handler(std::current_exception());
+            f->error_handler(std::current_exception());
           }
           catch (...) {
             fprintf(stderr, "Uncaught exception in fiber error handler!");
@@ -151,81 +174,55 @@ namespace wayward {
           std::abort();
         }
       }
-      p->started = false;
+      f->started = false;
 
-      if (p->on_exit == nullptr) {
-        fprintf(stderr, "Unowned fiber returned!");
-        std::abort();
+      if (f->invoker == nullptr) {
+        throw FiberError{"Orphan fiber returned. This means that the fiber was last resumed from a fiber that has now terminated, and can't naturally return to it."};
       }
-      resume_fiber_with_signal(p->on_exit, FiberSignal::Resume);
-    }
-
-    void start_fiber(Fiber* f) {
-      Fiber& self = Fiber::current();
-      Fiber::Private* p_self = self.p_.get();
-
-      if (setjmp(p_self->portal) == 0) {
-        Fiber::Private* p = f->p_.get();
-        p->on_exit = &self; // Become the 'owner' of the new fiber.
-
-        assert(p->stack == nullptr);
-        p->stack = allocate_stack();
-        p->started = true;
-        p->sig = FiberSignal::Resume;
-        p->resumed_from = &self;
-        g_current_fiber = f;
-
-        // Set up stack and jump into fiber:
-        void* sp;
-        if (STACK_GROWS_DOWN) {
-          sp = (void*)((intptr_t)p->stack + FIBER_STACK_SIZE);
-        } else {
-          sp = p->stack;
-        }
-
-        #if defined(__x86_64__)
-        __asm__ __volatile__
-        (
-         "movq %%rsp, %%rbx\n"
-         "movq %0, %%rsp\n"
-         "movq %1, %%rdi\n"
-         "callq *%2\n"
-         "movq %%rbx, %%rsp\n"
-         : // output registers
-         : "r"(sp), "r"(f), "r"(fiber_trampoline) // input registers
-         : "rsp", "rbx", "rdi" // clobbered
-         );
-        #else
-        #error Fibers are not supported yet on this platform. :(
-        #endif
-      } else {
-        handle_return_from_fiber(self.p_->resumed_from);
-      }
-    }
-  }
-
-  void Fiber::terminate() {
-    if (p_ && p_->started) {
-      p_->on_exit = &Fiber::current(); // Make sure that we get resumed when the fiber is done terminating.
-      resume_fiber_with_signal(this, FiberSignal::Terminate);
-    }
-  }
-
-  void Fiber::resume() {
-    if (p_->started) {
-      resume_fiber_with_signal(this, FiberSignal::Resume);
-    } else {
-      start_fiber(this);
+      resume_fiber_with_signal(std::move(f->invoker), FiberSignal::Resume);
     }
   }
 
   namespace fiber {
-    void yield() {
-      Fiber& fiber = Fiber::current();
-      if (fiber.p_->resumed_from == nullptr) {
-        throw FiberError("This fiber was never resumed from another fiber. Cannot yield.");
+    FiberPtr current() {
+      if (g_current_fiber == nullptr) {
+        // This is the first time fiber::current() is invoked in this thread,
+        // and we haven't yet created a fiber representation of the current main.
+
+        g_current_fiber = FiberPtr{new Fiber};
+        g_current_fiber->started = true;
       }
-      fiber.p_->resumed_from->resume();
+      return g_current_fiber;
+    }
+
+    FiberPtr create(Function function) {
+      return FiberPtr{new Fiber{std::move(function)}, fiber_delete};
+    }
+
+    FiberPtr create(Function function, ErrorHandler error_handler) {
+      return FiberPtr{new Fiber{std::move(function), std::move(error_handler)}, fiber_delete};
+    }
+
+    void resume(FiberPtr fiber) {
+      resume_fiber_with_signal(std::move(fiber), FiberSignal::Resume);
+    }
+
+    void start(Function function) {
+      auto f = create(std::move(function));
+      resume(std::move(f));
+    }
+
+    void terminate(FiberPtr fiber) {
+      if (fiber->started) {
+        resume_fiber_with_signal(std::move(fiber), FiberSignal::Terminate);
+      }
+    }
+
+    void yield() {
+      if (g_current_fiber == nullptr || g_current_fiber->invoker == nullptr) {
+        throw FiberError{"Called yield from orphaned fiber."};
+      }
+      resume_fiber_with_signal(std::move(g_current_fiber->invoker), FiberSignal::Resume);
     }
   }
 }

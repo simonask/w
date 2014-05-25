@@ -93,7 +93,6 @@ namespace wayward {
   struct HTTPServer::Private {
     evhttp* http = nullptr;
     std::function<Response(Request)> handler;
-    std::vector<std::unique_ptr<Fiber>> fibers;
 
     int socket_fd = -1;
     std::string listen_host;
@@ -118,12 +117,11 @@ namespace wayward {
   namespace {
     static void http_server_callback(evhttp_request* req, void* userdata) {
       auto p = static_cast<HTTPServer::Private*>(userdata);
-      p->fibers.emplace_back(new Fiber{[=]() {
+      fiber::start([=]() {
         auto request = make_request_from_evhttp_request(req);
         auto response = p->handler(std::move(request));
         send_response(response, req);
-      }});
-      p->fibers.back()->resume();
+      });
     }
   }
 
@@ -156,7 +154,7 @@ namespace wayward {
   struct HTTPClient::Private {
     IEventLoop* loop = nullptr;
     evhttp_connection* conn = nullptr;
-    Fiber* initiating_fiber = nullptr;
+    FiberPtr initiating_fiber;
     Maybe<Response> recorded_response;
     std::exception_ptr error;
   };
@@ -195,7 +193,7 @@ namespace wayward {
     static void http_client_callback(evhttp_request* req, void* userdata) {
       HTTPClient* client = static_cast<HTTPClient*>(userdata);
       client->p_->recorded_response = make_response_from_evhttp_request(req);
-      client->p_->initiating_fiber->resume();
+      fiber::resume(std::move(client->p_->initiating_fiber));
     }
 
     static void http_client_error_callback(evhttp_request_error err, void* userdata) {
@@ -233,7 +231,7 @@ namespace wayward {
       } catch (...) {
         client->p_->error = std::current_exception();
       }
-      client->p_->initiating_fiber->resume();
+      fiber::resume(std::move(client->p_->initiating_fiber));
     }
   }
 
@@ -263,7 +261,7 @@ namespace wayward {
     } else {
       throw HTTPError(wayward::format("Invalid method: {0}", req.method));
     }
-    p_->initiating_fiber = &Fiber::current();
+    p_->initiating_fiber = fiber::current();
     p_->recorded_response = Nothing;
     p_->error = nullptr;
     int result = evhttp_make_request(p_->conn, r, cmd, req.uri.path().c_str());
@@ -271,8 +269,8 @@ namespace wayward {
       throw HTTPError("Error making HTTP request.");
     }
 
-    // Resume the event loop. Hopefully.
-    wayward::fiber::yield();
+    // Resume the event loop, presumably.
+    fiber::yield();
 
     if (p_->error) {
       std::rethrow_exception(p_->error);

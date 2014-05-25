@@ -6,35 +6,39 @@ namespace {
 
   TEST(Fiber, returning_from_fiber_resumes_caller) {
     bool ran = false;
-    Fiber f { [&]() { ran = true; } };
-    f();
+    auto f = fiber::create([&]() {
+      ran = true;
+    });
+    fiber::resume(std::move(f));
     EXPECT_EQ(true, ran);
   }
 
   TEST(Fiber, calls_other_fiber) {
-    std::unique_ptr<Fiber> b;
+    FiberPtr main_fiber = fiber::current();
+    FiberPtr b;
     int n = 0;
-    std::unique_ptr<Fiber> a (new Fiber { [&]() {
+    auto a = fiber::create([&]() {
       while (n < 5) {
-        b->resume();
+        fiber::resume(b);
       }
-    }});
-    b = std::unique_ptr<Fiber>(new Fiber { [&]() {
+      fiber::resume(main_fiber);
+    });
+    b = fiber::create([&]() {
       while (true) {
         n += 1;
-        a->resume();
+        fiber::resume(a);
       }
-    }});
+    });
 
-    a->resume();
+    fiber::resume(a);
     EXPECT_EQ(5, n);
   }
 
   TEST(Fiber, terminates_gracefully) {
-    Fiber& main_fiber = Fiber::current();
+    auto main_fiber = fiber::current();
     int number = 0;
 
-    Fiber f { [&]() {
+    auto f = fiber::create([&]() {
       struct Foo {
         int& n;
         Foo(int& n) : n(n) {}
@@ -45,13 +49,13 @@ namespace {
 
       Foo foo { number };
       number = 789;
-      main_fiber.resume();
+      fiber::resume(main_fiber);
       number = 456;
-    }};
+    });
 
-    f();
+    fiber::resume(f);
     EXPECT_EQ(789, number);
-    f.terminate();
+    fiber::terminate(f);
     EXPECT_EQ(123, number);
   }
 }

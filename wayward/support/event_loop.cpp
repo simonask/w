@@ -62,10 +62,9 @@ namespace wayward {
       FDEventCallback callback;
 
       void handle_event(evutil_socket_t fd, short ev) {
-        Fiber fiber { [=]() {
+        fiber::start([=]() {
           callback(fd, ev);
-        }};
-        fiber();
+        });
       }
 
       static void handle_event_cb(evutil_socket_t fd, short ev, void* userdata) {
@@ -79,10 +78,9 @@ namespace wayward {
 
       void handle_event(evutil_socket_t fd, short ev) {
         TimeoutEventHandle_libevent* self = this;
-        Fiber fiber { [=]() {
+        fiber::start([=]() {
           self->callback();
-        }};
-        fiber();
+        });
       }
 
       static void handle_event_cb(evutil_socket_t fd, short ev, void* userdata) {

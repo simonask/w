@@ -15,52 +15,49 @@ namespace wayward {
   };
 
   struct FiberTermination {};
+  struct Fiber;
 
-  struct Fiber {
-    static Fiber& current();
+  /*
+    Fiber is implemented in terms of std::shared_ptr. A running fiber has a
+    reference to the fiber that invoked it.
+  */
+  using FiberPtr = std::shared_ptr<Fiber>;
 
+  namespace fiber {
     using Function = std::function<void()>;
     using ErrorHandler = std::function<void(std::exception_ptr)>;
 
-    explicit Fiber(Function function);
-    Fiber(Function function, ErrorHandler error_handler);
-    Fiber(Fiber&&) = default;
-    ~Fiber();
+    FiberPtr current();
 
     /*
-      If the fiber throws an uncaught exception, the error handler function will be called.
-      If no error handler is set, std::abort() is called.
+      Create a new fiber without starting it.
     */
-    void set_error_handler(ErrorHandler);
+    FiberPtr create(Function);
 
     /*
-      The fiber 'new_owner' will be resumed upon natural return from the fiber function.
-      By default, the fiber that *started* this fiber will be resumed upon return.
-      NOTE: That fiber may be a different one from the one that last *resumed* the fiber.
+      Create a new fiber with an error handler, without starting it.
     */
-    void set_on_exit(Fiber* new_owner);
-
+    FiberPtr create(Function, ErrorHandler);
 
     /*
-      Resume the fiber (or start it if it hasn't run yet).
+      Resume a fiber (or start it if it hasn't been started yet).
     */
-    void resume();
-    void operator()() { resume(); }
+    void resume(FiberPtr);
 
     /*
-      terminate resumes the fiber with a signal that instructs it to unwind its stack,
-      before in turn resuming the caller of terminate.
+      Create a fiber and start it right away.
     */
-    void terminate();
+    void start(Function);
 
-    struct Private;
-    std::unique_ptr<Private> p_;
-  private:
-    Fiber();
-  };
+    /*
+      Resume the fiber with a signal to terminate.
+    */
+    void terminate(FiberPtr);
 
-  // NOTE: These functions require an event loop!
-  namespace fiber {
+    /*
+      Resume the fiber that started the current fiber.
+      Throws an exception if the current fiber is orphaned.
+    */
     void yield();
   }
 }
