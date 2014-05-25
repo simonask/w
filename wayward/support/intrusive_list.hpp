@@ -2,6 +2,8 @@
 #ifndef WAYWARD_SUPPORT_INTRUSIVE_LIST_HPP_INCLUDED
 #define WAYWARD_SUPPORT_INTRUSIVE_LIST_HPP_INCLUDED
 
+#include <wayward/support/error.hpp>
+
 namespace wayward {
   template <typename T>
   struct IntrusiveListLink {
@@ -33,6 +35,10 @@ namespace wayward {
     return reinterpret_cast<std::ptrdiff_t>(&(ptr->*member));
   }
 
+  struct IntrusiveListError : Error {
+    IntrusiveListError(const std::string& msg) : Error(msg) {}
+  };
+
   template <typename T, IntrusiveListLink<T> T::*LinkMember>
   struct IntrusiveList {
     using value_type = T;
@@ -42,6 +48,11 @@ namespace wayward {
       sentinel_.next = &sentinel_;
     }
     IntrusiveList(const IntrusiveList<T, LinkMember>&) = delete;
+    ~IntrusiveList() {
+      if (!empty()) {
+        throw IntrusiveListError("A non-empty IntrusiveList was destroyed. This means dangling pointers and is probably a logic error.");
+      }
+    }
 
     T* head() const {
       if (!empty()) {
