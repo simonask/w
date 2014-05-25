@@ -9,12 +9,15 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <cassert>
 
+#include <event2/event.h>
 #include <event2/util.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <arpa/inet.h>
 
@@ -57,6 +60,8 @@ struct AppState {
   std::string binary_path;
   bool run_in_debugger = false;
 
+  FILE* needs_rebuild_stream = nullptr;
+  event* needs_rebuild_event = nullptr;
   bool needs_rebuild = false;
 
   wayward::ConsoleStreamLogger logger = wayward::ConsoleStreamLogger{std::cout, std::cerr};
@@ -106,21 +111,50 @@ static bool path_is_directory(const std::string& path) {
   return r == 0 && S_ISDIR(st.st_mode);
 }
 
+static void in_directory(const std::string& dir, std::function<void()> action) {
+  // TODO: Make exception-safe.
+  int old_cwd = ::open(".", O_RDONLY);
+  int new_cwd = ::open(dir.c_str(), O_RDONLY);
+  ::fchdir(new_cwd);
+  action();
+  ::fchdir(old_cwd);
+}
+
+static void check_child_needs_rebuild_callback(int fd, short ev, void* userdata) {
+  AppState* state = static_cast<AppState*>(userdata);
+
+  // Pipe was closed
+  event_free(state->needs_rebuild_event);
+  state->needs_rebuild_event = nullptr;
+
+  int result = ::pclose(state->needs_rebuild_stream);
+  state->needs_rebuild_stream = nullptr;
+  if (result != 0) {
+    state->logger.log(wayward::Severity::Debug, "w_dev", "App needs rebuild (reason: target binary out of date).");
+    state->needs_rebuild = true;
+  }
+}
+
 static void check_child_needs_rebuild(AppState* state) {
   using namespace wayward;
 
   if (state->needs_rebuild)
+    return;
+  if (state->needs_rebuild_stream != nullptr)
     return;
   if (!path_exists(state->binary_path)) {
     state->logger.log(Severity::Debug, "w_dev", "App needs rebuild (reason: target binary does not exist).");
     state->needs_rebuild = true;
   }
 
-  wayward::Recompiler recompiler { state->directory };
-  if (recompiler.needs_rebuild()) {
-    state->logger.log(Severity::Debug, "w_dev", "App needs rebuild (reason: target binary out of date).");
-    state->needs_rebuild = true;
-  }
+  in_directory(state->directory, [&]() {
+    state->needs_rebuild_stream = ::popen("scons -q > /dev/null", "r");
+    int fd = fileno(state->needs_rebuild_stream);
+    assert(fd > 0);
+    event_base* base = (event_base*)state->loop.native_handle();
+    state->needs_rebuild_event = event_new(base, fd, EV_READ, check_child_needs_rebuild_callback, state);
+    event_add(state->needs_rebuild_event, nullptr);
+  });
 }
 
 static void rebuild_child_server_if_needed(AppState* state) {
