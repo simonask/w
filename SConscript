@@ -17,6 +17,7 @@ wayward_support_sources = Split("""
   wayward/support/fiber.cpp
   wayward/support/event_loop.cpp
   wayward/support/http.cpp
+  wayward/support/teamwork.cpp
   """)
 
 wayward_sources = Split("""
@@ -61,8 +62,8 @@ if platform.system() == 'Darwin':
 env.Append(CPPPATH = ['.'])
 env.Append(CPPPATH = ['wayward/support'])
 
-libevent_cflags = os.popen('pkg-config --cflags libevent').read().strip()
-libevent_libs   = os.popen('pkg-config --libs libevent').read().strip()
+libevent_cflags = os.popen('pkg-config --cflags libevent libevent_pthreads').read().strip()
+libevent_libs   = os.popen('pkg-config --libs libevent libevent_pthreads').read().strip()
 libpq_cflags    = os.popen('pkg-config --cflags libpq').read().strip()
 libpq_libs      = os.popen('pkg-config --libs libpq').read().strip()
 
