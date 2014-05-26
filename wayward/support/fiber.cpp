@@ -94,7 +94,8 @@ namespace wayward {
       return *get();
     }
 
-    auto operator->() -> decltype(std::declval<T*>()->operator->()) {
+    template <typename U = T>
+    auto operator->() -> decltype(std::declval<U*>()->operator->()) {
       return get()->operator->();
     }
 
@@ -114,28 +115,59 @@ namespace wayward {
   };
 
   namespace {
-    static ThreadLocal<FiberPtr> g_current_fiber; // TODO: Thread-Local
+    struct FiberStackAllocator {
+      void* allocate_stack() {
+        if (free_list == nullptr) {
+          void* stack = ::mmap(nullptr, FIBER_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
 
-    void free_stack(void* p) {
-      ::munmap(p, FIBER_STACK_SIZE);
-    }
-
-    void* allocate_stack() {
-      void* stack = ::mmap(nullptr, FIBER_STACK_SIZE, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
-
-      // Mark the 'farthest' (first or last, depending on stack direction) with forbidden access,
-      // to ensure that stack overflow results in a crash, and not heap corruption.
-      void* canary;
-      if (STACK_GROWS_DOWN) {
-        canary = stack;
-      } else {
-        canary = (void*)((intptr_t)stack - CANARY_PAGE_SIZE);
+          // Mark the 'farthest' (first or last, depending on stack direction) with forbidden access,
+          // to ensure that stack overflow results in a crash, and not heap corruption.
+          void* canary;
+          if (STACK_GROWS_DOWN) {
+            canary = stack;
+          } else {
+            canary = (void*)((intptr_t)stack - CANARY_PAGE_SIZE);
+          }
+          assert((((intptr_t)canary) % CANARY_PAGE_SIZE) == 0); // Canary page is not on a page bound.
+          ::mprotect(canary, CANARY_PAGE_SIZE, PROT_NONE);
+          return stack;
+        } else {
+          void* next_in_line = *free_list_location(free_list);
+          void* ptr = free_list;
+          free_list = next_in_line;
+          return ptr;
+        }
       }
-      assert((((intptr_t)canary) % CANARY_PAGE_SIZE) == 0); // Canary page is not on a page bound.
-      ::mprotect(canary, CANARY_PAGE_SIZE, PROT_NONE);
 
-      return stack;
-    }
+      void free_stack(void* stack) {
+        // TODO: Set an upper limit to how many fiber stacks we keep around, perhaps?
+        *free_list_location(stack) = free_list;
+        free_list = stack;
+      }
+
+      ~FiberStackAllocator() {
+        void* ptr = free_list;
+        while (ptr) {
+          void* next_in_line = *((void**)free_list);
+          ::munmap(ptr, FIBER_STACK_SIZE);
+          ptr = next_in_line;
+        }
+      }
+
+      void** free_list_location(void* stack) {
+        if (STACK_GROWS_DOWN) {
+          // We can't just place it at the beginning, because there's a canary there.
+          return reinterpret_cast<void**>(reinterpret_cast<char*>(stack) + CANARY_PAGE_SIZE);
+        } else {
+          return (void**)stack;
+        }
+      }
+
+      void* free_list = nullptr;
+    };
+
+    static ThreadLocal<FiberPtr> g_current_fiber;
+    static ThreadLocal<FiberStackAllocator> g_fiber_stack_allocator;
 
     void prepare_jump_into(FiberPtr fiber, FiberSignal sig) {
       fiber->sig = sig;
@@ -146,7 +178,7 @@ namespace wayward {
     void handle_return() {
       // Clean-up a terminated fiber if necessary.
       if (!g_current_fiber->invoker->started) {
-        free_stack(g_current_fiber->invoker->stack);
+        g_fiber_stack_allocator.get()->free_stack(g_current_fiber->invoker->stack);
         g_current_fiber->invoker->stack = nullptr;
         g_current_fiber->invoker = nullptr;
       }
@@ -167,7 +199,7 @@ namespace wayward {
           longjmp(f->portal, 1);
         } else {
           assert(f->stack == nullptr);
-          f->stack = allocate_stack();
+          f->stack = g_fiber_stack_allocator.get()->allocate_stack();
           f->started = true;
 
           // Set up stack and jump into fiber:
