@@ -1,6 +1,7 @@
 #include <wayward/support/http.hpp>
 #include <wayward/support/event_loop.hpp>
 #include <wayward/support/fiber.hpp>
+#include <wayward/support/teamwork.hpp>
 
 #include <cassert>
 #include <event2/event.h>
@@ -93,6 +94,7 @@ namespace wayward {
   struct HTTPServer::Private {
     evhttp* http = nullptr;
     std::function<Response(Request)> handler;
+    Teamwork team;
 
     int socket_fd = -1;
     std::string listen_host;
@@ -117,10 +119,13 @@ namespace wayward {
   namespace {
     static void http_server_callback(evhttp_request* req, void* userdata) {
       auto p = static_cast<HTTPServer::Private*>(userdata);
-      fiber::start([=]() {
-        auto request = make_request_from_evhttp_request(req);
-        auto response = p->handler(std::move(request));
-        send_response(response, req);
+      p->team.work([=]() {
+        auto caller = fiber::current();
+        fiber::start([=]() {
+          auto request = make_request_from_evhttp_request(req);
+          auto response = p->handler(std::move(request));
+          send_response(response, req);
+        });
       });
     }
   }
