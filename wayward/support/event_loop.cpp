@@ -1,6 +1,11 @@
 #include <wayward/support/event_loop.hpp>
-#include <wayward/support/event_loop_private.hpp>
 #include <wayward/support/fiber.hpp>
+
+#include <event2/event.h>
+#include <event2/http.h>
+#include <event2/keyvalq_struct.h>
+#include <event2/buffer.h>
+#include <event2/thread.h>
 
 namespace wayward {
   namespace {
@@ -16,6 +21,7 @@ namespace wayward {
     Fiber* running_in_fiber = nullptr;
 
     Private() {
+      evthread_use_pthreads();
       base = event_base_new();
     }
 
@@ -27,7 +33,8 @@ namespace wayward {
 
   EventLoop::~EventLoop() {}
 
-  EventLoop::EventLoop() : p_(new Private) {}
+  EventLoop::EventLoop() : p_(new Private) {
+  }
 
   void EventLoop::run() {
     IEventLoop* old_loop = g_current_event_loop;
