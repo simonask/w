@@ -6,7 +6,7 @@
 
 namespace wayward {
   struct Teamwork {
-    explicit Teamwork(size_t num_workers = 4);
+    explicit Teamwork(size_t num_workers = 8);
     ~Teamwork();
 
     using Function = std::function<void()>;
