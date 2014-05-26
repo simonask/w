@@ -66,8 +66,55 @@ namespace wayward {
     // This is the main fiber! We're being initialized in Fiber::current().
   }
 
+  // WARNING: This presumes that std::thread is implemented in terms of pthread.
+  template <typename T>
+  struct ThreadLocal {
+    pthread_key_t key;
+    ThreadLocal() {
+      pthread_key_create(&key, ThreadLocal<T>::destroy);
+    }
+    ~ThreadLocal() {
+      pthread_key_delete(key);
+    }
+
+    T* get() {
+      T* ptr = reinterpret_cast<T*>(pthread_getspecific(key));
+      if (ptr == nullptr) {
+        ptr = new T;
+        pthread_setspecific(key, reinterpret_cast<void*>(ptr));
+      }
+      return ptr;
+    }
+
+    T& operator=(T value) {
+      return *get() = std::move(value);
+    }
+
+    operator T&() {
+      return *get();
+    }
+
+    auto operator->() -> decltype(std::declval<T*>()->operator->()) {
+      return get()->operator->();
+    }
+
+    template <typename U>
+    auto operator==(U&& other) -> decltype(std::declval<T>() == std::forward<U>(other)) {
+      return *get() == std::forward<U>(other);
+    }
+
+    template <typename U>
+    auto operator!=(U&& other) -> decltype(std::declval<T>() != std::forward<U>(other)) {
+      return *get() != std::forward<U>(other);
+    }
+
+    static void destroy(void* ptr) {
+      delete reinterpret_cast<T*>(ptr);
+    }
+  };
+
   namespace {
-    FiberPtr g_current_fiber; // TODO: Thread-Local
+    static ThreadLocal<FiberPtr> g_current_fiber; // TODO: Thread-Local
 
     void free_stack(void* p) {
       ::munmap(p, FIBER_STACK_SIZE);
