@@ -20,7 +20,7 @@ namespace wayward {
     T* get() {
       T* ptr = reinterpret_cast<T*>(pthread_getspecific(key));
       if (ptr == nullptr) {
-        ptr = new T;
+        ptr = new T{}; // Important: initializing with empty brackets to set pointer threadlocals to NULL as the default.
         pthread_setspecific(key, reinterpret_cast<void*>(ptr));
       }
       return ptr;

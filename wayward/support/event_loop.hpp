@@ -28,8 +28,6 @@ namespace wayward {
 
     virtual ~IEventLoop() {}
     virtual void run() = 0;
-    virtual void resume() = 0;
-    virtual void terminate() = 0;
     virtual void* native_handle() const = 0;
 
     virtual std::unique_ptr<IEventHandle>
@@ -45,9 +43,8 @@ namespace wayward {
   struct EventLoop : IEventLoop {
     EventLoop();
     virtual ~EventLoop();
+
     void run() final;
-    void resume() final;
-    void terminate() final;
     void* native_handle() const;
 
     std::unique_ptr<IEventHandle>
@@ -56,6 +53,7 @@ namespace wayward {
     std::unique_ptr<IEventHandle>
     call_in(DateTimeInterval interval, std::function<void()> callback, bool repeat = false) final;
 
+    explicit EventLoop(void* native_handle); // Only for internal use!
   private:
     struct Private;
     std::unique_ptr<Private> p_;

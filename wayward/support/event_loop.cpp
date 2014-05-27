@@ -1,5 +1,6 @@
 #include <wayward/support/event_loop.hpp>
 #include <wayward/support/fiber.hpp>
+#include <wayward/support/thread_local.hpp>
 
 #include <event2/event.h>
 #include <event2/http.h>
@@ -9,14 +10,19 @@
 
 namespace wayward {
   namespace {
-    static __thread IEventLoop* g_current_event_loop = nullptr;
+    static ThreadLocal<IEventLoop*> g_current_event_loop;
   }
 
   IEventLoop* current_event_loop() {
-    return g_current_event_loop;
+    return *g_current_event_loop;
+  }
+
+  void set_current_event_loop(IEventLoop* loop) {
+    *g_current_event_loop = loop;
   }
 
   struct EventLoop::Private {
+    bool owned_base = true;
     event_base* base = nullptr;
     Fiber* running_in_fiber = nullptr;
 
@@ -25,9 +31,17 @@ namespace wayward {
       base = event_base_new();
     }
 
+    explicit Private(event_base* b) {
+      evthread_use_pthreads();
+      base = b;
+      owned_base = false;
+    }
+
     ~Private() {
       // TODO: Run all finalizers!
-      event_base_free(base);
+      if (owned_base) {
+        event_base_free(base);
+      }
     }
   };
 
@@ -36,19 +50,14 @@ namespace wayward {
   EventLoop::EventLoop() : p_(new Private) {
   }
 
+  EventLoop::EventLoop(void* native_handle) : p_(new Private{reinterpret_cast<event_base*>(native_handle)}) {
+  }
+
   void EventLoop::run() {
-    IEventLoop* old_loop = g_current_event_loop;
-    g_current_event_loop = this;
+    IEventLoop* old_loop = current_event_loop();
+    set_current_event_loop(this);
     event_base_dispatch(p_->base);
-    g_current_event_loop = old_loop;
-  }
-
-  void EventLoop::resume() {
-
-  }
-
-  void EventLoop::terminate() {
-
+    set_current_event_loop(old_loop);
   }
 
   void* EventLoop::native_handle() const {
