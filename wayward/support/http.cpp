@@ -154,10 +154,12 @@ namespace wayward {
   namespace {
     static void http_server_callback(evhtp_request_t* req, void* userdata) {
       auto p = static_cast<HTTPServer::Private*>(userdata);
+      evhtp_request_pause(req);
       fiber::start([=]() {
         auto request = make_request_from_evhttp_request(req);
         auto response = p->handler(std::move(request));
         send_response(response, req);
+        evhtp_request_resume(req);
       });
     }
 
