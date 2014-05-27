@@ -1,4 +1,5 @@
 #include <wayward/support/fiber.hpp>
+#include <wayward/support/thread_local.hpp>
 
 #include <exception>
 #include <assert.h>
@@ -66,54 +67,6 @@ namespace wayward {
     // This is the main fiber! We're being initialized in Fiber::current().
   }
 
-  // WARNING: This presumes that std::thread is implemented in terms of pthread.
-  template <typename T>
-  struct ThreadLocal {
-    pthread_key_t key;
-    ThreadLocal() {
-      pthread_key_create(&key, ThreadLocal<T>::destroy);
-    }
-    ~ThreadLocal() {
-      pthread_key_delete(key);
-    }
-
-    T* get() {
-      T* ptr = reinterpret_cast<T*>(pthread_getspecific(key));
-      if (ptr == nullptr) {
-        ptr = new T;
-        pthread_setspecific(key, reinterpret_cast<void*>(ptr));
-      }
-      return ptr;
-    }
-
-    T& operator=(T value) {
-      return *get() = std::move(value);
-    }
-
-    operator T&() {
-      return *get();
-    }
-
-    template <typename U = T>
-    auto operator->() -> decltype(std::declval<U*>()->operator->()) {
-      return get()->operator->();
-    }
-
-    template <typename U>
-    auto operator==(U&& other) -> decltype(std::declval<T>() == std::forward<U>(other)) {
-      return *get() == std::forward<U>(other);
-    }
-
-    template <typename U>
-    auto operator!=(U&& other) -> decltype(std::declval<T>() != std::forward<U>(other)) {
-      return *get() != std::forward<U>(other);
-    }
-
-    static void destroy(void* ptr) {
-      delete reinterpret_cast<T*>(ptr);
-    }
-  };
-
   namespace {
     struct FiberStackAllocator {
       void* allocate_stack() {
@@ -171,19 +124,21 @@ namespace wayward {
 
     void prepare_jump_into(FiberPtr fiber, FiberSignal sig) {
       fiber->sig = sig;
-      fiber->invoker = g_current_fiber;
-      g_current_fiber = fiber;
+      fiber->invoker = std::move(*g_current_fiber);
+      *g_current_fiber = std::move(fiber);
     }
 
     void handle_return() {
       // Clean-up a terminated fiber if necessary.
-      if (!g_current_fiber->invoker->started) {
-        g_fiber_stack_allocator.get()->free_stack(g_current_fiber->invoker->stack);
-        g_current_fiber->invoker->stack = nullptr;
-        g_current_fiber->invoker = nullptr;
+      FiberPtr& current = *g_current_fiber;
+      assert(current);
+      if (!current->invoker->started) {
+        g_fiber_stack_allocator.get()->free_stack(current->invoker->stack);
+        current->invoker->stack = nullptr;
+        current->invoker = nullptr;
       }
 
-      if (g_current_fiber->sig == FiberSignal::Terminate) {
+      if (current->sig == FiberSignal::Terminate) {
         throw FiberTermination{};
       }
     }
@@ -199,7 +154,7 @@ namespace wayward {
           longjmp(f->portal, 1);
         } else {
           assert(f->stack == nullptr);
-          f->stack = g_fiber_stack_allocator.get()->allocate_stack();
+          f->stack = g_fiber_stack_allocator->allocate_stack();
           f->started = true;
 
           // Set up stack and jump into fiber:
@@ -264,14 +219,14 @@ namespace wayward {
 
   namespace fiber {
     FiberPtr current() {
-      if (g_current_fiber == nullptr) {
+      if (*g_current_fiber == nullptr) {
         // This is the first time fiber::current() is invoked in this thread,
         // and we haven't yet created a fiber representation of the current main.
 
-        g_current_fiber = FiberPtr{new Fiber};
-        g_current_fiber->started = true;
+        *g_current_fiber = FiberPtr{new Fiber};
+        (*g_current_fiber)->started = true;
       }
-      return g_current_fiber;
+      return *g_current_fiber;
     }
 
     FiberPtr create(Function function) {
@@ -298,10 +253,10 @@ namespace wayward {
     }
 
     void yield() {
-      if (g_current_fiber == nullptr || g_current_fiber->invoker == nullptr) {
+      if (*g_current_fiber == nullptr || (*g_current_fiber)->invoker == nullptr) {
         throw FiberError{"Called yield from orphaned fiber."};
       }
-      resume_fiber_with_signal(std::move(g_current_fiber->invoker), FiberSignal::Resume);
+      resume_fiber_with_signal(std::move((*g_current_fiber)->invoker), FiberSignal::Resume);
     }
   }
 }
