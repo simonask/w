@@ -5,24 +5,23 @@
 
 namespace wayward {
   struct URI {
-    URI();
+    URI() {}
     explicit URI(std::string uri);
-    URI(std::string scheme, std::string host, std::string path, std::string query = "", std::string fragment = "");
-    URI(URI&& other);
-    URI(const URI& other);
-    URI& operator=(URI&& other);
-    URI& operator=(const URI& other);
-    ~URI();
+    URI(std::string scheme, std::string host, int port, std::string path, std::string query = "", std::string fragment = "");
+    URI(URI&& other) = default;
+    URI(const URI& other) = default;
+    URI& operator=(URI&& other) = default;
+    URI& operator=(const URI& other) = default;
 
-    std::string scheme() const;
-    std::string host() const;
-    int port() const;
-    std::string path() const;
-    std::string query() const;
-    std::string fragment() const;
-  private:
-    void* priv = nullptr;
+    std::string scheme;
+    std::string host;
+    int port;
+    std::string path;
+    std::string query;
+    std::string fragment;
   };
+
+  inline URI::URI(std::string scheme, std::string host, int port, std::string path, std::string query, std::string fragment) : scheme(std::move(scheme)), host(std::move(host)), port(port), path(std::move(path)), query(std::move(query)), fragment(std::move(fragment)) {}
 }
 
 #endif /* end of include guard: SYMBOL */

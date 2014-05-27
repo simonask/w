@@ -62,8 +62,8 @@ if platform.system() == 'Darwin':
 env.Append(CPPPATH = ['.'])
 env.Append(CPPPATH = ['wayward/support'])
 
-libevent_cflags = os.popen('pkg-config --cflags libevent libevent_pthreads').read().strip()
-libevent_libs   = os.popen('pkg-config --libs libevent libevent_pthreads').read().strip()
+libevent_cflags = os.popen('pkg-config --cflags libevent libevent_pthreads libevent_openssl').read().strip()
+libevent_libs   = os.popen('pkg-config --libs libevent libevent_pthreads libevent_openssl').read().strip()
 libpq_cflags    = os.popen('pkg-config --cflags libpq').read().strip()
 libpq_libs      = os.popen('pkg-config --libs libpq').read().strip()
 
@@ -73,7 +73,11 @@ env_with_libevent = env.Clone()
 env_with_libevent.Append(CCFLAGS = libevent_cflags)
 env_with_libevent.Append(LINKFLAGS = libevent_libs)
 
-wayward_support = env_with_libevent.SharedLibrary("wayward_support", wayward_support_sources)
+env_with_libevhtp = env_with_libevent.Clone()
+env_with_libevhtp.Append(LIBS = [File('3rdparty/libevhtp/libevhtp.a'), 'ssl', 'crypto'])
+env_with_libevhtp.Append(CPPPATH = Split('3rdparty/libevhtp 3rdparty/libevhtp/evthr 3rdparty/libevhtp/htparse 3rdparty/libevhtp/oniguruma'))
+
+wayward_support = env_with_libevhtp.SharedLibrary("wayward_support", wayward_support_sources)
 wayward         = env.SharedLibrary("wayward", wayward_sources, LIBS = wayward_support)
 wayward_testing = env_with_libevent.SharedLibrary("wayward_testing", wayward_testing_sources, LIBS = wayward_support)
 w_dev           = env_with_libevent.Program('w_dev', w_util_sources, LIBS = wayward_support)

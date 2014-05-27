@@ -26,7 +26,7 @@ namespace wayward {
 
       bool match_and_set_params(Request& req) const {
         MatchResults match;
-        if (std::regex_match(req.uri.path(), match, regex)) {
+        if (std::regex_match(req.uri.path, match, regex)) {
           for (auto& group_name: regex_group_names) {
             req.params[group_name.second] = std::string(match[group_name.first]);
           }
@@ -123,7 +123,7 @@ namespace wayward {
         return Nothing; // Only serve static files in development.
       if (req.method != "GET")
         return Nothing;
-      auto path = req.uri.path();
+      auto path = req.uri.path;
       if (path.find("..") != std::string::npos)
         return Nothing; // Never allow paths with '..'
 

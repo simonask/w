@@ -1,37 +1,51 @@
 #include <wayward/support/http.hpp>
 #include <wayward/support/event_loop.hpp>
 #include <wayward/support/fiber.hpp>
-#include <wayward/support/teamwork.hpp>
+#include <wayward/support/event_loop_private.hpp>
 
 #include <cassert>
 #include <event2/event.h>
-#include <event2/http.h>
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>
+#include <evhtp.h>
 
 namespace wayward {
   namespace {
-    Request make_request_from_evhttp_request(evhttp_request* req) {
+    Request make_request_from_evhttp_request(evhtp_request_t* req) {
       Request r;
 
-      switch (evhttp_request_get_command(req)) {
-        case EVHTTP_REQ_GET:     r.method = "GET";     break;
-        case EVHTTP_REQ_POST:    r.method = "POST";    break;
-        case EVHTTP_REQ_HEAD:    r.method = "HEAD";    break;
-        case EVHTTP_REQ_PUT:     r.method = "PUT";     break;
-        case EVHTTP_REQ_DELETE:  r.method = "DELETE";  break;
-        case EVHTTP_REQ_OPTIONS: r.method = "OPTIONS"; break;
-        case EVHTTP_REQ_TRACE:   r.method = "TRACE";   break;
-        case EVHTTP_REQ_CONNECT: r.method = "CONNECT"; break;
-        case EVHTTP_REQ_PATCH:   r.method = "PATCH";   break;
+      switch (evhtp_request_get_method(req)) {
+        case htp_method_GET:       r.method = "GET"; break;
+        case htp_method_HEAD:      r.method = "HEAD"; break;
+        case htp_method_POST:      r.method = "POST"; break;
+        case htp_method_PUT:       r.method = "PUT"; break;
+        case htp_method_DELETE:    r.method = "DELETE"; break;
+        case htp_method_MKCOL:     r.method = "MKCOL"; break;
+        case htp_method_COPY:      r.method = "COPY"; break;
+        case htp_method_MOVE:      r.method = "MOVE"; break;
+        case htp_method_OPTIONS:   r.method = "OPTIONS"; break;
+        case htp_method_PROPFIND:  r.method = "PROPFIND"; break;
+        case htp_method_PROPPATCH: r.method = "PROPPATCH"; break;
+        case htp_method_LOCK:      r.method = "LOCK"; break;
+        case htp_method_UNLOCK:    r.method = "UNLOCK"; break;
+        case htp_method_TRACE:     r.method = "TRACE"; break;
+        case htp_method_CONNECT:   r.method = "CONNECT"; break;
+        case htp_method_PATCH:     r.method = "PATCH"; break;
+        case htp_method_UNKNOWN:   r.method = "UNKNOWN"; break;
       }
 
-      evkeyvalq* headers = evhttp_request_get_input_headers(req);
-      for (evkeyval* header = headers->tqh_first; header; header = header->next.tqe_next) {
-        r.headers[header->key] = header->value;
+      auto headers = req->headers_in;
+      for (auto header = headers->tqh_first; header; header = header->next.tqe_next) {
+        r.headers[std::string(header->key, header->klen)] = std::string(header->val, header->vlen);
       }
 
-      evbuffer* body = evhttp_request_get_input_buffer(req);
+      auto host_it = r.headers.find("Host");
+      std::string vhost;
+      if (host_it != r.headers.end()) {
+        vhost = host_it->second;
+      }
+
+      auto body = req->buffer_in;
       if (body) {
         std::stringstream body_buffer;
         while (evbuffer_get_length(body)) {
@@ -43,22 +57,40 @@ namespace wayward {
         r.body = body_buffer.str();
       }
 
-      char* decoded_uri_str = evhttp_decode_uri(evhttp_request_get_uri(req));
-      r.uri = URI(decoded_uri_str);
-      ::free(decoded_uri_str);
+      auto uri = req->uri;
+      const char* scheme = "";
+      switch (uri->scheme) {
+        case htp_scheme_ftp:     scheme = "ftp"; break;
+        case htp_scheme_http:    scheme = "http"; break;
+        case htp_scheme_https:   scheme = "https"; break;
+        case htp_scheme_nfs:     scheme = "nfs"; break;
+        default: break;
+      }
+      if (uri->query) {
+        for (auto param = uri->query->tqh_first; param; param = param->next.tqe_next) {
+          std::string k { param->key, param->klen };
+          std::string v { param->val, param->vlen };
+          r.params[k] = v;
+        }
+      }
+      std::string query_raw { uri->query_raw ? reinterpret_cast<char*>(uri->query_raw) : "" };
+      std::string fragment  { uri->fragment  ? reinterpret_cast<char*>(uri->fragment)  : "" };
+      r.uri = URI{scheme, vhost, 80 /* TODO */, uri->path->full, std::move(query_raw), std::move(fragment)};
       return r;
     }
 
-    Response make_response_from_evhttp_request(evhttp_request* req) {
+    Response make_response_from_evhttp_request(evhtp_request_t* req) {
       Response r;
-      r.code = (HTTPStatusCode)evhttp_request_get_response_code(req);
+      r.code = (HTTPStatusCode)req->status;
 
-      evkeyvalq* headers = evhttp_request_get_input_headers(req);
-      for (evkeyval* header = headers->tqh_first; header; header = header->next.tqe_next) {
-        r.headers[header->key] = header->value;
+      auto headers = req->headers_in;
+      for (auto header = headers->tqh_first; header; header = header->next.tqe_next) {
+        std::string k { header->key, header->klen };
+        std::string v { header->val, header->vlen };
+        r.headers[std::move(k)] = std::move(v);
       }
 
-      evbuffer* body = evhttp_request_get_input_buffer(req);
+      evbuffer* body = req->buffer_in;
       // TODO: Insert length sanity checks?
       size_t body_len = evbuffer_get_length(body);
       r.body.resize(body_len);
@@ -66,35 +98,38 @@ namespace wayward {
       return std::move(r);
     }
 
-    void add_evhttp_request_headers_and_body(evhttp_request* req, const Request& r) {
-      evkeyvalq* headers = evhttp_request_get_output_headers(req);
+    void add_evhttp_request_headers_and_body(evhtp_request_t* req, const Request& r) {
+      auto headers = req->headers_out;
       for (auto& pair: r.headers) {
-        evhttp_add_header(headers, pair.first.c_str(), pair.second.c_str());
+        auto kv = evhtp_kv_new(pair.first.c_str(), pair.second.c_str(), 0, 0); // 0 means "do not copy"
+        evhtp_headers_add_header(headers, kv);
       }
 
       if (r.body.size()) {
-        evbuffer* body = evhttp_request_get_output_buffer(req);
+        evbuffer* body = req->buffer_out;
         evbuffer_add(body, r.body.data(), r.body.size());
       }
     }
 
-    void send_response(Response& response, evhttp_request* handle) {
-      evkeyvalq* headers = evhttp_request_get_output_headers(handle);
+    void send_response(Response& response, evhtp_request_t* handle) {
+      auto headers = handle->headers_out;
       for (auto& pair: response.headers) {
-        evhttp_add_header(headers, pair.first.c_str(), pair.second.c_str());
+        auto kv = evhtp_kv_new(pair.first.c_str(), pair.second.c_str(), 0, 0);
+        evhtp_headers_add_header(headers, kv);
       }
 
-      evbuffer* body_buffer = evbuffer_new();
+      evbuffer* body_buffer = handle->buffer_out;
       evbuffer_add(body_buffer, response.body.c_str(), response.body.size());
-      evhttp_send_reply(handle, (int)response.code, response.reason.size() ? response.reason.c_str() : nullptr, body_buffer);
-      evbuffer_free(body_buffer);
+      evhtp_send_reply(handle, (int)response.code);
     }
   }
 
   struct HTTPServer::Private {
-    evhttp* http = nullptr;
+    evhtp_t* http = nullptr;
     std::function<Response(Request)> handler;
-    Teamwork team;
+
+    std::mutex event_loops_lock;
+    std::vector<std::unique_ptr<EventLoop>> event_loops;
 
     int socket_fd = -1;
     std::string listen_host;
@@ -117,31 +152,42 @@ namespace wayward {
   }
 
   namespace {
-    static void http_server_callback(evhttp_request* req, void* userdata) {
+    static void http_server_callback(evhtp_request_t* req, void* userdata) {
       auto p = static_cast<HTTPServer::Private*>(userdata);
-      p->team.work([=]() {
-        auto caller = fiber::current();
-        fiber::start([=]() {
-          auto request = make_request_from_evhttp_request(req);
-          auto response = p->handler(std::move(request));
-          send_response(response, req);
-        });
+      fiber::start([=]() {
+        auto request = make_request_from_evhttp_request(req);
+        auto response = p->handler(std::move(request));
+        send_response(response, req);
       });
+    }
+
+
+    static void http_server_init_thread(evhtp_t* htp, evthr_t* thr, void* userdata) {
+      auto p = static_cast<HTTPServer::Private*>(userdata);
+      auto base = evthr_get_base(thr);
+      auto loop = new EventLoop { (void*)base };
+      {
+        std::unique_lock<std::mutex> L { p->event_loops_lock };
+        p->event_loops.emplace_back(loop);
+      }
+      set_current_event_loop(loop);
     }
   }
 
   void HTTPServer::start(IEventLoop* loop) {
     assert(p_->http == nullptr);
     event_base* base = (event_base*)loop->native_handle();
-    p_->http = evhttp_new(base);
-    evhttp_set_gencb(p_->http, http_server_callback, p_.get());
+    p_->http = evhtp_new(base, this);
+    evhtp_set_gencb(p_->http, http_server_callback, p_.get());
+    evhtp_use_threads(p_->http, http_server_init_thread, 8, p_.get());
+
     if (p_->socket_fd >= 0) {
-      int r = evhttp_accept_socket(p_->http, p_->socket_fd);
+      int r = evhtp_accept_socket(p_->http, p_->socket_fd, 10);
       if (r < 0) {
         throw HTTPError(wayward::format("Could not listen on provided socket: {0}.", p_->socket_fd));
       }
     } else {
-      int r = evhttp_bind_socket(p_->http, p_->listen_host.c_str(), p_->port);
+      int r = evhtp_bind_socket(p_->http, p_->listen_host.c_str(), p_->port, 10);
       if (r < 0) {
         throw HTTPError(wayward::format("Could not bind to socket on {0}:{1}.", p_->listen_host, p_->port));
       }
@@ -150,15 +196,18 @@ namespace wayward {
 
   void HTTPServer::stop() {
     // XXX: Some way to check if requests are being served?
-    evhttp_free(p_->http);
+    std::unique_lock<std::mutex> L { p_->event_loops_lock };
+    p_->event_loops.clear();
+    evhtp_free(p_->http);
     p_->http = nullptr;
   }
 
-
-
   struct HTTPClient::Private {
     IEventLoop* loop = nullptr;
-    evhttp_connection* conn = nullptr;
+    evhtp_connection_t* conn = nullptr;
+    std::string host;
+    int port;
+
     FiberPtr initiating_fiber;
     Maybe<Response> recorded_response;
     std::exception_ptr error;
@@ -172,104 +221,60 @@ namespace wayward {
 
     event_base* base = static_cast<event_base*>(p_->loop->native_handle());
     // TODO: support evdns_base as well
-    p_->conn = evhttp_connection_base_new(base, nullptr, host.c_str(), port);
+    p_->conn = evhtp_connection_new(base, host.c_str(), port);
     if (p_->conn == nullptr) {
       throw HTTPError(wayward::format("Could not connect to {0}:{1}.", host, port));
     }
+    p_->host = std::move(host);
+    p_->port = port;
   }
 
   HTTPClient::~HTTPClient() {}
 
   std::string HTTPClient::host() const {
-    char* address;
-    ev_uint16_t port;
-    evhttp_connection_get_peer(p_->conn, &address, &port);
-    return address;
+    return p_->host;
   }
 
   int HTTPClient::port() const {
-    char* address;
-    ev_uint16_t port;
-    evhttp_connection_get_peer(p_->conn, &address, &port);
-    return port;
+    return p_->port;
   }
 
   namespace {
-    static void http_client_callback(evhttp_request* req, void* userdata) {
+    static void http_client_callback(evhtp_request_t* req, void* userdata) {
       HTTPClient* client = static_cast<HTTPClient*>(userdata);
       client->p_->recorded_response = make_response_from_evhttp_request(req);
-      fiber::resume(std::move(client->p_->initiating_fiber));
-    }
-
-    static void http_client_error_callback(evhttp_request_error err, void* userdata) {
-      HTTPClient* client = static_cast<HTTPClient*>(userdata);
-      client->p_->recorded_response = Nothing;
-      try {
-        std::string message;
-        switch (err) {
-          case EVREQ_HTTP_TIMEOUT: {
-            message = "Timeout";
-            break;
-          }
-          case EVREQ_HTTP_EOF: {
-            message = "Unexpected EOF";
-            break;
-          }
-          case EVREQ_HTTP_INVALID_HEADER: {
-            message = "Invalid header";
-            break;
-          }
-          case EVREQ_HTTP_BUFFER_ERROR: {
-            message = "Buffer error";
-            break;
-          }
-          case EVREQ_HTTP_REQUEST_CANCEL: {
-            message = "Request Cancelled";
-            break;
-          }
-          case EVREQ_HTTP_DATA_TOO_LONG: {
-            message = "Data Too Long";
-            break;
-          }
-        }
-        throw HTTPError{message};
-      } catch (...) {
-        client->p_->error = std::current_exception();
-      }
       fiber::resume(std::move(client->p_->initiating_fiber));
     }
   }
 
   Response HTTPClient::request(Request req) {
     assert(p_->conn);
-    evhttp_request* r = evhttp_request_new(http_client_callback, this);
-    evhttp_request_set_error_cb(r, http_client_error_callback);
-    evhttp_cmd_type cmd;
-    if (req.method == "GET") {
-      cmd = EVHTTP_REQ_GET;
-    } else if (req.method == "POST") {
-      cmd = EVHTTP_REQ_POST;
-    } else if (req.method == "HEAD") {
-      cmd = EVHTTP_REQ_HEAD;
-    } else if (req.method == "PUT") {
-      cmd = EVHTTP_REQ_PUT;
-    } else if (req.method == "DELETE") {
-      cmd = EVHTTP_REQ_DELETE;
-    } else if (req.method == "OPTIONS") {
-      cmd = EVHTTP_REQ_OPTIONS;
-    } else if (req.method == "TRACE") {
-      cmd = EVHTTP_REQ_TRACE;
-    } else if (req.method == "CONNECT") {
-      cmd = EVHTTP_REQ_CONNECT;
-    } else if (req.method == "PATCH") {
-      cmd = EVHTTP_REQ_PATCH;
-    } else {
+    evhtp_request_t* r = evhtp_request_new(http_client_callback, this);
+    htp_method method;
+    if (req.method == "GET")       { method = htp_method_GET; } else
+    if (req.method == "HEAD")      { method = htp_method_HEAD; } else
+    if (req.method == "POST")      { method = htp_method_POST; } else
+    if (req.method == "PUT")       { method = htp_method_PUT; } else
+    if (req.method == "DELETE")    { method = htp_method_DELETE; } else
+    if (req.method == "MKCOL")     { method = htp_method_MKCOL; } else
+    if (req.method == "COPY")      { method = htp_method_COPY; } else
+    if (req.method == "MOVE")      { method = htp_method_MOVE; } else
+    if (req.method == "OPTIONS")   { method = htp_method_OPTIONS; } else
+    if (req.method == "PROPFIND")  { method = htp_method_PROPFIND; } else
+    if (req.method == "PROPPATCH") { method = htp_method_PROPPATCH; } else
+    if (req.method == "LOCK")      { method = htp_method_LOCK; } else
+    if (req.method == "UNLOCK")    { method = htp_method_UNLOCK; } else
+    if (req.method == "TRACE")     { method = htp_method_TRACE; } else
+    if (req.method == "CONNECT")   { method = htp_method_CONNECT; } else
+    if (req.method == "PATCH")     { method = htp_method_PATCH; } else
+    if (req.method == "UNKNOWN")   { method = htp_method_UNKNOWN; } else
+    {
       throw HTTPError(wayward::format("Invalid method: {0}", req.method));
     }
     p_->initiating_fiber = fiber::current();
     p_->recorded_response = Nothing;
     p_->error = nullptr;
-    int result = evhttp_make_request(p_->conn, r, cmd, req.uri.path().c_str());
+    int result = evhtp_make_request(p_->conn, r, method, req.uri.path.c_str());
     if (result < 0) {
       throw HTTPError("Error making HTTP request.");
     }

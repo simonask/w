@@ -44,12 +44,11 @@ namespace persistence {
 
   const IAdapter& DataStore::adapter_or_error(const std::string& connection_url) {
     URI uri{connection_url};
-    std::string protocol = uri.scheme();
-    auto adapter = adapter_for_protocol(protocol);
+    auto adapter = adapter_for_protocol(uri.scheme);
     if (adapter) {
       return *adapter;
     }
-    throw DataStoreError(wayward::format("No adapter found for protocol '{0}'.", protocol));
+    throw DataStoreError(wayward::format("No adapter found for protocol '{0}'.", uri.scheme));
   }
 
   namespace {
