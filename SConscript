@@ -71,13 +71,19 @@ env.Append(CXXFLAGS = Split('-std=c++11'))
 
 env_with_libevent = env.Clone()
 env_with_libevent.Append(CCFLAGS = libevent_cflags)
+env_with_libevent.Append(CCFLAGS = Split("-DEVHTP_DISABLE_REGEX -DEVHTP_DISABLE_SSL"))
+env_with_libevent.Append(CPPPATH = Split("3rdparty/libevhtp 3rdparty/libevhtp/htparse 3rdparty/libevhtp/evthr"))
 env_with_libevent.Append(LINKFLAGS = libevent_libs)
 
-env_with_libevhtp = env_with_libevent.Clone()
-env_with_libevhtp.Append(LIBS = [File('3rdparty/libevhtp/libevhtp.a'), 'ssl', 'crypto'])
-env_with_libevhtp.Append(CPPPATH = Split('3rdparty/libevhtp 3rdparty/libevhtp/evthr 3rdparty/libevhtp/htparse 3rdparty/libevhtp/oniguruma'))
+libevhtp_sources = Split("""
+  3rdparty/libevhtp/evhtp.c
+  3rdparty/libevhtp/htparse/htparse.c
+  3rdparty/libevhtp/evthr/evthr.c
+  """)
 
-wayward_support = env_with_libevhtp.SharedLibrary("wayward_support", wayward_support_sources)
+libevhtp = env_with_libevent.StaticLibrary("libevhtp", libevhtp_sources)
+
+wayward_support = env_with_libevent.SharedLibrary("wayward_support", wayward_support_sources, LIBS = libevhtp)
 wayward         = env.SharedLibrary("wayward", wayward_sources, LIBS = wayward_support)
 wayward_testing = env_with_libevent.SharedLibrary("wayward_testing", wayward_testing_sources, LIBS = wayward_support)
 w_dev           = env_with_libevent.Program('w_dev', w_util_sources, LIBS = wayward_support)
