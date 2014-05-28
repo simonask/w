@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <ostream>
+#include <mutex>
 
 namespace wayward {
   enum class Severity {
@@ -65,6 +66,7 @@ namespace wayward {
     void log(Severity severity, std::string tag, std::string message) override;
 
     void write_message(Severity severity, std::string formatted_message) final {
+      std::unique_lock<std::mutex> L(mutex_);
       if (severity >= Severity::Warning) {
         err_ << formatted_message;
       } else {
@@ -75,6 +77,7 @@ namespace wayward {
     std::ostream& out_;
     std::ostream& err_;
     bool colorize_ = true;
+    std::mutex mutex_;
   };
 }
 
