@@ -23,6 +23,7 @@ namespace wayward {
     Fiber(Function function, ErrorHandler error_handler);
     Fiber(Fiber&&) = default;
     Fiber();
+    ~Fiber();
 
     bool is_main() const { return !function; }
 
@@ -59,12 +60,21 @@ namespace wayward {
     }
   }
 
-  Fiber::Fiber(Function function) : function{std::move(function)} {}
+  Fiber::Fiber(Function function) : function{std::move(function)} {
+    //printf("Fiber::Fiber()\n");
+  }
 
-  Fiber::Fiber(Function function, ErrorHandler error_handler) : function(std::move(function)), error_handler(std::move(error_handler)) {}
+  Fiber::Fiber(Function function, ErrorHandler error_handler) : function(std::move(function)), error_handler(std::move(error_handler)) {
+    //printf("Fiber::Fiber()\n");
+  }
 
   Fiber::Fiber() {
+    //printf("Fiber::Fiber()\n");
     // This is the main fiber! We're being initialized in Fiber::current().
+  }
+
+  Fiber::~Fiber() {
+    //printf("Fiber::~Fiber()\n");
   }
 
   namespace {
@@ -148,6 +158,7 @@ namespace wayward {
     void resume_fiber_with_signal(FiberPtr f, FiberSignal sig) {
       auto current = fiber::current();
       if (setjmp(current->portal) == 0) {
+        current = nullptr; // Reset this so we don't end up holding a reference to ourselves.
         // There...
         prepare_jump_into(f, sig);
         if (f->started) {
