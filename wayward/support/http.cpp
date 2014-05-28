@@ -170,6 +170,8 @@ namespace wayward {
       {
         std::unique_lock<std::mutex> L { p->event_loops_lock };
         p->event_loops.emplace_back(loop);
+        std::string thread_name = wayward::format("Wayward HTTP Server Worker {0}", p->event_loops.size());
+        ::pthread_setname_np(thread_name.c_str());
       }
       set_current_event_loop(loop);
     }
