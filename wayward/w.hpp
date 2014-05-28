@@ -24,7 +24,7 @@ namespace wayward {
   Response render_text(std::string text, Args&&... args) {
     Response r;
     r.code = HTTPStatusCode::OK;
-    r.headers["Content-Type"] = "text/plain";
+    r.headers["Content-Type"] = "text/plain; charset=utf-8";
     r.body = wayward::format(text, std::forward<Args>(args)...);
     return r;
   }

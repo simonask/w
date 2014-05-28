@@ -42,7 +42,7 @@ namespace wayward {
       auto host_it = r.headers.find("Host");
       std::string vhost;
       if (host_it != r.headers.end()) {
-        vhost = host_it->second;
+        vhost = host_it->second; // TODO: Split port from host
       }
 
       auto body = req->buffer_in;
@@ -158,6 +158,7 @@ namespace wayward {
       fiber::start([=]() {
         auto request = make_request_from_evhttp_request(req);
         auto response = p->handler(std::move(request));
+        response.headers["Date"] = DateTime::now().strftime("%a, %d %b %y %T %z");
         send_response(response, req);
         evhtp_request_resume(req);
       });

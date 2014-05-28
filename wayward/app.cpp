@@ -166,7 +166,7 @@ namespace wayward {
       auto t0 = DateTime::now();
 
       if (app->config.log_requests) {
-        //log::debug("w", wayward::format("Starting {0} {1}", req.method, req.uri.path));
+        log::debug("w", wayward::format("Starting {0} {1}", req.method, req.uri.path));
       }
 
       Maybe<Response> response = Nothing;
@@ -186,7 +186,7 @@ namespace wayward {
         auto time_elapsed = t1 - t0;
         double us = time_elapsed.microseconds().repr_.count();
         double ms = us / 1000.0;
-        //log::info("w", wayward::format("Finished {0} {1} with {2} in {3} ms", req.method, req.uri.path, (int)response->code, ms));
+        log::info("w", wayward::format("Finished {0} {1} with {2} in {3} ms", req.method, req.uri.path, (int)response->code, ms));
       }
 
       return std::move(*response);
@@ -231,6 +231,15 @@ namespace wayward {
     cmd.description("Periodically check if our parent process has died, and die with it.");
     cmd.option("--die-when-orphaned", [&]() {
       priv->die_when_orphaned_poll_event = priv->loop.call_in(100_milliseconds, app_die_if_orphaned, true);
+    });
+
+    cmd.description("Enable or disable access log (values: on, off).");
+    cmd.option("--access-log", [&](std::string option) {
+      if (option == "on") {
+        config.log_requests = true;
+      } else if (option == "off") {
+        config.log_requests = false;
+      }
     });
 
     cmd.usage("--help", "-h");
