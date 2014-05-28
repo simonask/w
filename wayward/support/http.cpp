@@ -101,7 +101,7 @@ namespace wayward {
     void add_evhttp_request_headers_and_body(evhtp_request_t* req, const Request& r) {
       auto headers = req->headers_out;
       for (auto& pair: r.headers) {
-        auto kv = evhtp_kv_new(pair.first.c_str(), pair.second.c_str(), 0, 0); // 0 means "do not copy"
+        auto kv = evhtp_header_new(pair.first.c_str(), pair.second.c_str(), 0, 0); // 0 means "do not copy"
         evhtp_headers_add_header(headers, kv);
       }
 
@@ -111,10 +111,10 @@ namespace wayward {
       }
     }
 
-    void send_response(Response& response, evhtp_request_t* handle) {
+    void send_response(const Response& response, evhtp_request_t* handle) {
       auto headers = handle->headers_out;
       for (auto& pair: response.headers) {
-        auto kv = evhtp_kv_new(pair.first.c_str(), pair.second.c_str(), 0, 0);
+        auto kv = evhtp_header_new(pair.first.c_str(), pair.second.c_str(), 0, 0); // 0 means "do not copy"
         evhtp_headers_add_header(headers, kv);
       }
 
@@ -154,13 +154,11 @@ namespace wayward {
   namespace {
     static void http_server_callback(evhtp_request_t* req, void* userdata) {
       auto p = static_cast<HTTPServer::Private*>(userdata);
-      evhtp_request_pause(req);
       fiber::start([=]() {
         auto request = make_request_from_evhttp_request(req);
         auto response = p->handler(std::move(request));
         response.headers["Date"] = DateTime::now().strftime("%a, %d %b %y %T %z");
         send_response(response, req);
-        evhtp_request_resume(req);
       });
     }
 
@@ -185,12 +183,12 @@ namespace wayward {
     evhtp_use_threads(p_->http, http_server_init_thread, 8, p_.get());
 
     if (p_->socket_fd >= 0) {
-      int r = evhtp_accept_socket(p_->http, p_->socket_fd, 10);
+      int r = evhtp_accept_socket(p_->http, p_->socket_fd, 5);
       if (r < 0) {
         throw HTTPError(wayward::format("Could not listen on provided socket: {0}.", p_->socket_fd));
       }
     } else {
-      int r = evhtp_bind_socket(p_->http, p_->listen_host.c_str(), p_->port, 10);
+      int r = evhtp_bind_socket(p_->http, p_->listen_host.c_str(), p_->port, 5);
       if (r < 0) {
         throw HTTPError(wayward::format("Could not bind to socket on {0}:{1}.", p_->listen_host, p_->port));
       }
