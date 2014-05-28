@@ -64,7 +64,9 @@ struct AppState {
   event* needs_rebuild_event = nullptr;
   bool needs_rebuild = false;
 
-  wayward::ConsoleStreamLogger logger = wayward::ConsoleStreamLogger{std::cout, std::cerr};
+  wayward::ConsoleStreamLogger logger;
+
+  AppState() : logger{std::cout, std::cerr} {}
 };
 
 static Response response_for_error(AppState* state, std::exception_ptr exception) {
