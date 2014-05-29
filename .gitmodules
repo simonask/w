@@ -1,0 +1,3 @@
+[submodule "3rdparty/libevhtp"]
+	path = 3rdparty/libevhtp
+	url = https://github.com/simonask/libevhtp.git
