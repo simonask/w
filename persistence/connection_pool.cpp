@@ -3,6 +3,7 @@
 #include <wayward/support/format.hpp>
 
 #include <mutex>
+#include <condition_variable>
 
 namespace persistence {
   using wayward::Nothing;

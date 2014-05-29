@@ -59,10 +59,10 @@ namespace persistence {
             ss << ", ";
         }
       }
-      if (x.limit >= 0) {
-        ss << " LIMIT " << x.limit;
-        if (x.offset >= 0) {
-          ss << " OFFSET " << x.offset;
+      if (x.limit) {
+        ss << " LIMIT " << *x.limit;
+        if (x.offset) {
+          ss << " OFFSET " << *x.offset;
         }
       }
       return ss.str();

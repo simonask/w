@@ -19,6 +19,9 @@ wayward_support_sources = Split("""
   wayward/support/event_loop.cpp
   wayward/support/http.cpp
   wayward/support/teamwork.cpp
+  3rdparty/libevhtp/evhtp.c
+  3rdparty/libevhtp/htparse/htparse.c
+  3rdparty/libevhtp/evthr/evthr.c
   """)
 
 wayward_sources = Split("""
@@ -67,7 +70,13 @@ if platform.system() == 'Darwin':
   mode_flags["release"]["linkflags"]   = Split("-O3 -g -flto")
   mode_flags["development"]["ccflags"] = Split("-O0 -g -DDEBUG=1")
 elif platform.system() == 'Linux':
-  env.Append(CXXFLAGS = Split('-std=c++11'))
+  env.Replace(CXX = 'clang++')
+  env.Replace(CC  = 'clang')
+  env.Append(CCFLAGS = '-fdiagnostics-color=always')
+  env.Append(CXXFLAGS = Split('-std=c++11 -stdlib=libc++'))
+  env.Append(SHCCFLAGS = Split('-fPIC'))
+  env.Append(SHLINKFLAGS = Split("-fvisibility=default -fPIC -soname '${TARGET.file}'"))
+  env.Append(LINKFLAGS = Split("-pthread -stdlib=libc++"))
   mode_flags["release"]["ccflags"]     = Split("-O3 -g -flto")
   mode_flags["release"]["linkflags"]   = Split("-flto")
   mode_flags["development"]["ccflags"] = Split("-O0 -g -DDEBUG=1")
@@ -86,38 +95,58 @@ else:
   Exit(1)
 
 env.Append(CPPPATH = ['.'])
-env.Append(CPPPATH = ['wayward/support'])
 
 libevent_cflags = os.popen('pkg-config --cflags libevent libevent_pthreads').read().strip()
 libevent_libs   = os.popen('pkg-config --libs libevent libevent_pthreads').read().strip()
 libpq_cflags    = os.popen('pkg-config --cflags libpq').read().strip()
 libpq_libs      = os.popen('pkg-config --libs libpq').read().strip()
 
-env_with_libevent = env.Clone()
-env_with_libevent.Append(CCFLAGS = libevent_cflags)
-env_with_libevent.Append(CCFLAGS = Split("-DEVHTP_DISABLE_REGEX -DEVHTP_DISABLE_SSL"))
-env_with_libevent.Append(CPPPATH = Split("3rdparty/libevhtp 3rdparty/libevhtp/htparse 3rdparty/libevhtp/evthr"))
-env_with_libevent.Append(LINKFLAGS = libevent_libs)
+env.Append(CCFLAGS = libevent_cflags)
+env.Append(CCFLAGS = Split("-DEVHTP_DISABLE_REGEX -DEVHTP_DISABLE_SSL"))
+env.Append(CPPPATH = Split("3rdparty/libevhtp 3rdparty/libevhtp/htparse 3rdparty/libevhtp/evthr"))
+env.Append(LINKFLAGS = libevent_libs)
 
-libevhtp_sources = Split("""
-  3rdparty/libevhtp/evhtp.c
-  3rdparty/libevhtp/htparse/htparse.c
-  3rdparty/libevhtp/evthr/evthr.c
-  """)
+def WaywardLibrary(environment, target_name, source):
+  if platform.system() == 'Darwin':
+    return environment.SharedLibrary(target = target_name, source = source)
+  elif platform.system() == 'Linux':
+    return environment.StaticLibrary(target = target_name, source = source)
 
-libevhtp = env_with_libevent.StaticLibrary("libevhtp", libevhtp_sources)
+wayward_support = WaywardLibrary(env, 'wayward_support', wayward_support_sources)
+wayward         = WaywardLibrary(env, 'wayward', wayward_sources)
+wayward_testing = WaywardLibrary(env, 'wayward_testing', wayward_testing_sources)
 
-wayward_support = env_with_libevent.SharedLibrary("wayward_support", wayward_support_sources, LIBS = libevhtp)
-wayward         = env.SharedLibrary("wayward", wayward_sources, LIBS = wayward_support)
-wayward_testing = env_with_libevent.SharedLibrary("wayward_testing", wayward_testing_sources, LIBS = wayward_support)
-w_dev           = env_with_libevent.Program('w_dev', w_util_sources, LIBS = wayward_support)
+if platform.system() == 'Linux':
+  persistence_env = env
+else:
+  persistence_env = env.Clone()
+  persistence_env.Append(LIBS = wayward_support)
 
-persistence_env = env.Clone()
-persistence_env.Append(CCFLAGS = libpq_cflags)
-persistence_env.Append(LINKFLAGS = libpq_libs)
-persistence     = persistence_env.SharedLibrary("persistence", persistence_sources, LIBS = wayward_support)
+persistence_env.Append(CCFLAGS = Split(libpq_cflags))
+persistence_env.Append(LINKFLAGS = Split(libpq_libs))
+persistence = WaywardLibrary(persistence_env, 'persistence', persistence_sources)
 
-Export('env', 'wayward', 'wayward_support', 'persistence', 'wayward_testing')
+def WaywardProgram(environment, target_name, source, rpaths = []):
+  linkflags = []
+  env = environment.Clone()
+  if platform.system() == 'Darwin':
+    for path in rpaths:
+      if not path.endswith('/'):
+        path += '/'
+      linkflags.extend(Split("-rpath @executable_path/" + path))
+  elif platform.system() == 'Linux':
+    # Always include all libraries on Linux, because the GNU linker is being *so* *difficult*!
+    # For instance, the system libraries (libevent and libpq) need to be at the end of the linker command, so we can't get
+    # them as part of LINKFLAGS. This is because the GNU linker discards a library after having encountered it and
+    # resolved any currently pending symbols.
+    env.Append(LIBS = [wayward, persistence, wayward_support, 'event', 'event_pthreads', 'pq', 'unwind'])
+  env.Append(LINKFLAGS = linkflags)
+  return env.Program(target = target_name, source = source)
+
+
+w_dev = WaywardProgram(env, 'w_dev', w_util_sources, rpaths = ['.'])
+
+Export('env', 'wayward', 'wayward_support', 'persistence', 'wayward_testing', 'WaywardProgram')
 
 build_tests = ARGUMENTS.get('build_tests', 'yes')
 if build_tests == 'yes':

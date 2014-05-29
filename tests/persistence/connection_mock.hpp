@@ -90,7 +90,7 @@ namespace persistence {
 
     inline std::string ConnectionMock::sanitize_impl(std::string input) {
       std::regex r {"'"};
-      return std::regex_replace(input, r, "\\'");
+      return std::regex_replace(input, r, std::string{"\\'"});
     }
 
     inline std::unique_ptr<IResultSet> ConnectionMock::execute_impl(std::string sql) {

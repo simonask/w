@@ -334,9 +334,8 @@ namespace persistence {
       std::vector<CloningPtr<ast::Value>> group;
       std::vector<Ordering> order;
 
-      // TODO: Use Maybe
-      ssize_t limit = -1;
-      ssize_t offset = -1;
+      Maybe<size_t> limit;
+      Maybe<size_t> offset;
 
       std::string to_sql(ISQLQueryRenderer& visitor) const final { return visitor.render(*this); }
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
@@ -346,7 +345,7 @@ namespace persistence {
       virtual ~UpdateQuery() {}
       std::string relation;
       CloningPtr<ast::Condition> where;
-      CloningPtr<size_t> limit;
+      Maybe<size_t> limit;
       std::vector<std::string> columns;
       std::vector<CloningPtr<SingleValue>> values;
 
@@ -357,7 +356,7 @@ namespace persistence {
       virtual ~DeleteQuery() {}
       std::string relation;
       CloningPtr<ast::Condition> where;
-      CloningPtr<size_t> limit;
+      Maybe<size_t> limit;
 
       std::string to_sql(ISQLQueryRenderer& visitor) const final { return visitor.render(*this); }
     };

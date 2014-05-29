@@ -20,6 +20,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <arpa/inet.h>
+#include <string.h>
 
 extern "C" char** environ;
 

@@ -9,6 +9,8 @@
 #include <event2/keyvalq_struct.h>
 #include <evhtp.h>
 
+#include <mutex>
+
 namespace wayward {
   namespace {
     Request make_request_from_evhttp_request(evhtp_request_t* req) {
@@ -171,7 +173,11 @@ namespace wayward {
         std::unique_lock<std::mutex> L { p->event_loops_lock };
         p->event_loops.emplace_back(loop);
         std::string thread_name = wayward::format("Wayward HTTP Server Worker {0}", p->event_loops.size());
+        #if defined(__linux__)
+        ::pthread_setname_np(::pthread_self(), thread_name.c_str());
+        #elif defined(__APPLE__)
         ::pthread_setname_np(thread_name.c_str());
+        #endif
       }
       set_current_event_loop(loop);
     }

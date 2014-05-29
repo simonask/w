@@ -5,10 +5,14 @@
 #include <libunwind.h>
 #include <dlfcn.h>
 #include <cxxabi.h>
+#elif defined(__linux__)
+#define UNW_LOCAL_ONLY 1
+#include <libunwind.h>
+#include <cxxabi.h>
 #endif
 
 namespace wayward {
-  #if defined(__APPLE__)
+  #if defined(__APPLE__) || defined(__linux__)
 
   std::string demangle_symbol(const std::string& mangled) {
     size_t len;

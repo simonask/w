@@ -1,28 +1,30 @@
 import glob
 import os
 
-Import('env', 'wayward_support', 'wayward', 'persistence', 'wayward_testing')
+Import('env', 'wayward_support', 'wayward', 'persistence', 'wayward_testing', 'WaywardProgram')
 
 env = env.Clone()
 env.Append(CPPPATH = Split('googletest/include googletest ..'))
 
-gtest = env.SharedLibrary('gtest', source = ['googletest/src/gtest-all.cc'], CPPDEFINES = {'GTEST_HAS_PTHREAD': 1})
+gtest = env.StaticLibrary('gtest', source = ['googletest/src/gtest-all.cc'], CPPDEFINES = {'GTEST_HAS_PTHREAD': 1})
 test_main = env.StaticLibrary('test_main', source = ['test.cpp'])
 
 case_env = env.Clone()
-case_env.Append(LIBS = [wayward_support, wayward_testing, gtest, test_main])
+case_env.Append(LIBS = [test_main, gtest, wayward_support, wayward_testing])
 
 test_targets = []
 
 for f in glob.glob('wayward/support/*.cpp'):
-  target = case_env.Program(f.replace('.cpp', '', 1), source = [f], LINKFLAGS = Split('-rpath @executable_path/../../../ -rpath @executable_path/../../'))
+  target = WaywardProgram(case_env, f.replace('.cpp', '', 1), source = f, rpaths = Split('../../.. ../..'))
+  #target = case_env.Program(f.replace('.cpp', '', 1), source = [f], LINKFLAGS = Split('-Wl,-rpath -Wl,@executable_path/../../../ -Wl,-rpath -Wl,@executable_path/../../'))
   test_targets.append(target)
 
 persistence_case_env = env.Clone()
-persistence_case_env.Append(LIBS = [persistence, wayward_support, wayward_testing, gtest, test_main])
+persistence_case_env.Append(LIBS = [test_main, gtest, persistence, wayward_support, wayward_testing])
 
 for f in glob.glob('persistence/*.cpp'):
-  target = persistence_case_env.Program(f.replace('.cpp', '', 1), source = [f], LINKFLAGS = Split('-rpath @executable_path/../../ -rpath @executable_path/../'))
+  target = WaywardProgram(persistence_case_env, f.replace('.cpp', '', 1), source = f, rpaths = Split('../.. ..'))
+  #target = persistence_case_env.Program(f.replace('.cpp', '', 1), source = [f], LINKFLAGS = Split('-Wl,-rpath -Wl,@executable_path/../../ -rpath @executable_path/../'))
   test_targets.append(target)
 
 run_test_targets = []

@@ -3,6 +3,7 @@
 #define WAYWARD_SUPPORT_TEAMWORK_HPP_INCLUDED
 
 #include <functional>
+#include <memory>
 
 namespace wayward {
   struct Teamwork {

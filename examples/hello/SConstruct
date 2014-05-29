@@ -1,13 +1,12 @@
 import os
 
-WAYWARD_PATH = '../../' # Final slash important, otherwise rpath doesn't work.
+WAYWARD_PATH = '../../'
 
 SConscript(os.path.join(WAYWARD_PATH, "SConstruct"))
-
-Import('env', 'wayward', 'persistence', 'wayward_support')
+Import('env', 'persistence', 'WaywardProgram')
 
 env = env.Clone()
 env.Append(CPPPATH = WAYWARD_PATH)
-env.Append(LINKFLAGS = ['-rpath', WAYWARD_PATH])
+env.Append(LIBS = persistence)
 
-blog = env.Program('hello', ['hello.cpp'], LIBS = [wayward, persistence, wayward_support])
+hello = WaywardProgram(env, 'hello', ['hello.cpp'], [WAYWARD_PATH])
