@@ -72,7 +72,7 @@ if platform.system() == 'Darwin':
 elif platform.system() == 'Linux':
   env.Replace(CXX = 'clang++')
   env.Replace(CC  = 'clang')
-  env.Append(CCFLAGS = '-fdiagnostics-color=always')
+  env.Append(CCFLAGS = '-fcolor-diagnostics')
   env.Append(CXXFLAGS = Split('-std=c++11 -stdlib=libc++'))
   env.Append(SHCCFLAGS = Split('-fPIC'))
   env.Append(SHLINKFLAGS = Split("-fvisibility=default -fPIC -soname '${TARGET.file}'"))
@@ -113,8 +113,10 @@ def WaywardLibrary(environment, target_name, source):
     return environment.StaticLibrary(target = target_name, source = source)
 
 wayward_support = WaywardLibrary(env, 'wayward_support', wayward_support_sources)
-wayward         = WaywardLibrary(env, 'wayward', wayward_sources)
-wayward_testing = WaywardLibrary(env, 'wayward_testing', wayward_testing_sources)
+env_with_ws = env.Clone()
+env_with_ws.Append(LIBS = [wayward_support])
+wayward         = WaywardLibrary(env_with_ws, 'wayward', wayward_sources)
+wayward_testing = WaywardLibrary(env_with_ws, 'wayward_testing', wayward_testing_sources)
 
 if platform.system() == 'Linux':
   persistence_env = env
@@ -134,6 +136,7 @@ def WaywardProgram(environment, target_name, source, rpaths = []):
       if not path.endswith('/'):
         path += '/'
       linkflags.extend(Split("-rpath @executable_path/" + path))
+    env.Append(LIBS = [wayward, wayward_support])
   elif platform.system() == 'Linux':
     # Always include all libraries on Linux, because the GNU linker is being *so* *difficult*!
     # For instance, the system libraries (libevent and libpq) need to be at the end of the linker command, so we can't get
@@ -144,7 +147,7 @@ def WaywardProgram(environment, target_name, source, rpaths = []):
   return env.Program(target = target_name, source = source)
 
 
-w_dev = WaywardProgram(env, 'w_dev', w_util_sources, rpaths = ['.'])
+w_dev = WaywardProgram(env_with_ws, 'w_dev', w_util_sources, rpaths = ['.'])
 
 Export('env', 'wayward', 'wayward_support', 'persistence', 'wayward_testing', 'WaywardProgram')
 
