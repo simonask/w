@@ -15,6 +15,7 @@ Wayward
 
 - Params de-/restructuralization
 - Dictionary class that returns Maybe<T> for non-existing values.
+- Make sure that plugin architecture (and Synth) is working on Linux.
 
 Wayward Support
 ---------------
