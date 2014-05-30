@@ -43,6 +43,7 @@ namespace app {
     }
 
     w::Response get_post(w::Request& req) {
+      return w::render("post.html", {{"post", post}});
       return json_ok(req, post);
     }
 
@@ -93,6 +94,9 @@ int main(int argc, char const *argv[])
 {
   p::setup("postgresql://wayward_examples@localhost/wayward_examples_blog");
 
+  w::load_plugin("wayward_synth.plugin");
+  w::set_template_engine("synth", {{"template_path", "views"}});
+
   w::App app { argc, argv };
 
   app.get("/posts", &app::PostRoutes::get_all_posts);
@@ -107,6 +111,10 @@ int main(int argc, char const *argv[])
 
   app.get("/", [&](w::Request& req) -> w::Response {
     return w::file("index.html");
+  });
+
+  app.get("/template", [&](w::Request& req) -> w::Response {
+    return w::render("test.html", {{"message", "Hello, World!"}});
   });
 
   return app.run();

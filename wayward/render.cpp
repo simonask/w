@@ -1,4 +1,5 @@
 #include "wayward/w.hpp"
+#include "wayward/template_engine.hpp"
 
 #include <fstream>
 
@@ -29,5 +30,13 @@ namespace wayward {
     } else {
       return wayward::not_found();
     }
+  }
+
+  Response render(const std::string& template_name, Dict params, HTTPStatusCode code) {
+    auto engine = current_template_engine();
+    Response response;
+    response.code = code;
+    response.body = engine->render(template_name, std::move(params));
+    return std::move(response);
   }
 }

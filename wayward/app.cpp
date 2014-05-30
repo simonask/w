@@ -201,7 +201,6 @@ namespace wayward {
   }
 
   App::App(int argc, char const* const* argv) : priv(new Private) {
-    load_plugin("wayward_synth.plugin");
     priv->app = this;
     priv->executable_path = argv[0];
 

@@ -26,6 +26,7 @@ wayward_sources = Split("""
   wayward/app.cpp
   wayward/render.cpp
   wayward/log.cpp
+  wayward/template_engine.cpp
   """)
 
 w_util_sources = Split("""

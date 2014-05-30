@@ -14,6 +14,9 @@
 #include <wayward/support/logger.hpp>
 #include <wayward/support/node.hpp>
 #include <wayward/support/json.hpp>
+#include <wayward/support/plugin.hpp>
+
+#include <wayward/template_engine.hpp>
 
 #if !defined(WAYWARD_NO_SHORTHAND_NAMESPACE)
 namespace w = wayward;
@@ -37,7 +40,7 @@ namespace wayward {
     return r;
   }
 
-  Response render_template(std::string templ);
+  Response render(const std::string& template_name, Dict params = Dict{}, HTTPStatusCode code = HTTPStatusCode::OK);
   Response redirect(std::string new_location, HTTPStatusCode code = HTTPStatusCode::Found);
   Response file(std::string path, Maybe<std::string> content_type = Nothing);
 
