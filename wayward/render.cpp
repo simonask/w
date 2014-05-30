@@ -37,6 +37,7 @@ namespace wayward {
     Response response;
     response.code = code;
     response.body = engine->render(template_name, std::move(params));
+    response.headers["Content-Type"] = "text/html; charset=utf-8";
     return std::move(response);
   }
 }
