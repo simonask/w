@@ -164,6 +164,7 @@ namespace wayward {
       auto t0 = DateTime::now();
 
       if (app->config.log_requests) {
+        std::cout << "\n";
         log::debug("w", wayward::format("Starting {0} {1}", req.method, req.uri.path));
       }
 
