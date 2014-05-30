@@ -1,3 +1,6 @@
 [submodule "3rdparty/libevhtp"]
 	path = 3rdparty/libevhtp
 	url = https://github.com/simonask/libevhtp.git
+[submodule "3rdparty/synth"]
+  path = 3rdparty/synth
+  url = https://github.com/ajg/synth.git
