@@ -105,6 +105,7 @@ namespace wayward {
     Maybe<std::string>  get_string()  const final { return wayward::Nothing; }
     Maybe<int64_t>      get_integer() const final { return wayward::Nothing; }
     Maybe<double>       get_float()   const final { return wayward::Nothing; }
+    Maybe<bool>         get_boolean() const final { return wayward::Nothing; }
   };
 }
 

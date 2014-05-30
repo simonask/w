@@ -47,6 +47,10 @@ namespace wayward {
     Maybe<double> get_float() const final {
       return value_ ? as_structured_data(*access_)->get_float() : Maybe<double>(Nothing);
     }
+
+    Maybe<bool> get_boolean() const final {
+      return value_ ? as_structured_data(*access_)->get_boolean() : Maybe<bool>(Nothing);
+    }
   private:
     Maybe<T> value_;
     const Maybe<T>& access_;
@@ -60,6 +64,14 @@ namespace wayward {
     Maybe<std::string> get_string() const override { return Nothing; }
     Maybe<int64_t> get_integer() const override { return Nothing; }
     Maybe<double> get_float() const override { return Nothing; }
+    Maybe<bool> get_boolean() const override { return Nothing; }
+  };
+
+  template <>
+  struct StructuredDataAdapter<bool> : StructuredDataValue {
+    StructuredDataAdapter(bool b) : b_(b) {}
+    Maybe<bool> get_boolean() const final { return b_; }
+    bool b_;
   };
 
   struct StructuredDataStringAdapter : StructuredDataValue {
@@ -88,6 +100,11 @@ namespace wayward {
   template <size_t N>
   struct StructuredDataAdapter<char[N]> : StructuredDataStringAdapter {
     StructuredDataAdapter(const char* str) : StructuredDataStringAdapter(std::string(str, N ? N-1 : 0)) {}
+  };
+
+  template <>
+  struct StructuredDataAdapter<const char*> : StructuredDataStringAdapter {
+    StructuredDataAdapter(const char* str) : StructuredDataStringAdapter(std::string(str)) {}
   };
 
   struct StructuredDataIntegerAdapter : StructuredDataValue {
@@ -133,7 +150,7 @@ namespace wayward {
     size_t length() const final { return collection_.size(); }
     std::shared_ptr<const IStructuredData> operator[](const std::string&) const final { return nullptr; }
     std::shared_ptr<const IStructuredData> operator[](size_t idx) const final {
-      return as_structured_data(collection_[idx]);
+      return as_structured_data(collection_.at(idx));
     }
   private:
     const T& collection_;

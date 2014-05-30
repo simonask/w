@@ -14,6 +14,7 @@ namespace wayward {
 
   enum class NodeType {
     Nil,
+    Boolean,
     Integer,
     Float,
     String,
@@ -37,6 +38,7 @@ namespace wayward {
     virtual Maybe<std::string>  get_string() const = 0;
     virtual Maybe<int64_t> get_integer() const = 0;
     virtual Maybe<double>  get_float() const = 0;
+    virtual Maybe<bool>    get_boolean() const = 0;
   };
 
   // Default implementation deliberately left out.

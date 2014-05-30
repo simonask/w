@@ -31,6 +31,16 @@ namespace wayward {
           os << "null";
           break;
         }
+        case NodeType::Boolean: {
+          bool b;
+          if (node >> b) {
+            os << (b ? "true" : "false");
+          } else {
+            os << "undefined";
+            throw JSONSerializationError("Boolean node didn't return a bool");
+          }
+          break;
+        }
         case NodeType::Integer: {
           int64_t n;
           if (node >> n) {

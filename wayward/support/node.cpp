@@ -77,13 +77,13 @@ namespace wayward {
       switch (type()) {
         case NodeType::Integer: {
           std::stringstream ss;
-          ss << *node_->get_integer();
+          ss.operator<<(*node_->get_integer());
           str = ss.str();
           return true;
         }
         case NodeType::Float: {
           std::stringstream ss;
-          ss << *node_->get_float();
+          ss.operator<<(*node_->get_float());
           str = ss.str();
           return true;
         }
@@ -138,5 +138,86 @@ namespace wayward {
       }
     }
     return false;
+  }
+
+  bool Node::operator>>(bool& b) const {
+    if (node_) {
+      switch (type()) {
+        case NodeType::Boolean: {
+          b = *node_->get_boolean();
+          return true;
+        }
+        default: return false;
+      }
+    }
+    return false;
+  }
+
+  std::string Node::to_string() const {
+    switch (type()) {
+      case NodeType::Nil: {
+        return "nil";
+      }
+      case NodeType::Boolean: {
+        bool b = false;
+        *this >> b;
+        return b ? "true" : "false";
+      }
+      case NodeType::Integer: {
+        std::string str;
+        *this >> str;
+        return std::move(str);
+      }
+      case NodeType::Float: {
+        std::string str;
+        *this >> str;
+        return std::move(str);
+      }
+      case NodeType::String: {
+        std::string str;
+        *this >> str;
+        return str;
+      }
+      case NodeType::List: {
+        std::stringstream ss;
+        ss << '[';
+        for (size_t i = 0; i < length(); ++i) {
+          auto node = (*this)[i];
+          if (node.type() == NodeType::String) {
+            ss << "\"";
+            ss << node.to_string();
+            ss << "\"";
+          } else {
+            ss << node.to_string();
+          }
+          if (i + 1 != length()) {
+            ss << ", ";
+          }
+        }
+        ss << ']';
+        return ss.str();
+      }
+      case NodeType::Dictionary: {
+        std::stringstream ss;
+        ss << '{';
+        auto kx = keys();
+        for (size_t i = 0; i < kx.size(); ++i) {
+          auto node = (*this)[kx[i]];
+          ss << kx[i] << ": ";
+          if (node.type() == NodeType::String) {
+            ss << "\"";
+            ss << node.to_string();
+            ss << "\"";
+          } else {
+            ss << node.to_string();
+          }
+          if (i + 1 != kx.size()) {
+            ss << ", ";
+          }
+        }
+        ss << '}';
+        return ss.str();
+      }
+    }
   }
 }
