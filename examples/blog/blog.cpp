@@ -98,6 +98,7 @@ int main(int argc, char const *argv[])
 
   w::App app { argc, argv };
 
+  app.get("/", &app::PostRoutes::get_all_posts);
   app.get("/posts", &app::PostRoutes::get_all_posts);
   app.get("/posts/:post_id", &app::PostRoutes::get_post);
   app.patch("/posts/:post_id", &app::PostRoutes::put_post);
@@ -107,10 +108,6 @@ int main(int argc, char const *argv[])
   app.get("/posts/:post_id/comments/:comment_id", &app::PostCommentRoutes::get_comment);
   app.del("/posts/:post_id/comments/:comment_id", &app::PostCommentRoutes::delete_comment);
   app.get("/crash", app::crash);
-
-  app.get("/", [&](w::Request& req) -> w::Response {
-    return w::file("index.html");
-  });
 
   app.get("/template", [&](w::Request& req) -> w::Response {
     return w::render("test.html", {{"message", "Hello, World!"}});
