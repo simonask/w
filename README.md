@@ -169,9 +169,9 @@ Dependencies
 
 Dependency management in C++ apps is a pain, so `<w>` tries to keep it to a minimum.
 
-- [libevent 2.1-alpha](http://libevent.org/)
-- C++11 compatible compiler ([Clang](http://clang.llvm.org/) is recommended).
-- SCons 2.3.1 or newer.
+- [libevent 2.0.x](http://libevent.org/)
+- [Clang](http://clang.llvm.org/) and [libc++](http://libcxx.llvm.org/) — GCC will be supported in the future, but there are some disagreements between Clang++ and g++ that are holding back that development
+- SCons 2.3.0 or newer.
 - For Persistence: `libpq` (from PostgreSQL).
 
 `<w>` has been tested on the following platforms:
