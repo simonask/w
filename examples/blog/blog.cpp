@@ -44,7 +44,6 @@ namespace app {
 
     w::Response get_post(w::Request& req) {
       return w::render("post.html", {{"post", post}});
-      return json_ok(req, post);
     }
 
     w::Response put_post(w::Request& req) {
