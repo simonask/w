@@ -95,7 +95,6 @@ def WaywardEnvironment(base):
 
   env.Append(CPPPATH = ['.'])
   env.Append(CCFLAGS = libevent_cflags)
-  env.Append(CCFLAGS = Split("-DEVHTP_DISABLE_REGEX -DEVHTP_DISABLE_SSL"))
   env.Append(CPPPATH = Split("3rdparty/libevhtp 3rdparty/libevhtp/htparse 3rdparty/libevhtp/evthr"))
   env.Append(LINKFLAGS = libevent_libs)
   return env
