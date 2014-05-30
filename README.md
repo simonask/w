@@ -31,6 +31,39 @@ Here are a couple of hints:
 - `<w>` may choose to handle more than one request at a time. If your request handlers share
   any state, make sure to guard it behind an `std::mutex`.
 
+Features
+--------
+
+- An easy to use, high-level interface for defining HTTP-aware apps, similar to Ruby's Sinatra.
+- Quick development turnaround. The built-in `w_dev` server recompiles your app as you make changes, and displays compiler errors in your browser (as well as the terminal, of course).
+- High-performance. Wayward internally uses `libevent` and `libevhtp` with a threaded HTTP server by default, and it is already competitive with Go's `net/http` library in terms of requests per second. It essentially combines evented I/O with threaded processing of requests, and the system is designed from the ground up to be highly scalable.
+- Batteries included. Wayward comes with an ORM system that integrates well with all components, but it doesn't force it down your throat. Wayward also comes with Wayward Support, a small class library with features commonly needed in web development that are missing from the STL.
+- Wayward has a plugin for integrating with the templating framework [Synth](https://github.com/ajg/synth), that renders HTML or JSON templates using familiar Django syntax.
+
+Getting Started
+---------------
+
+- `git clone https://github.com/simonask/w.git --recursive` — the recursive bit is important, because Wayward has a couple of dependencies.
+- `cd w`
+- `scons -j8`
+
+And you're set. Build and run the Blog example:
+
+- `cd examples/blog`
+- `scons -j8`
+
+Let's set up PostgreSQL for the blog:
+
+- `createuser wayward_examples`
+- `createdb wayward_examples_blog -O wayward_examples`
+- `psql -d wayward_examples_blog < structure.sql`
+
+And let's run it:
+
+- `../../w_dev server blog`
+
+You now have a server running at `localhost:3000` serving up a simple Blog application. You can just as easily run the `blog` executable directly, but then you won't get automatic recompilation when you muck around in the source code, and have to manually shut it down and run `scons`.
+
 Example app
 -----------
 
