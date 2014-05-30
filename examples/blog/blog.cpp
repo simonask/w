@@ -7,20 +7,6 @@
 namespace app {
   using p::RecordPtr;
 
-  template <typename T>
-  w::Response json_response(const w::Request& req, T&& object, w::HTTPStatusCode code = w::HTTPStatusCode::OK) {
-    w::Response response;
-    // TODO: Set headers from req
-    response.body = w::as_json(std::forward<T>(object));
-    response.code = code;
-    return response;
-  }
-
-  template <typename T>
-  w::Response json_ok(const w::Request& req, T&& object) {
-    return json_response(req, std::forward<T>(object));
-  }
-
   struct PostRoutes : w::Routes {
     RecordPtr<Post> post;
 
@@ -75,7 +61,7 @@ namespace app {
     }
 
     w::Response get_comment(w::Request& req) {
-      return json_ok(req, comment);
+      return w::render("comment.html", {{"comment", comment}});
     }
 
     w::Response delete_comment(w::Request& req) {
