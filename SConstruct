@@ -16,6 +16,7 @@ wayward_support_sources = Split("""
   wayward/support/event_loop.cpp
   wayward/support/http.cpp
   wayward/support/teamwork.cpp
+  wayward/support/plugin.cpp
   3rdparty/libevhtp/evhtp.c
   3rdparty/libevhtp/htparse/htparse.c
   3rdparty/libevhtp/evthr/evthr.c
@@ -52,6 +53,10 @@ persistence_sources = Split("""
   persistence/datetime.cpp
   """)
 
+wayward_synth_sources = Split("""
+  wayward/synth/synth.cpp
+  """)
+
 env = WaywardEnvironment(DefaultEnvironment())
 
 wayward_support = WaywardLibrary(env, 'wayward_support', wayward_support_sources)
@@ -59,6 +64,10 @@ env_with_ws = env.Clone()
 env_with_ws.Append(LIBS = [wayward_support])
 wayward         = WaywardLibrary(env_with_ws, 'wayward', wayward_sources)
 wayward_testing = WaywardLibrary(env_with_ws, 'wayward_testing', wayward_testing_sources)
+
+env_for_synth = env.Clone()
+env_for_synth.Append(CPPPATH = Split('3rdparty/synth'))
+wayward_synth   = WaywardPlugin(env_for_synth, 'wayward_synth', wayward_synth_sources)
 
 if platform.system() == 'Linux':
   persistence_env = env
@@ -70,24 +79,7 @@ persistence_env.Append(CCFLAGS = Split(libpq_cflags))
 persistence_env.Append(LINKFLAGS = Split(libpq_libs))
 persistence = WaywardLibrary(persistence_env, 'persistence', persistence_sources)
 
-def WaywardProgram(environment, target_name, source, rpaths = []):
-  linkflags = []
-  env = environment.Clone()
-  if platform.system() == 'Darwin':
-    for path in rpaths:
-      if not path.endswith('/'):
-        path += '/'
-      linkflags.extend(Split("-rpath @executable_path/" + path))
-    env.Append(LIBS = [wayward, wayward_support])
-  elif platform.system() == 'Linux':
-    # Always include all libraries on Linux, because the GNU linker is being *so* *difficult*!
-    # For instance, the system libraries (libevent and libpq) need to be at the end of the linker command, so we can't get
-    # them as part of LINKFLAGS. This is because the GNU linker discards a library after having encountered it and
-    # resolved any currently pending symbols.
-    env.Append(LIBS = [wayward, persistence, wayward_support, 'event', 'event_pthreads', 'pq', 'unwind'])
-  env.Append(LINKFLAGS = linkflags)
-  return env.Program(target = target_name, source = source)
-
+WaywardAddDefaultLibraries([wayward, persistence, wayward_support])
 
 w_dev = WaywardProgram(env_with_ws, 'w_dev', w_util_sources, rpaths = ['.'])
 

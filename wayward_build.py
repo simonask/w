@@ -14,6 +14,44 @@ def WaywardLibrary(env, target, source):
   elif platform.system() == 'Linux':
     return env.StaticLibrary(target = target, source = source)
 
+_wayward_default_libs = []
+
+def WaywardAddDefaultLibraries(targets):
+  _wayward_default_libs.extend(targets)
+
+def WaywardProgram(environment, target_name, source, rpaths = []):
+  linkflags = []
+  env = environment.Clone()
+  if platform.system() == 'Darwin':
+    for path in rpaths:
+      if not path.endswith('/'):
+        path += '/'
+      linkflags.extend(Split("-rpath @executable_path/" + path))
+    env.Append(LIBS = copy.copy(_wayward_default_libs))
+  elif platform.system() == 'Linux':
+    # Always include all libraries on Linux, because the GNU linker is being *so* *difficult*!
+    # For instance, the system libraries (libevent and libpq) need to be at the end of the linker command, so we can't get
+    # them as part of LINKFLAGS. This is because the GNU linker discards a library after having encountered it and
+    # resolved any currently pending symbols.
+    libs = copy.copy(_wayward_default_libs)
+    libs.extend['event', 'event_pthreads', 'pq', 'unwind']
+    env.Append(LIBS = libs)
+  env.Append(LINKFLAGS = linkflags)
+  return env.Program(target = target_name, source = source)
+
+def WaywardPlugin(env, target, source):
+  env = env.Clone()
+  if platform.system() == 'Darwin':
+    env.Replace(SHLINKFLAGS = '$LINKFLAGS -bundle -flat_namespace -undefined suppress')
+    env.Replace(SHLIBSUFFIX = '.plugin')
+    env.Replace(SHLIBPREFIX = '')
+  elif platform.system() == 'Linux':
+    env.Replace(SHLINKFLAGS = '$LINKFLAGS -shared')
+    env.Append(SHCCFLAGS = "-fPIC")
+    env.Replace(SHLIBSUFFIX = '.plugin')
+    env.Replace(SHLIBPREFIX = '')
+  return env.SharedLibrary(target, source)
+
 def WaywardEnvironment(base):
   env = base.Clone()
   default_flags = {'cflags': [], 'ccflags': [], 'cxxflags': [], 'linkflags': []}
@@ -36,8 +74,8 @@ def WaywardEnvironment(base):
     env.Append(CCFLAGS = '-fcolor-diagnostics')
     env.Append(CXXFLAGS = Split('-std=c++11 -stdlib=libc++'))
     env.Append(SHCCFLAGS = Split('-fPIC'))
-    env.Append(SHLINKFLAGS = Split("-fvisibility=default -fPIC -soname '${TARGET.file}'"))
-    env.Append(LINKFLAGS = Split("-pthread -stdlib=libc++"))
+    env.Append(LINKFLAGS = Split("-pthread -stdlib=libc++ --export-dynamic"))
+    env.Append(SHLINKFLAGS = Split("$LINKFLAGS -fvisibility=default -fPIC -soname '${TARGET.file}'"))
     mode_flags["release"]["ccflags"]     = Split("-O3 -g -flto")
     mode_flags["release"]["linkflags"]   = Split("-flto")
     mode_flags["development"]["ccflags"] = Split("-O0 -g -DDEBUG=1")

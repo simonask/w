@@ -10,7 +10,7 @@ gtest = env.StaticLibrary('gtest', source = ['googletest/src/gtest-all.cc'], CPP
 test_main = env.StaticLibrary('test_main', source = ['test.cpp'])
 
 case_env = env.Clone()
-case_env.Append(LIBS = [test_main, gtest, wayward_support, wayward_testing])
+case_env.Append(LIBS = [test_main, gtest, wayward_testing])
 
 test_targets = []
 
@@ -20,7 +20,7 @@ for f in glob.glob('wayward/support/*.cpp'):
   test_targets.append(target)
 
 persistence_case_env = env.Clone()
-persistence_case_env.Append(LIBS = [test_main, gtest, persistence, wayward_support, wayward_testing])
+persistence_case_env.Append(LIBS = [test_main, gtest, persistence, wayward_testing])
 
 for f in glob.glob('persistence/*.cpp'):
   target = WaywardProgram(persistence_case_env, f.replace('.cpp', '', 1), source = f, rpaths = Split('../.. ..'))
