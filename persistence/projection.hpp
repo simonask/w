@@ -250,6 +250,9 @@ namespace persistence {
     }
 
     size_t count() const {
+      if (materialized_)
+        return materialized_->height();
+
       auto p_copy = p_.select({
         {relational_algebra::aggregate("COUNT", relational_algebra::column(q_.projector_->relation_alias(), get_type<Primary>()->primary_key()->column())),
         "count"}
