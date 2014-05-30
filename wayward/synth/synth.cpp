@@ -58,6 +58,26 @@ namespace ajg {
           return node < other.node;
         }
       }
+
+      struct iterator {
+        iterator(const AdaptedWaywardNode& node, size_t idx) : node(node), idx(idx) {}
+        iterator(const iterator& other) = default;
+        bool operator==(const iterator& other) const { return &node == &other.node && idx == other.idx; }
+        bool operator!=(const iterator& other) const { return !(*this == other); }
+
+        AdaptedWaywardNode operator*() const {
+          return AdaptedWaywardNode{wayward::Node{node.node}[idx]};
+        }
+
+        iterator& operator++() { ++idx; return *this; }
+        iterator operator++(int) { auto copy = *this; ++idx; return copy; }
+
+        const AdaptedWaywardNode& node;
+        size_t idx;
+      };
+
+      iterator begin() const { return iterator{*this, 0}; }
+      iterator end() const { return iterator{*this, wayward::Node{node}.length()}; }
     };
 
     template <typename OS>
@@ -76,10 +96,8 @@ namespace ajg {
       boolean_type to_boolean() const { return (bool)node(); } // Conversion with operator bool()
       //datetime_type to_datetime() const { return boost::local_sec_clock::local_time(); /* TODO */ }
       void output(ostream_type& out) const { out << get_string(); }
-      /*iterator begin() { return begin<iterator>(this->adapted()); }
-      iterator end()   { return end<iterator>(this->adapted()); }
-      const_iterator begin() const { return begin<const_iterator>(this->adapted()); }
-      const_iterator end()   const { return end<const_iterator>(this->adapted()); }*/
+      const_iterator begin() const { return this->adapted().begin(); }
+      const_iterator end()   const { return this->adapted().end(); }
 
       boolean_type is_boolean() const { return node().type() == wayward::NodeType::Boolean; }
       boolean_type is_string()  const { return node().type() == wayward::NodeType::String; }
@@ -128,7 +146,7 @@ namespace wayward {
       using Context = typename Template::context_type;
 
       auto path = wayward::format("{0}/{1}", template_path, template_name);
-      Template templ { path };
+      Template templ { path, { template_path } };
 
       Context ctx;
       for (auto& pair: params) {

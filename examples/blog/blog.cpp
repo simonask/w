@@ -39,7 +39,7 @@ namespace app {
         .reverse_order();
       auto all = posts.all();
 
-      return json_ok(req, all);
+      return w::render("index.html", {{"posts", posts}});
     }
 
     w::Response get_post(w::Request& req) {
