@@ -92,6 +92,12 @@ namespace wayward {
         r.headers[std::move(k)] = std::move(v);
       }
 
+      // XXX: Temporary workaround for a bug in libevhtp that causes non-error Status to be dropped from responses.
+      if (r.headers.find("Location") != r.headers.end()) {
+        r.code = HTTPStatusCode::Found;
+      }
+      // End temporary workaround.
+
       evbuffer* body = req->buffer_in;
       // TODO: Insert length sanity checks?
       size_t body_len = evbuffer_get_length(body);
