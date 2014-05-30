@@ -304,7 +304,7 @@ namespace wayward {
   Response HTTPClient::request(std::string method, std::string path, Maybe<std::string> body, Params params, Headers headers) {
     Request req;
     req.method = std::move(method);
-    req.uri = URI(std::move(path));
+    req.uri.path = std::move(path);
     req.params = std::move(params);
     req.headers = std::move(headers);
     if (body) {

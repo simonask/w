@@ -43,12 +43,15 @@ namespace persistence {
   }
 
   const IAdapter& DataStore::adapter_or_error(const std::string& connection_url) {
-    URI uri{connection_url};
-    auto adapter = adapter_for_protocol(uri.scheme);
+    auto maybe_uri = URI::parse(connection_url);
+    if (!maybe_uri) {
+      throw DataStoreError(wayward::format("Invalid data store URI: {0}", connection_url));
+    }
+    auto adapter = adapter_for_protocol(maybe_uri->scheme);
     if (adapter) {
       return *adapter;
     }
-    throw DataStoreError(wayward::format("No adapter found for protocol '{0}'.", uri.scheme));
+    throw DataStoreError(wayward::format("No adapter found for protocol '{0}'.", maybe_uri->scheme));
   }
 
   namespace {

@@ -2,6 +2,7 @@
 #include <wayward/support/datetime.hpp>
 #include <wayward/support/command_line_options.hpp>
 #include <wayward/support/event_loop.hpp>
+#include <wayward/support/plugin.hpp>
 
 #include <cxxabi.h>
 #include <unistd.h>
@@ -200,6 +201,7 @@ namespace wayward {
   }
 
   App::App(int argc, char const* const* argv) : priv(new Private) {
+    load_plugin("wayward_synth.plugin");
     priv->app = this;
     priv->executable_path = argv[0];
 
