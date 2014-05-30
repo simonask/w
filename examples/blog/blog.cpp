@@ -37,7 +37,6 @@ namespace app {
         .inner_join(&Post::author)
         .order(&Post::published_at)
         .reverse_order();
-      auto all = posts.all();
 
       return w::render("index.html", {{"posts", posts}});
     }
@@ -98,7 +97,7 @@ int main(int argc, char const *argv[])
 
   w::App app { argc, argv };
 
-  app.get("/", &app::PostRoutes::get_all_posts);
+  app.get("/", [](w::Request&) { return w::redirect("/posts"); });
   app.get("/posts", &app::PostRoutes::get_all_posts);
   app.get("/posts/:post_id", &app::PostRoutes::get_post);
   app.patch("/posts/:post_id", &app::PostRoutes::put_post);
