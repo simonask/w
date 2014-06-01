@@ -107,16 +107,18 @@ namespace wayward {
     NetworkConnectTimeoutError_Microsoft = 599,
   };
 
+  using Headers = std::map<std::string, std::string>;
+
   struct Request {
-    std::map<std::string, std::string> headers;
-    std::map<std::string, Node> params;
+    Headers headers;
+    Dict params;
     std::string method;
     URI uri;
     std::string body;
   };
 
   struct Response {
-    std::map<std::string, std::string> headers;
+    Headers headers;
     HTTPStatusCode code = HTTPStatusCode::OK;
     std::string reason; // Keep empty to derive from `code`.
     std::string body;
