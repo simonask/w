@@ -4,31 +4,35 @@
 
 #include <wayward/support/maybe.hpp>
 #include <wayward/support/structured_data_adapters.hpp>
+#include <wayward/support/error.hpp>
 
 namespace wayward {
   /*
-    A Node is any element as part of structured data.
+    A Node is a form of type-erasure interface that provides generic access, for instance to templating engines or serialization purposes.
 
     Think of it as any subtree of JSON data.
   */
   struct Node {
-    explicit Node(std::shared_ptr<const IStructuredData> node) : node_(std::move(node)) {}
+    explicit Node(StructuredDataConstPtr ptr) : ptr_(std::move(ptr)) {}
+    Node(NothingType) {}
     Node() {}
     Node(const Node&) = default;
     Node(Node&&) = default;
     Node& operator=(const Node&) = default;
     Node& operator=(Node&&) = default;
-    Node(std::map<std::string, Node> dict);
     template <typename T>
     Node(T&& implicitly_adaptable_data);
 
     NodeType type() const;
     size_t length() const;
     std::vector<std::string> keys() const;
+    Node get(const std::string& key) const;
+    Node get(size_t idx) const;
     Node operator[](const std::string& key) const;
     Node operator[](size_t idx) const;
     explicit operator bool() const;
 
+    // Extractors that try their hardest to convert the data to the target type:
     bool operator>>(std::string& str) const;
     bool operator>>(int64_t& n) const;
     bool operator>>(double& n) const;
@@ -36,60 +40,25 @@ namespace wayward {
 
     std::string to_string() const;
 
-    std::shared_ptr<const IStructuredData> node_;
+    StructuredDataConstPtr ptr_;
   };
 
   using Dict = std::map<std::string, Node>;
 
-  template <typename T>
-  Node::Node(T&& implicitly_adaptable_data) : node_(as_structured_data(std::forward<T>(implicitly_adaptable_data))) {}
-
-  template <>
-  struct StructuredDataAdapter<Node> : IStructuredData {
-    StructuredDataAdapter(Node node) : node_(std::move(node)) {}
-    NodeType type() const {
-      return node_.type();
+  template <typename T> struct GetStructuredDataAdapter;
+  template <> struct GetStructuredDataAdapter<Node> {
+    static StructuredDataConstPtr get(const Node& node) {
+      return node.ptr_;
     }
-    size_t length() const {
-      return node_.length();
+  };
+  template <typename T> struct GetStructuredDataAdapter {
+    static auto get(T x) -> decltype(make_structured_data_adapter(x)) {
+      return make_structured_data_adapter(std::move(x));
     }
-    std::vector<std::string> keys() const {
-      return node_.keys();
-    }
-    std::shared_ptr<const IStructuredData>
-    operator[](const std::string& str) const {
-      return node_[str].node_;
-    }
-    std::shared_ptr<const IStructuredData>
-    operator[](size_t idx) const {
-      return node_[idx].node_;
-    }
-    Maybe<std::string>  get_string() const {
-      std::string s;
-      if (node_ >> s) return s;
-      return Nothing;
-    }
-    Maybe<int64_t> get_integer() const {
-      int64_t n;
-      if (node_ >> n) return n;
-      return Nothing;
-    }
-    Maybe<double>  get_float() const {
-      double d;
-      if (node_ >> d) return d;
-      return Nothing;
-    }
-    Maybe<bool> get_boolean() const {
-      bool b;
-      if (node_ >> b) return b;
-      return Nothing;
-    }
-  private:
-    Node node_;
   };
 
-  inline
-  Node::Node(std::map<std::string, Node> dict) : node_(as_structured_data(std::move(dict))) {}
+  template <typename T>
+  Node::Node(T&& implicitly_adaptable_data) : ptr_(std::static_pointer_cast<const IStructuredData>(GetStructuredDataAdapter<T>::get(std::forward<T>(implicitly_adaptable_data)))) {}
 }
 
 #endif // WAYWARD_SUPPORT_NODE_HPP_INCLUDED

@@ -55,7 +55,7 @@ namespace persistence {
     std::shared_ptr<const ::wayward::IStructuredData>
     get_value_as_structured_data(const T& record) const override {
       const M* value_ptr = &(record.*ptr_);
-      return wayward::as_structured_data(*value_ptr);
+      return wayward::make_structured_data_adapter(*value_ptr);
     }
   };
 }

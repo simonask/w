@@ -9,8 +9,8 @@
 namespace ajg {
   namespace synth {
     struct AdaptedWaywardNode {
-      explicit AdaptedWaywardNode(const wayward::Node& node) : node(node.node_) {}
-      std::shared_ptr<const wayward::IStructuredData> node;
+      explicit AdaptedWaywardNode(const wayward::Node& node) : node(node.ptr_) {}
+      wayward::StructuredDataConstPtr node;
 
       bool operator==(const AdaptedWaywardNode& other) const {
         if (!node || !other.node) {

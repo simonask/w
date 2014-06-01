@@ -82,8 +82,7 @@ namespace wayward {
       return k;
     }
 
-    std::shared_ptr<const IStructuredData>
-    operator[](const std::string& str) const final {
+    StructuredDataConstPtr get(const std::string& str) const final {
       if (ptr_ == nullptr) return nullptr;
 
       auto t = ::persistence::get_type<T>();
@@ -97,8 +96,7 @@ namespace wayward {
       return nullptr;
     }
 
-    std::shared_ptr<const IStructuredData>
-    operator[](size_t idx) const final {
+    StructuredDataConstPtr get(size_t idx) const final {
       return nullptr;
     }
 

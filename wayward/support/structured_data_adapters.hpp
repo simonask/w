@@ -15,41 +15,39 @@ namespace wayward {
     StructuredDataAdapter(Maybe<T>& value) : access_(value) {}
 
     NodeType type() const final {
-      return value_ ? as_structured_data(*access_)->type() : NodeType::Nil;
+      return value_ ? make_structured_data_adapter(*access_)->type() : NodeType::Nil;
     }
 
     size_t length() const final {
-      return value_ ? as_structured_data(*access_)->length() : 0;
+      return value_ ? make_structured_data_adapter(*access_)->length() : 0;
     }
 
     std::vector<std::string> keys() const final {
-      return value_ ? as_structured_data(*access_)->keys() : std::vector<std::string>();
+      return value_ ? make_structured_data_adapter(*access_)->keys() : std::vector<std::string>();
     }
 
-    std::shared_ptr<const IStructuredData>
-    operator[](const std::string& key) const final {
-      return value_ ? as_structured_data(*access_)->operator[](key) : nullptr;
+    StructuredDataConstPtr get(const std::string& key) const final {
+      return value_ ? make_structured_data_adapter(*access_)->get(key) : nullptr;
     }
 
-    std::shared_ptr<const IStructuredData>
-    operator[](const size_t idx) const final {
-      return value_ ? as_structured_data(*access_)->operator[](idx) : nullptr;
+    StructuredDataConstPtr get(size_t idx) const final {
+      return value_ ? make_structured_data_adapter(*access_)->get(idx) : nullptr;
     }
 
     Maybe<std::string> get_string() const final {
-      return value_ ? as_structured_data(*access_)->get_string() : Maybe<std::string>(Nothing);
+      return value_ ? make_structured_data_adapter(*access_)->get_string() : Maybe<std::string>(Nothing);
     }
 
     Maybe<int64_t> get_integer() const final {
-      return value_ ? as_structured_data(*access_)->get_integer() : Maybe<int64_t>(Nothing);
+      return value_ ? make_structured_data_adapter(*access_)->get_integer() : Maybe<int64_t>(Nothing);
     }
 
     Maybe<double> get_float() const final {
-      return value_ ? as_structured_data(*access_)->get_float() : Maybe<double>(Nothing);
+      return value_ ? make_structured_data_adapter(*access_)->get_float() : Maybe<double>(Nothing);
     }
 
     Maybe<bool> get_boolean() const final {
-      return value_ ? as_structured_data(*access_)->get_boolean() : Maybe<bool>(Nothing);
+      return value_ ? make_structured_data_adapter(*access_)->get_boolean() : Maybe<bool>(Nothing);
     }
   private:
     Maybe<T> value_;
@@ -59,8 +57,8 @@ namespace wayward {
   struct StructuredDataValue : IStructuredData {
     size_t length() const override { return 0; }
     std::vector<std::string> keys() const override { return std::vector<std::string>(); }
-    std::shared_ptr<const IStructuredData> operator[](const std::string&) const override { return nullptr; }
-    std::shared_ptr<const IStructuredData> operator[](size_t) const override { return nullptr; }
+    StructuredDataConstPtr get(const std::string&) const override { return nullptr; }
+    StructuredDataConstPtr get(size_t) const override { return nullptr; }
     Maybe<std::string> get_string() const override { return Nothing; }
     Maybe<int64_t> get_integer() const override { return Nothing; }
     Maybe<double> get_float() const override { return Nothing; }
@@ -148,9 +146,9 @@ namespace wayward {
     StructuredDataRandomAccessListReferenceAdapter(const T& collection) : collection_(collection) {}
     NodeType type() const final { return NodeType::List; }
     size_t length() const final { return collection_.size(); }
-    std::shared_ptr<const IStructuredData> operator[](const std::string&) const final { return nullptr; }
-    std::shared_ptr<const IStructuredData> operator[](size_t idx) const final {
-      return as_structured_data(collection_.at(idx));
+    StructuredDataConstPtr get(const std::string&) const final { return nullptr; }
+    StructuredDataConstPtr get(size_t idx) const final {
+      return make_structured_data_adapter(collection_.at(idx));
     }
   private:
     const T& collection_;
@@ -179,15 +177,15 @@ namespace wayward {
       }
       return k;
     }
-    std::shared_ptr<const IStructuredData> operator[](const std::string& key) const final {
+    StructuredDataConstPtr get(const std::string& key) const final {
       auto it = collection_.find(key);
       if (it != collection_.end()) {
-        return as_structured_data(it->second);
+        return make_structured_data_adapter(it->second);
       } else {
         return nullptr;
       }
     }
-    std::shared_ptr<const IStructuredData> operator[](size_t idx) const final { return nullptr; }
+    StructuredDataConstPtr get(size_t idx) const final { return nullptr; }
   private:
     const T& collection_;
   };

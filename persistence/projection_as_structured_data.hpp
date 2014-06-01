@@ -29,11 +29,11 @@ namespace wayward {
       return std::vector<std::string>{};
     }
 
-    std::shared_ptr<const IStructuredData> operator[](const std::string& str) const final {
+    StructuredDataConstPtr get(const std::string& str) const final {
       return nullptr;
     }
 
-    std::shared_ptr<const IStructuredData> operator[](size_t idx) const final {
+    StructuredDataConstPtr get(size_t idx) const final {
       load();
       return as_structured_data(values->at(idx));
     }
