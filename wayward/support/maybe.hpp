@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include <wayward/support/error.hpp>
+#include <wayward/support/monad.hpp>
 
 namespace wayward {
   struct EmptyMaybeDereference : Error {
@@ -32,6 +33,9 @@ namespace wayward {
 
     T* get() { if (has_value_) return reinterpret_cast<T*>(&storage_); throw EmptyMaybeDereference(); }
     const T* get() const { if (has_value_) return reinterpret_cast<const T*>(&storage_); throw EmptyMaybeDereference(); }
+
+    bool operator==(NothingType) const { return !has_value_; }
+    bool operator!=(NothingType) const { return has_value_; }
 
     explicit operator bool() const { return has_value_; }
     const T* operator->() const { return get(); }
@@ -114,6 +118,32 @@ namespace wayward {
         // Neither has a value, so do nothing.
       }
     }
+  }
+
+  template <typename T>
+  Maybe<T> Just(T&& x) {
+    return Maybe<T>(T(std::forward<T>(x)));
+  }
+
+  namespace monad {
+    template <typename T> struct Join<Maybe<Maybe<T>>> {
+      using Type = Maybe<T>;
+    };
+    template <typename T> struct Join<Maybe<T>> {
+      using Type = Maybe<T>;
+    };
+
+    template <typename T>
+    struct Bind<Maybe<T>> {
+      template <typename F>
+      static auto bind(Maybe<T> m, F f) -> typename Join<Maybe<decltype(f(*m))>>::Type {
+        if (m) {
+          return f(*m);
+        } else {
+          return Nothing;
+        }
+      }
+    };
   }
 }
 
