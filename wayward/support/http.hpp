@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include <wayward/support/node.hpp>
+#include <wayward/support/mutable_node.hpp>
 #include <wayward/support/uri.hpp>
 
 namespace wayward {
@@ -108,10 +108,11 @@ namespace wayward {
   };
 
   using Headers = std::map<std::string, std::string>;
+  using Params = MutableNode;
 
   struct Request {
     Headers headers;
-    Dict params;
+    Params params;
     std::string method;
     URI uri;
     std::string body;
@@ -147,7 +148,6 @@ namespace wayward {
     std::string host() const;
     int port() const;
 
-    using Params = std::map<std::string, Node>;
     using Headers = std::map<std::string, std::string>;
 
     Response request(Request req);

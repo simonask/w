@@ -2,6 +2,9 @@
 #include <regex>
 #include <wayward/support/format.hpp>
 
+#include <cstdlib>
+#include <cassert>
+
 namespace wayward {
   Maybe<URI> URI::parse(const std::string& input) {
     /*
@@ -37,6 +40,42 @@ namespace wayward {
     } else {
       return Nothing;
     }
+  }
+
+  namespace {
+    int hexdigit_to_integer(int digit) {
+      if (digit >= 'a')
+        digit -= 'a' - 'A';
+      if (digit >= 'A')
+        digit -= 'A' - 10;
+      else
+        digit -= '0';
+      return digit;
+    }
+  }
+
+  std::string
+  URI::decode(const std::string& input) {
+    std::string result;
+    result.reserve(input.size()); // We know that output size <= input size
+    size_t ilen = input.size();
+    for (size_t i = 0; i < ilen; ++i) {
+      if (i < ilen - 2 && input[i] == '%') {
+        int a = input[i+1];
+        int b = input[i+2];
+        if (std::isxdigit(a) && std::isxdigit(b)) {
+          a = hexdigit_to_integer(a);
+          b = hexdigit_to_integer(b);
+          int c = a * 0x10 + b;
+          assert(c < 256); // Consistency error!
+          result.push_back((char)c);
+          i += 2;
+          continue;
+        }
+      }
+      result.push_back(input[i]);
+    }
+    return std::move(result);
   }
 
   std::string URI::to_string() const {

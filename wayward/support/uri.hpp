@@ -15,6 +15,9 @@ namespace wayward {
 
     static Maybe<URI> parse(const std::string& uri);
 
+    static std::string decode(const std::string& encoded);
+    static std::string encode(const std::string& raw);
+
     std::string scheme;
     std::string username;
     std::string password;

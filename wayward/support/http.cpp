@@ -2,6 +2,7 @@
 #include <wayward/support/event_loop.hpp>
 #include <wayward/support/fiber.hpp>
 #include <wayward/support/event_loop_private.hpp>
+#include <wayward/support/mutable_node.hpp>
 
 #include <cassert>
 #include <event2/event.h>
@@ -13,6 +14,48 @@
 
 namespace wayward {
   namespace {
+    std::vector<std::string> get_keys_from_destructured_param(const std::string& k) {
+      // k must be well-formed at this point.
+      std::vector<std::string> keys;
+      auto bracket_pos = k.find('[');
+      if (bracket_pos != std::string::npos) {
+        keys.push_back(k.substr(0, bracket_pos));
+        while (bracket_pos != std::string::npos) {
+          auto end_bracket_pos = k.find(']', bracket_pos);
+          keys.push_back(k.substr(bracket_pos + 1, end_bracket_pos - bracket_pos - 1));
+          bracket_pos = k.find('[', end_bracket_pos);
+        }
+      } else {
+        keys.push_back(k);
+      }
+      return std::move(keys);
+    }
+
+    void add_destructured_param_to_dict(MutableNode& params, std::string k, std::string v) {
+      static const std::regex restructuralize_dictionary_keys { "^([^\\[]+)(\\[[^\\]]+\\])*$" };
+      MatchResults results;
+      if (std::regex_match(k, results, restructuralize_dictionary_keys)) {
+        auto keys = get_keys_from_destructured_param(k);
+        MutableNode dict;
+        dict.take_data(params.data());
+        for (size_t i = 0; i < keys.size(); ++i) {
+          auto& key = keys[i];
+
+          if (dict.type() != NodeType::Dictionary) {
+            dict = MutableNode::dictionary();
+          }
+
+          if (i + 1 == keys.size()) {
+            dict[key] = std::move(v);
+          } else {
+            dict.take_data(dict[key].data());
+          }
+        }
+      } else {
+        params[k] = std::move(v);
+      }
+    }
+
     Request make_request_from_evhttp_request(evhtp_request_t* req) {
       Request r;
 
@@ -68,13 +111,21 @@ namespace wayward {
         case htp_scheme_nfs:     scheme = "nfs"; break;
         default: break;
       }
+
+      MutableNode params = MutableNode::dictionary();
+
       if (uri->query) {
         for (auto param = uri->query->tqh_first; param; param = param->next.tqe_next) {
           std::string k { param->key, param->klen };
           std::string v { param->val, param->vlen };
-          r.params[k] = v;
+          k = URI::decode(k);
+          v = URI::decode(v);
+          add_destructured_param_to_dict(params, std::move(k), std::move(v));
         }
       }
+
+      r.params.take_data(std::move(params).data());
+
       std::string query_raw { uri->query_raw ? reinterpret_cast<char*>(uri->query_raw) : "" };
       std::string fragment  { uri->fragment  ? reinterpret_cast<char*>(uri->fragment)  : "" };
       r.uri = URI{scheme, vhost, 80 /* TODO */, uri->path->full, std::move(query_raw), std::move(fragment)};
