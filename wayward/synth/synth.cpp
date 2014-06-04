@@ -153,6 +153,8 @@ namespace wayward {
         ctx[pair.first] = synth::AdaptedWaywardNode{pair.second};
       }
 
+      wayward::log::debug("synth", wayward::format("Rendering template: {0}", path));
+
       return templ.render_to_string(ctx);
     }
 
