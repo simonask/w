@@ -45,20 +45,34 @@ namespace wayward {
 
   using Dict = std::map<std::string, Node>;
 
-  template <typename T> struct GetStructuredDataAdapter;
   template <> struct GetStructuredDataAdapter<Node> {
     static StructuredDataConstPtr get(const Node& node) {
       return node.ptr_;
     }
   };
-  template <typename T> struct GetStructuredDataAdapter {
-    static auto get(T x) -> decltype(make_structured_data_adapter(x)) {
-      return make_structured_data_adapter(std::move(x));
+
+  template <> struct GetStructuredDataAdapter<Node&> {
+    static StructuredDataConstPtr get(const Node& node) {
+      return node.ptr_;
+    }
+  };
+
+  template <> struct GetStructuredDataAdapter<Node&&> {
+    static StructuredDataConstPtr get(Node&& node) {
+      return std::move(node.ptr_);
     }
   };
 
   template <typename T>
-  Node::Node(T&& implicitly_adaptable_data) : ptr_(std::static_pointer_cast<const IStructuredData>(GetStructuredDataAdapter<T>::get(std::forward<T>(implicitly_adaptable_data)))) {}
+  Node::Node(T&& implicitly_adaptable_data)
+  : ptr_(
+    std::static_pointer_cast<const IStructuredData>(
+      GetStructuredDataAdapter<T>::get(
+        std::forward<T>(implicitly_adaptable_data)
+      )
+    )
+  )
+  {}
 }
 
 #endif // WAYWARD_SUPPORT_NODE_HPP_INCLUDED

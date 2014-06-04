@@ -35,7 +35,7 @@ namespace wayward {
 
     StructuredDataConstPtr get(size_t idx) const final {
       load();
-      return as_structured_data(values->at(idx));
+      return make_structured_data_adapter(values->at(idx));
     }
 
     Maybe<std::string>  get_string() const final { return Nothing; }

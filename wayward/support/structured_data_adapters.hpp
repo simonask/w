@@ -15,39 +15,39 @@ namespace wayward {
     StructuredDataAdapter(Maybe<T>& value) : access_(value) {}
 
     NodeType type() const final {
-      return value_ ? make_structured_data_adapter(*access_)->type() : NodeType::Nil;
+      return access_ ? make_structured_data_adapter(*access_)->type() : NodeType::Nil;
     }
 
     size_t length() const final {
-      return value_ ? make_structured_data_adapter(*access_)->length() : 0;
+      return access_ ? make_structured_data_adapter(*access_)->length() : 0;
     }
 
     std::vector<std::string> keys() const final {
-      return value_ ? make_structured_data_adapter(*access_)->keys() : std::vector<std::string>();
+      return access_ ? make_structured_data_adapter(*access_)->keys() : std::vector<std::string>();
     }
 
     StructuredDataConstPtr get(const std::string& key) const final {
-      return value_ ? make_structured_data_adapter(*access_)->get(key) : nullptr;
+      return access_ ? make_structured_data_adapter(*access_)->get(key) : nullptr;
     }
 
     StructuredDataConstPtr get(size_t idx) const final {
-      return value_ ? make_structured_data_adapter(*access_)->get(idx) : nullptr;
+      return access_ ? make_structured_data_adapter(*access_)->get(idx) : nullptr;
     }
 
     Maybe<std::string> get_string() const final {
-      return value_ ? make_structured_data_adapter(*access_)->get_string() : Maybe<std::string>(Nothing);
+      return access_ ? make_structured_data_adapter(*access_)->get_string() : Maybe<std::string>(Nothing);
     }
 
     Maybe<int64_t> get_integer() const final {
-      return value_ ? make_structured_data_adapter(*access_)->get_integer() : Maybe<int64_t>(Nothing);
+      return access_ ? make_structured_data_adapter(*access_)->get_integer() : Maybe<int64_t>(Nothing);
     }
 
     Maybe<double> get_float() const final {
-      return value_ ? make_structured_data_adapter(*access_)->get_float() : Maybe<double>(Nothing);
+      return access_ ? make_structured_data_adapter(*access_)->get_float() : Maybe<double>(Nothing);
     }
 
     Maybe<bool> get_boolean() const final {
-      return value_ ? make_structured_data_adapter(*access_)->get_boolean() : Maybe<bool>(Nothing);
+      return access_ ? make_structured_data_adapter(*access_)->get_boolean() : Maybe<bool>(Nothing);
     }
   private:
     Maybe<T> value_;
@@ -143,12 +143,14 @@ namespace wayward {
 
   template <typename T>
   struct StructuredDataRandomAccessListReferenceAdapter : StructuredDataValue {
+    using ValueType = typename T::value_type;
+
     StructuredDataRandomAccessListReferenceAdapter(const T& collection) : collection_(collection) {}
     NodeType type() const final { return NodeType::List; }
     size_t length() const final { return collection_.size(); }
     StructuredDataConstPtr get(const std::string&) const final { return nullptr; }
     StructuredDataConstPtr get(size_t idx) const final {
-      return make_structured_data_adapter(collection_.at(idx));
+      return GetStructuredDataAdapter<ValueType>::get(collection_.at(idx));
     }
   private:
     const T& collection_;
@@ -166,6 +168,8 @@ namespace wayward {
 
   template <typename T>
   struct StructuredDataDictionaryReferenceAdapter : StructuredDataValue {
+    using MappedType = typename T::mapped_type;
+
     StructuredDataDictionaryReferenceAdapter(const T& collection) : collection_(collection) {}
     NodeType type() const final { return NodeType::Dictionary; }
     size_t length() const final { return collection_.size(); }
@@ -180,7 +184,7 @@ namespace wayward {
     StructuredDataConstPtr get(const std::string& key) const final {
       auto it = collection_.find(key);
       if (it != collection_.end()) {
-        return make_structured_data_adapter(it->second);
+        return GetStructuredDataAdapter<MappedType>::get(it->second);
       } else {
         return nullptr;
       }

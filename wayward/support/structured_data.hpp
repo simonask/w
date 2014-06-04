@@ -49,6 +49,14 @@ namespace wayward {
     auto ptr = std::make_shared<Adapter>(std::forward<T>(object));
     return std::static_pointer_cast<const IStructuredData>(std::move(ptr));
   }
+
+  template <typename T> struct GetStructuredDataAdapter;
+
+  template <typename T> struct GetStructuredDataAdapter {
+    static auto get(T x) -> decltype(make_structured_data_adapter(x)) {
+      return make_structured_data_adapter(std::move(x));
+    }
+  };
 }
 
 #endif // WAYWARD_SUPPORT_STRUCTURED_DATA_HPP_INCLUDED
