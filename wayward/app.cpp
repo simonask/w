@@ -148,11 +148,17 @@ namespace wayward {
         }
       }
 
-      Response response;
       if (h) {
         try {
+          if (app->config.log_requests) {
+            log::debug("w", wayward::format("Parameters: {0}", req.params.to_string()));
+          }
           return h->handler(req);
-        } catch (...) {
+        }
+        catch (Response thrown_response) {
+          return std::move(thrown_response);
+        }
+        catch (...) {
           return respond_to_error(std::current_exception(), __cxxabiv1::__cxa_current_exception_type());
         }
       }
@@ -165,7 +171,7 @@ namespace wayward {
 
       if (app->config.log_requests) {
         std::cout << "\n";
-        log::debug("w", wayward::format("Starting {0} {1}", req.method, req.uri.path));
+        log::debug("w", wayward::format("Starting {0} {1}...", req.method, req.uri.path));
       }
 
       Maybe<Response> response = Nothing;

@@ -7,16 +7,7 @@
 namespace app {
   using p::RecordPtr;
 
-  struct PostRoutes : w::Routes {
-    RecordPtr<Post> post;
-
-    void before(w::Request& req) override {
-      int64_t id;
-      if (req.params["post_id"] >> id) {
-        post = from<Post>().where(p::column(&Post::id) == id).first();
-      }
-    }
-
+  struct PostsRoutes : w::Routes {
     w::Response get_all_posts(w::Request& req) {
       auto posts = from<Post>()
         .where(p::column(&Post::published_at) <= DateTime::now())
@@ -25,6 +16,19 @@ namespace app {
         .reverse_order();
 
       return w::render("index.html", {{"posts", posts}});
+    }
+  };
+
+  struct PostRoutes : w::Routes {
+    RecordPtr<Post> post;
+
+    void before(w::Request& req) override {
+      int64_t id;
+      if (req.params["post_id"] >> id) {
+        post = from<Post>().where(p::column(&Post::id) == id).first();
+      } else {
+        throw w::not_found();
+      }
     }
 
     w::Response get_post(w::Request& req) {
@@ -84,7 +88,7 @@ int main(int argc, char const *argv[])
   w::App app { argc, argv };
 
   app.get("/", [](w::Request&) { return w::redirect("/posts"); });
-  app.get("/posts", &app::PostRoutes::get_all_posts);
+  app.get("/posts", &app::PostsRoutes::get_all_posts);
   app.get("/posts/:post_id", &app::PostRoutes::get_post);
   app.patch("/posts/:post_id", &app::PostRoutes::put_post);
   app.del("/posts/:post_id", &app::PostRoutes::delete_post);
@@ -95,7 +99,7 @@ int main(int argc, char const *argv[])
   app.get("/crash", app::crash);
 
   app.get("/template", [&](w::Request& req) -> w::Response {
-    return w::render("test.html", {{"message", "Hello, World!"}});
+    return w::render("test.html", {{"message", "Hello, World!"}, {"params", req.params}});
   });
 
   return app.run();
