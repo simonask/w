@@ -65,9 +65,9 @@ struct AppState {
   event* needs_rebuild_event = nullptr;
   bool needs_rebuild = false;
 
-  wayward::ConsoleStreamLogger logger;
+  std::shared_ptr<wayward::ILogger> logger;
 
-  AppState() : logger{std::cout, std::cerr} {}
+  AppState() : logger{wayward::ConsoleStreamLogger::get()} {}
 };
 
 static Response response_for_error(AppState* state, std::exception_ptr exception) {
@@ -78,12 +78,12 @@ static Response response_for_error(AppState* state, std::exception_ptr exception
     std::rethrow_exception(exception);
   }
   catch (const wayward::CompilationError& error) {
-    state->logger.log(wayward::Severity::Error, "w_dev", error.what());
+    state->logger->log(wayward::Severity::Error, "w_dev", error.what());
     // TODO: Render a pretty template with the output from the compiler.
     response.body = wayward::format("Compilation Error: {0}", error.what());
   }
   catch (const std::exception& error) {
-    state->logger.log(wayward::Severity::Error, "w_dev", error.what());
+    state->logger->log(wayward::Severity::Error, "w_dev", error.what());
     response.body = wayward::format("Error: {0}", error.what());
   }
   catch (...) {
@@ -97,7 +97,7 @@ static void validate_child_server(AppState* state) {
     // Re-validate child process (see if it's running):
     int r = ::kill(state->child_server_pid, 0);
     if (r != 0) {
-      state->logger.log(wayward::Severity::Error, "w_dev", "App server has died.");
+      state->logger->log(wayward::Severity::Error, "w_dev", "App server has died.");
       state->child_server_pid = -1;
     }
   }
@@ -133,7 +133,7 @@ static void check_child_needs_rebuild_callback(int fd, short ev, void* userdata)
   int result = ::pclose(state->needs_rebuild_stream);
   state->needs_rebuild_stream = nullptr;
   if (result != 0) {
-    state->logger.log(wayward::Severity::Debug, "w_dev", "App needs rebuild (reason: target binary out of date).");
+    state->logger->log(wayward::Severity::Debug, "w_dev", "App needs rebuild (reason: target binary out of date).");
     state->needs_rebuild = true;
   }
 }
@@ -146,7 +146,7 @@ static void check_child_needs_rebuild(AppState* state) {
   if (state->needs_rebuild_stream != nullptr)
     return;
   if (!path_exists(state->binary_path)) {
-    state->logger.log(Severity::Debug, "w_dev", "App needs rebuild (reason: target binary does not exist).");
+    state->logger->log(Severity::Debug, "w_dev", "App needs rebuild (reason: target binary does not exist).");
     state->needs_rebuild = true;
   }
 
@@ -163,7 +163,7 @@ static void check_child_needs_rebuild(AppState* state) {
 static void rebuild_child_server_if_needed(AppState* state) {
   if (state->needs_rebuild) {
     wayward::Recompiler recompiler { state->directory };
-    state->logger.log(wayward::Severity::Information, "w_dev", wayward::format("Rebuilding '{0}'...", state->binary_path));
+    state->logger->log(wayward::Severity::Information, "w_dev", wayward::format("Rebuilding '{0}'...", state->binary_path));
     recompiler.rebuild();
     if (state->child_server_pid > 0) {
       // Kill the child process.
@@ -189,7 +189,7 @@ static void check_child_server_binary(AppState* state) {
 static void spawn_child_server_if_needed(AppState* state) {
   if (state->child_server_pid < 0) {
     // Spawn the child server
-    state->logger.log(wayward::Severity::Information, "w_dev", wayward::format("Spawning app server at port {0}...", state->child_server_port));
+    state->logger->log(wayward::Severity::Information, "w_dev", wayward::format("Spawning app server at port {0}...", state->child_server_port));
 
     state->child_server_pid = fork();
     if (state->child_server_pid == 0) {
@@ -374,10 +374,10 @@ namespace w_dev {
     HTTPServer http { state.address, state.port, [&](Request req) { return request_callback(&state, std::move(req)); } };
     try {
       http.start(&state.loop);
-      state.logger.log(Severity::Information, "w_dev", wayward::format("Dev server listening on {0}:{1}...", state.address, state.port));
+      state.logger->log(Severity::Information, "w_dev", wayward::format("Dev server listening on {0}:{1}...", state.address, state.port));
     }
     catch (const HTTPError& error) {
-      state.logger.log(Severity::Error, "w_dev", wayward::format("HTTPError: {0}", error.what()));
+      state.logger->log(Severity::Error, "w_dev", wayward::format("HTTPError: {0}", error.what()));
       return 1;
     }
 

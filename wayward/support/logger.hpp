@@ -5,7 +5,10 @@
 #include <string>
 #include <memory>
 #include <ostream>
+#include <functional>
 #include <mutex>
+
+#include <wayward/support/datetime.hpp>
 
 namespace wayward {
   enum class Severity {
@@ -29,7 +32,10 @@ namespace wayward {
     return std::static_pointer_cast<ILogger>(std::make_shared<T>(std::forward<Args>(args)...));
   }
 
+  using FormatFunction = std::function<std::string(Severity, DateTime timestamp, const std::string& tag, const std::string& message)>;
+
   struct FormattedLogger : ILogger {
+    FormattedLogger();
     virtual ~FormattedLogger() {}
 
     // ILogger interface
@@ -39,11 +45,10 @@ namespace wayward {
 
     // FormattedLogger interface
     virtual void write_message(Severity severity, std::string formatted_message) = 0;
-    std::string format() const { return format_; }
-    void set_format(std::string fmt) { format_ = std::move(fmt); }
-  private:
+    void set_formatter(FormatFunction func) { formatter_ = std::move(func); }
+  protected:
     Severity level_ = Severity::Debug;
-    std::string format_ = "{start_color}[{timestamp}] <{tag}> {severity}:{end_color} {message}\n";
+    FormatFunction formatter_;
   };
 
   struct FileLogger : FormattedLogger {
@@ -57,8 +62,7 @@ namespace wayward {
   };
 
   struct ConsoleStreamLogger : FormattedLogger {
-    explicit ConsoleStreamLogger(std::ostream& out, std::ostream& err) : out_(out), err_(err) {}
-    virtual ~ConsoleStreamLogger() {}
+    static std::shared_ptr<ILogger> get();
 
     bool colorize() const { return colorize_; }
     void set_colorize(bool b) { colorize_ = b; }
@@ -74,10 +78,13 @@ namespace wayward {
       }
     }
 
+  private:
+    explicit ConsoleStreamLogger(std::ostream& out, std::ostream& err) : out_(out), err_(err) {}
     std::ostream& out_;
     std::ostream& err_;
     bool colorize_ = true;
     std::mutex mutex_;
+    std::map<std::string, size_t> tag_colors_;
   };
 }
 

@@ -6,16 +6,14 @@
 #include <iostream>
 
 namespace wayward {
-  void FormattedLogger::log(Severity severity, std::string tag, std::string message) {
-    if (severity >= level_) {
-      write_message(severity, wayward::format(format_, {
-        {"start_color", ""},
-        {"end_color", ""},
-        {"severity", severity_as_string(severity)},
-        {"timestamp", DateTime::now().strftime("%Y-%m-%d %H:%M:%S")},
-        {"tag", std::move(tag)},
-        {"message", std::move(message)}
-      }));
+  namespace {
+    std::string default_formatter(Severity severity, DateTime timestamp, const std::string& tag, const std::string& message) {
+      if (severity == Severity::Warning || severity == Severity::Error) {
+        return "{start_color}[{timestamp}] <{tag}> {severity}{end_color} {message}\n";
+      } else {
+        return "{start_color}[{timestamp}] <{tag}>{end_color} {message}\n";
+      }
+
     }
   }
 
@@ -25,6 +23,23 @@ namespace wayward {
       case Severity::Information: return "INFO";
       case Severity::Warning: return "WARNING";
       case Severity::Error: return "ERROR";
+    }
+  }
+
+  FormattedLogger::FormattedLogger() : formatter_(default_formatter) {}
+
+  void FormattedLogger::log(Severity severity, std::string tag, std::string message) {
+    if (severity >= level_) {
+      auto t = DateTime::now();
+      auto format = formatter_(severity, t, tag, message);
+      write_message(severity, wayward::format(format, {
+        {"start_color", ""},
+        {"end_color", ""},
+        {"severity", severity_as_string(severity)},
+        {"timestamp", t.strftime("%Y-%m-%d %H:%M:%S")},
+        {"tag", std::move(tag)},
+        {"message", std::move(message)}
+      }));
     }
   }
 
@@ -38,15 +53,24 @@ namespace wayward {
     const char TerminalResetColor[] = "\033[00m";
 
     static const char* CycleColors[] = {
-      TerminalYellow,
       TerminalGreen,
-      TerminalMagenta,
-      TerminalCyan,
-      TerminalBlack,
+      TerminalYellow,
       TerminalMagenta,
       TerminalCyan,
     };
-    static size_t NumCycleColors = 7;
+    static size_t NumCycleColors = 4;
+  }
+
+  namespace {
+    std::shared_ptr<ConsoleStreamLogger> g_console_logger;
+  }
+
+  std::shared_ptr<ILogger>
+  ConsoleStreamLogger::get() {
+    if (g_console_logger == nullptr) {
+      g_console_logger = std::shared_ptr<ConsoleStreamLogger>(new ConsoleStreamLogger{std::cout, std::cerr});
+    }
+    return std::static_pointer_cast<ILogger>(g_console_logger);
   }
 
   void ConsoleStreamLogger::log(Severity severity, std::string tag, std::string message) {
@@ -58,18 +82,31 @@ namespace wayward {
         if (severity == Severity::Error) {
           start_color = TerminalRed;
         } else {
-          auto hash = std::hash<std::string>()(tag);
-          auto color_idx = hash % NumCycleColors;
+          // Locking because we might be modifying tag_colors_.
+          std::unique_lock<std::mutex> L(mutex_);
+
+          auto existing_color = tag_colors_.find(tag);
+          size_t color_idx;
+          if (existing_color == tag_colors_.end()) {
+            color_idx = tag_colors_.size() % NumCycleColors;
+            tag_colors_[tag] = color_idx;
+          } else {
+            color_idx = existing_color->second;
+          }
+
           start_color = CycleColors[color_idx];
         }
         end_color = TerminalResetColor;
       }
 
-      write_message(severity, wayward::format(format(), {
+      auto t = DateTime::now();
+      auto format = formatter_(severity, t, tag, message);
+
+      write_message(severity, wayward::format(format, {
         {"start_color", start_color},
         {"end_color", end_color},
         {"severity", severity_as_string(severity)},
-        {"timestamp", DateTime::now().strftime("%Y-%m-%d %H:%M:%S")},
+        {"timestamp", t.strftime("%Y-%m-%d %H:%M:%S")},
         {"tag", std::move(tag)},
         {"message", std::move(message)}
       }));

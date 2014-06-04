@@ -33,7 +33,7 @@ namespace persistence {
 
   const std::shared_ptr<ILogger>& DataStore::logger() {
     if (logger_ == nullptr) {
-      logger_ = wayward::make_logger<wayward::ConsoleStreamLogger>(std::cout, std::cerr);
+      logger_ = wayward::ConsoleStreamLogger::get();
     }
     return logger_;
   }

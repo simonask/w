@@ -7,7 +7,7 @@ namespace wayward {
     static std::shared_ptr<ILogger> g_current_logger;
 
     std::shared_ptr<ILogger> create_default_logger() {
-      return make_logger<ConsoleStreamLogger>(std::cout, std::cerr);
+      return ConsoleStreamLogger::get();
     }
   }
 
