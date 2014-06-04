@@ -26,9 +26,9 @@ namespace app {
       int64_t id;
       if (req.params["post_id"] >> id) {
         post = from<Post>().where(p::column(&Post::id) == id).first();
-      } else {
-        throw w::not_found();
       }
+      if (!post)
+        throw w::not_found();
     }
 
     w::Response get_post(w::Request& req) {
