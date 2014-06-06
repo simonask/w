@@ -18,6 +18,8 @@ wayward_support_sources = Split("""
   wayward/support/teamwork.cpp
   wayward/support/plugin.cpp
   wayward/support/mutable_node.cpp
+  wayward/support/data_franca/spelunker.cpp
+  wayward/support/data_franca/mutator.cpp
   3rdparty/libevhtp/evhtp.c
   3rdparty/libevhtp/htparse/htparse.c
   3rdparty/libevhtp/evthr/evthr.c

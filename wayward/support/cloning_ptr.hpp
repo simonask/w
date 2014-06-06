@@ -70,6 +70,7 @@ namespace wayward {
     void reset(pointer ptr = pointer()) { ptr.reset(ptr); }
     void swap(CloningPtr<T>& other) { ptr.swap(other.ptr); }
     pointer get() { return ptr.get(); }
+    const pointer get() const { return ptr.get(); }
     explicit operator bool() const { return ptr.operator bool(); }
     T& operator*() const { return *ptr; }
     pointer operator->() const { return ptr.operator->(); }

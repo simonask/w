@@ -3,7 +3,6 @@
 #define WAYWARD_SUPPORT_DATA_FRANCA_READER_HPP_INCLUDED
 
 #include <wayward/support/data_franca/types.hpp>
-#include <wayward/support/data_franca/get_adapter.hpp>
 
 #include <wayward/support/maybe.hpp>
 
@@ -46,7 +45,8 @@ namespace wayward {
       virtual void move_next() = 0;
     };
 
-    struct NullReader : IReader {
+    struct NullReader final : IReader {
+      NullReader() {}
       DataType type() const final { return DataType::Nothing; }
       Maybe<Boolean> get_boolean() const final { return Nothing; }
       Maybe<Integer> get_integer() const final { return Nothing; }
@@ -64,7 +64,7 @@ namespace wayward {
       ReaderPtr current_value() const final { return nullptr; }
       Maybe<String> current_key() const final { return Nothing; }
       bool at_end() const final { return true; }
-      void move_next() const final {}
+      void move_next() final {}
     };
 
     template <typename Self, typename Subscript = Self>
@@ -75,8 +75,8 @@ namespace wayward {
       bool operator>>(Integer& n) const;
       bool operator>>(Real& r) const;
       bool operator>>(String& str) const;
-      Subscript operator[](size_t idx) const;
-      Subscript operator[](const String& key) const;
+      Subscript reader_subscript(size_t idx) const;
+      Subscript reader_subscript(const String& key) const;
       size_t length() const;
       struct iterator;
       iterator begin() const;
@@ -86,8 +86,9 @@ namespace wayward {
       ReaderInterface() {}
     private:
       // Could be an IReader, could be something else...
-      auto reader() const -> decltype(std::declval<const Self>().reader_iface()) {
-        return static_cast<const Self*>(this)->reader_iface();
+      template <typename Self_ = Self>
+      auto reader() const -> decltype(std::declval<const Self_>().reader_iface()) {
+        return static_cast<const Self_*>(this)->reader_iface();
       }
     };
 
@@ -96,21 +97,19 @@ namespace wayward {
       bool operator==(const iterator& other) const {
         return (enumerator_ == nullptr && other.enumerator_ == nullptr) || (enumerator_->at_end() == other.enumerator_->at_end());
       }
-      bool operator!=(const iterator& other) const { !(*this == other); }
-      const Self& operator*() const { return current_; }
-      const Self* operator->() const { return &current_; }
+      bool operator!=(const iterator& other) const { return !(*this == other); }
+      const Subscript& operator*() const { return current_; }
+      const Subscript* operator->() const { return &current_; }
 
-      iterator& operator++() { enumerator_->move_next(); current_ = Self{enumerator_->current_value}; return *this; }
+      Maybe<String> key() const { return enumerator_->current_key(); }
+
+      iterator& operator++() { enumerator_->move_next(); current_ = Subscript{enumerator_->current_value()}; return *this; }
     private:
       iterator(ReaderEnumeratorPtr e) : enumerator_{std::move(e)}, current_{enumerator_->current_value()} {}
       ReaderEnumeratorPtr enumerator_;
-      const Self current_;
+      Subscript current_;
+      friend struct ReaderInterface<Self, Subscript>;
     };
-
-    template <typename Self, typename Subscript>
-    bool ReaderInterface<Self, Subscript>::is_null() const {
-      return !q_;
-    }
 
     template <typename Self, typename Subscript>
     bool ReaderInterface<Self, Subscript>::is_nothing() const {
@@ -124,7 +123,7 @@ namespace wayward {
 
     template <typename Self, typename Subscript>
     bool ReaderInterface<Self, Subscript>::operator>>(Boolean& b) const {
-      if (type() == DataType::Boolean) {
+      if (reader().type() == DataType::Boolean) {
         b = *reader().get_boolean();
         return true;
       }
@@ -133,7 +132,7 @@ namespace wayward {
 
     template <typename Self, typename Subscript>
     bool ReaderInterface<Self, Subscript>::operator>>(Integer& n) const {
-      if (type() == DataType::Integer) {
+      if (reader().type() == DataType::Integer) {
         n = *reader().get_integer();
         return true;
       }
@@ -142,7 +141,7 @@ namespace wayward {
 
     template <typename Self, typename Subscript>
     bool ReaderInterface<Self, Subscript>::operator>>(Real& r) const {
-      if (type() == DataType::Real) {
+      if (reader().type() == DataType::Real) {
         r = *reader().get_real();
         return true;
       }
@@ -151,11 +150,23 @@ namespace wayward {
 
     template <typename Self, typename Subscript>
     bool ReaderInterface<Self, Subscript>::operator>>(String& str) const {
-      if (type() == DataType::String) {
+      if (reader().type() == DataType::String) {
         str = *reader().get_string();
         return true;
       }
       return false;
+    }
+
+    template <typename Self, typename Subscript>
+    typename ReaderInterface<Self, Subscript>::iterator
+    ReaderInterface<Self, Subscript>::begin() const {
+      return iterator{reader().enumerator()};
+    }
+
+    template <typename Self, typename Subscript>
+    typename ReaderInterface<Self, Subscript>::iterator
+    ReaderInterface<Self, Subscript>::end() const {
+      return iterator{ReaderEnumeratorPtr{new ReaderEnumeratorAtEnd}};
     }
 
     template <typename Self, typename Subscript>
@@ -164,12 +175,12 @@ namespace wayward {
     }
 
     template <typename Self, typename Subscript>
-    Subscript ReaderInterface<Self, Subscript>::operator[](size_t idx) const {
+    Subscript ReaderInterface<Self, Subscript>::reader_subscript(size_t idx) const {
       return reader().at(idx);
     }
 
     template <typename Self, typename Subscript>
-    Subscript ReaderInterface<Self, Subscript>::operator[](const String& key) const {
+    Subscript ReaderInterface<Self, Subscript>::reader_subscript(const String& key) const {
       return reader().get(key);
     }
   }

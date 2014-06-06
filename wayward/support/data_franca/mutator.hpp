@@ -1,0 +1,72 @@
+#pragma once
+#ifndef WAYWARD_SUPPORT_DATA_FRANCA_MUTATOR_HPP_INCLUDED
+#define WAYWARD_SUPPORT_DATA_FRANCA_MUTATOR_HPP_INCLUDED
+
+#include <wayward/support/data_franca/adapter.hpp>
+#include <wayward/support/data_franca/spelunker.hpp>
+
+namespace wayward {
+  namespace data_franca {
+    struct Mutator final : ReaderInterface<Mutator, Spelunker>, WriterInterface<Mutator> {
+      Mutator() {}
+      Mutator(AdapterPtr ptr) : q_{std::move(ptr)} {}
+      Mutator(const Mutator&) = default;
+      Mutator(Mutator&&) = default;
+      Mutator& operator=(const Mutator&) = default;
+      Mutator& operator=(Mutator&&) = default;
+
+      template <typename T>
+      Mutator(T&& object);
+
+      Spelunker operator[](size_t idx) const { return this->reader_subscript(idx); }
+      Spelunker operator[](const String& key) const { return this->reader_subscript(key); }
+      Spelunker operator[](const char* key) const { return this->reader_subscript(key); }
+      Mutator operator[](size_t idx) { return this->writer_subscript(idx); }
+      Mutator operator[](const String& key) { return this->writer_subscript(key); }
+      Mutator operator[](const char* key) { return this->writer_subscript(key); }
+
+      DataType type() const;
+
+      const IReader& reader_iface() const;
+      IWriter& writer_iface();
+    private:
+      friend struct ReaderInterface<Mutator>;
+      friend struct WriterInterface<Mutator>;
+      friend struct GetAdapter<Mutator>;
+
+      AdapterPtr q_;
+
+      static const NullReader g_null_reader;
+    };
+
+    template <typename T>
+    Mutator::Mutator(T&& object) : q_(make_adapter(std::forward<T>(object))) {}
+
+    inline DataType Mutator::type() const {
+      return reader_iface().type();
+    }
+
+    inline const IReader& Mutator::reader_iface() const {
+      return q_ ? static_cast<const IReader&>(*q_) : g_null_reader;
+    }
+
+    struct MutationError : Error {
+      MutationError(const std::string& message) : Error(message) {}
+    };
+
+    inline IWriter& Mutator::writer_iface() {
+      if (q_ == nullptr) {
+        throw MutationError{"Attempted to modify an empty mutator."};
+      }
+      return *q_;
+    }
+
+    template <>
+    struct GetAdapter<Mutator> {
+      static ReaderPtr get(const Mutator& m) { return std::static_pointer_cast<const IReader>(m.q_); }
+      static AdapterPtr get(Mutator& m) { return m.q_; }
+    };
+  }
+}
+
+#endif // WAYWARD_SUPPORT_DATA_FRANCA_MUTATOR_HPP_INCLUDED

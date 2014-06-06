@@ -3,7 +3,7 @@
 #define WAYWARD_SUPPORT_DATA_FRANCA_SPELUNKER_HPP_INCLUDED
 
 #include <wayward/support/data_franca/reader.hpp>
-#include <wayward/support/data_franca/get_reader.hpp>
+#include <wayward/support/data_franca/adapter.hpp>
 
 namespace wayward {
   namespace data_franca {
@@ -13,6 +13,7 @@ namespace wayward {
     */
     struct Spelunker final : ReaderInterface<Spelunker> {
       Spelunker() {}
+      Spelunker(ReaderPtr ptr) : q_{std::move(ptr)} {}
       Spelunker(const Spelunker&) = default;
       Spelunker(Spelunker&&) = default;
 
@@ -22,20 +23,27 @@ namespace wayward {
       template <typename T>
       Spelunker(T&& object);
 
-      DataType type() const { return q_ ? q_->type() : DataType::NothingType; }
+      Spelunker operator[](size_t idx) const { return this->reader_subscript(idx); }
+      Spelunker operator[](const String& key) const { return this->reader_subscript(key); }
+
+      DataType type() const { return q_ ? q_->type() : DataType::Nothing; }
 
       const IReader& reader_iface() const { return q_ ? *q_ : g_null_reader; }
     private:
       ReaderPtr q_;
       friend struct ReaderInterface<Spelunker>;
-      friend struct iterator;
-      Spelunker(ReaderPtr ptr) : q_{std::move(ptr)} {}
+      friend struct GetAdapter<Spelunker>;
 
       static const NullReader g_null_reader;
     };
 
     template <typename T>
     Spelunker::Spelunker(T&& object) : q_(make_reader(std::forward<T>(object))) {}
+
+    template <>
+    struct GetAdapter<Spelunker> {
+      static ReaderPtr get(const Spelunker& s) { return s.q_; }
+    };
   }
 }
 
