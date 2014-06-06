@@ -36,20 +36,25 @@ namespace app {
     }
 
     w::Response put_post(w::Request& req) {
-      // TODO
-      return w::not_found();
+      p::assign_attributes(post, req.params["post"]);
+      p::save(post);
+      return w::redirect(w::format("/posts/{0}", post->id));
     }
 
     w::Response delete_post(w::Request& req) {
-      return w::not_found();
+      p::destroy(post);
+      return w::redirect(w::format("/posts"));
     }
 
     w::Response get_comments(w::Request& req) {
-      return w::not_found();
+      return w::render("comments.html", {{"post", post}});
     }
 
     w::Response post_comment(w::Request& req) {
-      return w::not_found();
+      auto comment = create<Comment>(req["comment"]);
+      comment->post = post;
+      p::save(comment);
+      return w::redirect(w::format("/posts/{0}", post->id);
     }
   };
 
