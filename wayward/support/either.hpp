@@ -4,6 +4,7 @@
 
 #include <wayward/support/meta.hpp>
 #include <wayward/support/type_info.hpp>
+#include <wayward/support/maybe.hpp>
 
 #include <cassert>
 
@@ -115,6 +116,15 @@ namespace wayward {
       if (is_a<T>()) {
         f(*memory_as<T>());
       }
+    }
+
+    template <typename T>
+    typename std::enable_if<meta::IndexOf<T, Types>::Value < NumTypes, Maybe<T>>::type
+    get() const {
+      if (is_a<T>()) {
+        return Maybe<T>{*memory_as<T>()};
+      }
+      return Nothing;
     }
 
     void swap(Self& other);
