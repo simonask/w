@@ -10,7 +10,7 @@ namespace wayward {
     g_template_engines[name] = func;
   }
 
-  std::shared_ptr<ITemplateEngine> template_engine(const std::string& name, Dict options) {
+  std::shared_ptr<ITemplateEngine> template_engine(const std::string& name, const Options& options) {
     auto it = g_template_engines.find(name);
     if (it != g_template_engines.end()) {
       auto template_engine = it->second();
@@ -21,7 +21,7 @@ namespace wayward {
     }
   }
 
-  void set_template_engine(const std::string& name, Dict options) {
+  void set_template_engine(const std::string& name, Options options) {
     g_current_engine = template_engine(name, std::move(options));
   }
 

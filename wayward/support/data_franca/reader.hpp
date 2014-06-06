@@ -5,6 +5,7 @@
 #include <wayward/support/data_franca/types.hpp>
 
 #include <wayward/support/maybe.hpp>
+#include <wayward/support/cloning_ptr.hpp>
 
 #include <vector>
 #include <memory>
@@ -12,7 +13,7 @@
 namespace wayward {
   namespace data_franca {
     struct IReaderEnumerator;
-    using ReaderEnumeratorPtr = std::unique_ptr<IReaderEnumerator>;
+    using ReaderEnumeratorPtr = CloningPtr<IReaderEnumerator>;
 
     /*
       A Reader traverses data and inspects it as it passes over it.
@@ -43,6 +44,7 @@ namespace wayward {
       virtual Maybe<String> current_key() const = 0;
       virtual bool at_end() const = 0;
       virtual void move_next() = 0;
+      virtual IReaderEnumerator* clone() const = 0;
     };
 
     struct NullReader final : IReader {
@@ -60,7 +62,7 @@ namespace wayward {
       ReaderEnumeratorPtr enumerator() const { return nullptr; }
     };
 
-    struct ReaderEnumeratorAtEnd : IReaderEnumerator {
+    struct ReaderEnumeratorAtEnd : Cloneable<ReaderEnumeratorAtEnd, IReaderEnumerator> {
       ReaderPtr current_value() const final { return nullptr; }
       Maybe<String> current_key() const final { return Nothing; }
       bool at_end() const final { return true; }
@@ -94,6 +96,8 @@ namespace wayward {
 
     template <typename Self, typename Subscript>
     struct ReaderInterface<Self, Subscript>::iterator {
+      iterator(const iterator&) = default;
+      iterator(iterator&&) = default;
       bool operator==(const iterator& other) const {
         return (enumerator_ == nullptr && other.enumerator_ == nullptr) || (enumerator_->at_end() == other.enumerator_->at_end());
       }

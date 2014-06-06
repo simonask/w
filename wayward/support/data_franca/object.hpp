@@ -7,6 +7,7 @@
 
 #include <wayward/support/data_franca/reader.hpp>
 #include <wayward/support/data_franca/writer.hpp>
+#include <wayward/support/data_franca/adapter.hpp>
 
 #include <wayward/support/cloning_ptr.hpp>
 
@@ -29,6 +30,27 @@ namespace wayward {
       // Convenience:
       Object(int n) : data_((Integer)n) {}
       Object(const char* str) : data_(std::string{str}) {}
+      static Object dictionary() { Object o; o.data_ = Dictionary{}; return std::move(o); }
+      static Object list() { Object o; o.data_ = List{}; return std::move(o); }
+
+      template <typename T>
+      static Object dictionary(std::initializer_list<std::pair<String, T>> kv) {
+        auto d = dictionary();
+        for (auto& it: kv) {
+          d[it.first] = it.second;
+        }
+        return std::move(d);
+      }
+
+      template <typename T>
+      static Object list(std::initializer_list<T> values) {
+        auto l = list();
+        l.reserve(values.size());
+        for (auto& it: values) {
+          l.push_back(std::move(it));
+        }
+        return std::move(l);
+      }
 
       Object* clone() const { return new Object(*this); }
 
@@ -37,6 +59,8 @@ namespace wayward {
       const Object& operator[](size_t idx) const { return this->reader_subscript(idx); }
       Object& operator[](const String& key) { return this->writer_subscript(key); }
       const Object& operator[](const String& key) const { return this->reader_subscript(key); }
+      Object& operator[](const char* key) { return this->writer_subscript(key); }
+      const Object& operator[](const char* key) const { return this->reader_subscript(key); }
 
       // This sets the type to 'List':
       void reserve(size_t idx);
@@ -51,6 +75,10 @@ namespace wayward {
       const Object&  get(const String& key) const;
       size_t         length() const;
       const Object&  at(size_t idx) const;
+
+      struct ListEnumerator;
+      struct DictEnumerator;
+      ReaderEnumeratorPtr enumerator() const;
 
       // WriterInterface required interface:
       Object& writer_iface() { return *this; }
@@ -78,94 +106,52 @@ namespace wayward {
       > data_;
 
       static const Object g_null_object;
-    };
 
-    inline DataType Object::type() const {
-      // XXX: Slightly fragile, but never change the order of the Either.
-      switch (data_.which()) {
-        case 0: return DataType::Nothing;
-        case 1: return DataType::Boolean;
-        case 2: return DataType::Integer;
-        case 3: return DataType::Real;
-        case 4: return DataType::String;
-        case 5: return DataType::List;
-        case 6: return DataType::Dictionary;
-        default: return DataType::Nothing;
-      }
-    }
+      friend struct Enumerator;
+      friend struct Adapter<Object>;
+    };
 
     struct ObjectIndexOutOfBounds : Error {
       ObjectIndexOutOfBounds(const std::string& msg) : Error{msg} {}
     };
 
-    inline Object& Object::reference_at_index(size_t idx) {
-      if (type() != DataType::List) {
-        throw ObjectIndexOutOfBounds{"Object is not a list."};
-      }
-      Object* ptr = nullptr;
-      data_.template when<List>([&](List& list) {
-        if (idx < list.size()) {
-          ptr = list[idx].get();
-        }
-      });
-      if (ptr == nullptr) {
-        throw ObjectIndexOutOfBounds{"Index out of bounds."};
-      }
-      return *ptr;
-    }
+    template <>
+    struct Adapter<Object> : IAdapter {
+      Adapter(Object& ref) : ref_(ref) {}
 
-    inline const Object& Object::at(size_t idx) const {
-      if (type() != DataType::List) {
-        throw ObjectIndexOutOfBounds{"Object is not a list."};
-      }
-      const Object* ptr = nullptr;
-      data_.template when<List>([&](const List& list) {
-        if (idx < list.size()) {
-          ptr = list[idx].get();
-        }
-      });
-      if (ptr == nullptr) {
-        throw ObjectIndexOutOfBounds{"Index out of bounds."};
-      }
-      return *ptr;
-    }
+      // IReader interface:
+      DataType type() const final { return ref_.type(); }
+      Maybe<Boolean> get_boolean() const final { return ref_.get_boolean(); }
+      Maybe<Integer> get_integer() const final { return ref_.get_integer(); }
+      Maybe<Real>    get_real()    const final { return ref_.get_real(); }
+      Maybe<String>  get_string()  const final { return ref_.get_string(); }
+      bool has_key(const String& key) const final { return ref_.has_key(key); }
+      ReaderPtr get(const String& key) const final { return make_reader(ref_.get(key)); }
+      size_t   length()       const final { return ref_.length(); }
+      ReaderPtr at(size_t idx) const final { return make_reader(ref_.at(idx)); }
+      ReaderEnumeratorPtr enumerator() const final { return ref_.enumerator(); }
 
-    inline Object& Object::reference_at_key(const String& key) {
-      if (type() != DataType::Dictionary) {
-        data_ = Dictionary{};
+      // IWriter interface:
+      bool set_boolean(Boolean b) final { return ref_.set_boolean(b); }
+      bool set_integer(Integer n) final { return ref_.set_integer(n); }
+      bool set_real(Real r) final { return ref_.set_real(r); }
+      bool set_string(String str) final { return ref_.set_string(std::move(str)); }
+      AdapterPtr reference_at_index(size_t idx) final { return make_adapter(ref_.reference_at_index(idx)); }
+      AdapterPtr push_back() final {
+        ref_.push_back(Object{});
+        AdapterPtr ptr;
+        ref_.data_.template when<Object::List>([&](Object::List& list) {
+          ptr = make_adapter(*list.back());
+        });
+        return std::move(ptr);
       }
-      Object* ptr = nullptr;
-      data_.template when<Dictionary>([&](Dictionary& dict) {
-        auto it = dict.find(key);
-        if (it == dict.end()) {
-          it = dict.insert(std::make_pair(key, CloningPtr<Object>{new Object})).first;
-        }
-        ptr = it->second.get();
-      });
-      assert(ptr != nullptr);
-      return *ptr;
-    }
+      AdapterPtr reference_at_key(const String& key) final { return make_adapter(ref_.reference_at_key(key)); }
+      bool erase(const String& key) final { return ref_.erase(key); }
 
-    inline bool Object::push_back(Object other) {
-      if (type() != DataType::List) {
-        data_ = List{};
-      }
-      data_.template when<List>([&](List& list) {
-        list.emplace_back(new Object(std::move(other)));
-      });
-      return true;
-    }
+      Object& ref_;
+    };
 
-    inline size_t Object::length() const {
-      size_t len = 0;
-      data_.template when<List>([&](const List& list) {
-        len = list.size();
-      });
-      data_.template when<Dictionary>([&](const Dictionary& dict) {
-        len = dict.size();
-      });
-      return len;
-    }
+
   }
 }
 

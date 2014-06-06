@@ -2,7 +2,6 @@
 #include <wayward/support/event_loop.hpp>
 #include <wayward/support/fiber.hpp>
 #include <wayward/support/event_loop_private.hpp>
-#include <wayward/support/mutable_node.hpp>
 
 #include <cassert>
 #include <event2/event.h>
@@ -31,24 +30,19 @@ namespace wayward {
       return std::move(keys);
     }
 
-    void add_destructured_param_to_dict(MutableNode& params, std::string k, std::string v) {
+    void add_destructured_param_to_dict(data_franca::Object& params, std::string k, std::string v) {
       static const std::regex restructuralize_dictionary_keys { "^([^\\[]+)(\\[[^\\]]+\\])*$" };
       MatchResults results;
       if (std::regex_match(k, results, restructuralize_dictionary_keys)) {
         auto keys = get_keys_from_destructured_param(k);
-        MutableNode dict;
-        dict.take_data(params.data());
+        data_franca::Object* dict = &params;
         for (size_t i = 0; i < keys.size(); ++i) {
           auto& key = keys[i];
 
-          if (dict.type() != NodeType::Dictionary) {
-            dict = MutableNode::dictionary();
-          }
-
           if (i + 1 == keys.size()) {
-            dict[key] = std::move(v);
+            (*dict)[key] = std::move(v);
           } else {
-            dict.take_data(dict[key].data());
+            dict = &(*dict)[key];
           }
         }
       } else {
@@ -112,7 +106,7 @@ namespace wayward {
         default: break;
       }
 
-      MutableNode params = MutableNode::dictionary();
+      data_franca::Object params = data_franca::Object::dictionary();
 
       if (uri->query) {
         for (auto param = uri->query->tqh_first; param; param = param->next.tqe_next) {
@@ -124,7 +118,7 @@ namespace wayward {
         }
       }
 
-      r.params.take_data(std::move(params).data());
+      r.params = std::move(params);
 
       std::string query_raw { uri->query_raw ? reinterpret_cast<char*>(uri->query_raw) : "" };
       std::string fragment  { uri->fragment  ? reinterpret_cast<char*>(uri->fragment)  : "" };

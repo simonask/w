@@ -3,6 +3,7 @@
 #define WAYWARD_SUPPORT_META_HPP_INCLUDED
 
 #include <type_traits>
+#include <limits.h>
 
 namespace wayward {
   namespace meta {

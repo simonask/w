@@ -89,6 +89,16 @@ namespace wayward {
   }
 
   template <typename T>
+  bool operator==(const CloningPtr<T>& lhs, std::nullptr_t) {
+    return lhs.get() == nullptr;
+  }
+
+  template <typename T>
+  bool operator==(std::nullptr_t, const CloningPtr<T>& rhs) {
+    return rhs.get() == nullptr;
+  }
+
+  template <typename T>
   CloningPtr<T> make_cloning_ptr(T* ptr) {
     return CloningPtr<T>(ptr);
   }

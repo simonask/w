@@ -4,7 +4,6 @@ import os
 wayward_support_sources = Split("""
   wayward/support/format.cpp
   wayward/support/uri.cpp
-  wayward/support/node.cpp
   wayward/support/json.cpp
   wayward/support/datetime/datetime.cpp
   wayward/support/datetime/clock.cpp
@@ -17,9 +16,9 @@ wayward_support_sources = Split("""
   wayward/support/http.cpp
   wayward/support/teamwork.cpp
   wayward/support/plugin.cpp
-  wayward/support/mutable_node.cpp
   wayward/support/data_franca/spelunker.cpp
   wayward/support/data_franca/mutator.cpp
+  wayward/support/data_franca/object.cpp
   3rdparty/libevhtp/evhtp.c
   3rdparty/libevhtp/htparse/htparse.c
   3rdparty/libevhtp/evthr/evthr.c

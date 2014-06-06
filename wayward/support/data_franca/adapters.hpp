@@ -48,6 +48,15 @@ namespace wayward {
       bool set_string(String str) final { this->ref_ = std::move(str); return true; }
     };
 
+    struct StringCopyReader : AdapterBase<String> {
+      String string_;
+      StringCopyReader(String str) : AdapterBase<String>(string_), string_(std::move(str)) {}
+
+      DataType type() const final { return DataType::String; }
+      Maybe<String> get_string() const final { return string_; }
+      bool set_string(String str) final { string_ = std::move(str); return true; }
+    };
+
     template <typename T>
     struct Adapter<std::vector<T>> : AdapterBase<std::vector<T>> {
       Adapter(std::vector<T>& ref) : AdapterBase<std::vector<T>>(ref) {}
@@ -62,7 +71,7 @@ namespace wayward {
         return nullptr;
       }
 
-      struct Enumerator : IReaderEnumerator {
+      struct Enumerator : Cloneable<Enumerator, IReaderEnumerator> {
         using Iterator = typename std::vector<T>::const_iterator;
         Enumerator(Iterator it, Iterator end) : it_(it), end_(end) {}
         Iterator it_;
@@ -120,7 +129,7 @@ namespace wayward {
         return nullptr;
       }
 
-      struct Enumerator : IReaderEnumerator {
+      struct Enumerator : Cloneable<Enumerator, IReaderEnumerator> {
         using Iterator = typename std::map<String, T>::const_iterator;
         Iterator it_;
         Iterator end_;
@@ -168,6 +177,19 @@ namespace wayward {
           return true;
         }
         return false;
+      }
+    };
+
+    template <typename T>
+    struct OwningMapAdapter : Adapter<std::map<String, T>> {
+      std::map<String, T> map_;
+      OwningMapAdapter(std::map<String, T> map) : Adapter<std::map<String, T>>(map_), map_(std::move(map)) {}
+    };
+
+    template <size_t N>
+    struct GetAdapter<char[N]> {
+      static ReaderPtr get(const char* str) {
+        return ReaderPtr{new StringCopyReader{String{str, N}}};
       }
     };
   }

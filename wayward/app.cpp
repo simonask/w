@@ -151,7 +151,7 @@ namespace wayward {
       if (h) {
         try {
           if (app->config.log_requests) {
-            log::debug("w", wayward::format("Parameters: {0}", req.params.to_string()));
+            log::debug("w", wayward::format("Parameters: {0}", as_json(req.params, JSONMode::Compact)));
           }
           return h->handler(req);
         }

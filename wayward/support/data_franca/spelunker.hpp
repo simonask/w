@@ -23,8 +23,12 @@ namespace wayward {
       template <typename T>
       Spelunker(T&& object);
 
+      template <typename T>
+      Spelunker(std::initializer_list<T> list);
+
       Spelunker operator[](size_t idx) const { return this->reader_subscript(idx); }
       Spelunker operator[](const String& key) const { return this->reader_subscript(key); }
+      Spelunker operator[](const char* key) const { return this->reader_subscript(key); }
 
       DataType type() const { return q_ ? q_->type() : DataType::Nothing; }
 
@@ -39,6 +43,11 @@ namespace wayward {
 
     template <typename T>
     Spelunker::Spelunker(T&& object) : q_(make_reader(std::forward<T>(object))) {}
+
+    template <typename T> struct GetOwningAdapter;
+
+    template <typename T>
+    Spelunker::Spelunker(std::initializer_list<T> list) : q_(new OwningMapAdapter<T>(list)) {}
 
     template <>
     struct GetAdapter<Spelunker> {

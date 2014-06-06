@@ -12,7 +12,6 @@
 #include <wayward/support/uri.hpp>
 #include <wayward/support/format.hpp>
 #include <wayward/support/logger.hpp>
-#include <wayward/support/node.hpp>
 #include <wayward/support/json.hpp>
 #include <wayward/support/plugin.hpp>
 
@@ -40,7 +39,7 @@ namespace wayward {
     return r;
   }
 
-  Response render(const std::string& template_name, Dict params = Dict{}, HTTPStatusCode code = HTTPStatusCode::OK);
+  Response render(const std::string& template_name, Options params = Options{}, HTTPStatusCode code = HTTPStatusCode::OK);
   Response redirect(std::string new_location, HTTPStatusCode code = HTTPStatusCode::Found);
   Response file(std::string path, Maybe<std::string> content_type = Nothing);
 

@@ -43,6 +43,7 @@ namespace wayward {
     };
 
     template <typename T, typename Enable = void> struct Adapter;
+    template <typename T, typename Enable = void> struct OwningAdapter;
 
 
     template <typename T> struct GetAdapter;

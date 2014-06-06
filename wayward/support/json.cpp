@@ -3,6 +3,8 @@
 
 namespace wayward {
   namespace {
+    using namespace data_franca;
+
     void escape_json_stream(std::ostream& os, const std::string& input) {
       for (auto it = input.cbegin(); it != input.cend(); it++) {
         switch (*it) {
@@ -25,13 +27,13 @@ namespace wayward {
       }
     }
 
-    void node_to_json_stream(std::ostream& os, const Node& node, JSONMode mode, int indent = 0) {
+    void node_to_json_stream(std::ostream& os, const Spelunker& node, JSONMode mode, int indent = 0) {
       switch (node.type()) {
-        case NodeType::Nil: {
+        case DataType::Nothing: {
           os << "null";
           break;
         }
-        case NodeType::Boolean: {
+        case DataType::Boolean: {
           bool b;
           if (node >> b) {
             os << (b ? "true" : "false");
@@ -41,7 +43,7 @@ namespace wayward {
           }
           break;
         }
-        case NodeType::Integer: {
+        case DataType::Integer: {
           int64_t n;
           if (node >> n) {
             os << n;
@@ -51,7 +53,7 @@ namespace wayward {
           }
           break;
         }
-        case NodeType::Float: {
+        case DataType::Real: {
           double n;
           if (node >> n) {
             os << n;
@@ -61,7 +63,7 @@ namespace wayward {
           }
           break;
         }
-        case NodeType::String: {
+        case DataType::String: {
           std::string str;
           if (node >> str) {
             os << "\"";
@@ -73,7 +75,7 @@ namespace wayward {
           }
           break;
         }
-        case NodeType::List: {
+        case DataType::List: {
           size_t len = node.length();
           os << '[';
           if (mode == JSONMode::Compact) {
@@ -101,31 +103,30 @@ namespace wayward {
           os << ']';
           break;
         }
-        case NodeType::Dictionary: {
-          auto keys = node.keys();
-          size_t len = keys.size();
+        case DataType::Dictionary: {
           os << '{';
           if (mode == JSONMode::Compact) {
-            for (auto it = keys.begin(); it != keys.end(); ++it) {
+            for (auto it = node.begin(); it != node.end();) {
               os << "\"";
-              escape_json_stream(os, *it);
+              escape_json_stream(os, *it.key());
               os << "\": ";
-              node_to_json_stream(os, node[*it], mode);
-              if (it+1 != keys.end()) {
+              node_to_json_stream(os, *it, mode);
+              ++it;
+              if (it != node.end()) {
                 os << ", ";
               }
             }
           } else {
-            if (len != 0) {
+            if (node.length() != 0) {
               indentation(os, indent);
-              for (auto it = keys.begin(); it != keys.end(); ++it) {
+              for (auto it = node.begin(); it != node.end();) {
                 indentation(os, 1);
-                os << "\"";
-                escape_json_stream(os, *it);
+                escape_json_stream(os, *it.key());
                 os << "\": ";
-                node_to_json_stream(os, node[*it], mode, indent+1);
-                if (it+1 != keys.end()) {
-                  os << ',';
+                node_to_json_stream(os, *it, mode, indent+1);
+                ++it;
+                if (it != node.end()) {
+                  os << ", ";
                 }
                 os << '\n';
                 indentation(os, indent);
@@ -145,7 +146,7 @@ namespace wayward {
     return ss.str();
   }
 
-  std::string as_json(const Node& node, JSONMode mode) {
+  std::string as_json(const data_franca::Spelunker& node, JSONMode mode) {
     std::stringstream ss;
     node_to_json_stream(ss, node, mode);
     return ss.str();
