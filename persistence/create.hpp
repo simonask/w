@@ -4,11 +4,15 @@
 
 #include <persistence/record_ptr.hpp>
 #include <persistence/context.hpp>
-#include <wayward/support/data_franca/spelunker.hpp>
+#include <persistence/assign_attributes.hpp>
 
 namespace persistence {
   template <typename T>
-  RecordPtr<T> create(Context&, const wayward::data_franca::Spelunker& data = wayward::data_franca::Spelunker{});
+  RecordPtr<T> create(Context& ctx, const wayward::data_franca::Spelunker& data = wayward::data_franca::Spelunker{}) {
+    auto record = ctx.create<T>();
+    assign_attributes(record, data);
+    return std::move(record);
+  }
 }
 
 #endif // PERSISTENCE_CREATE_HPP_INCLUDED
