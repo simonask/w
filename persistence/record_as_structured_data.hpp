@@ -54,6 +54,11 @@ namespace wayward {
         return nullptr;
       }
 
+      bool set_nothing() final {
+        this->ref_ = nullptr;
+        return true;
+      }
+
       bool erase(const String& key) final {
         return false; // TODO?
       }
