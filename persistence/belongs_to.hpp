@@ -17,6 +17,8 @@ namespace persistence {
     bool operator==(const RecordPtr<AssociatedType>& rhs) const { return ptr_ == rhs; }
     bool operator!=(const RecordPtr<AssociatedType>& rhs) const { return ptr_ != rhs; }
 
+    RecordPtr<AssociatedType>& operator=(RecordPtr<AssociatedType> ptr) { return ptr_ = std::move(ptr); }
+
     AssociatedType* operator->() const { return ptr_.get(); } // TODO: Populate on-demand
 
     // ISingularAssociationTo<> interface
