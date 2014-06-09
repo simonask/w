@@ -4,6 +4,13 @@
 
 #include <string>
 
+namespace wayward {
+  namespace data_franca {
+    struct ScalarSpelunker;
+    struct ScalarMutator;
+  }
+}
+
 namespace persistence {
   struct IType {
     virtual std::string name() const = 0;
@@ -14,7 +21,8 @@ namespace persistence {
 
   template <typename T>
   struct IDataTypeFor : IType {
-    virtual void extract_from_results(T& value, const IResultSet&, size_t row, const std::string& col_name) const = 0;
+    virtual bool deserialize_value(T& value, const wayward::data_franca::ScalarSpelunker& source) const = 0;
+    virtual bool serialize_value(const T& value, wayward::data_franca::ScalarMutator& target) const = 0;
     virtual bool has_value(const T& value) const = 0;
   };
 

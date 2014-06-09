@@ -69,6 +69,7 @@ namespace wayward {
 
       // WriterInterface required interface:
       Object& writer_iface() { return *this; }
+      bool set_nothing() { data_ = Nothing; return true; }
       bool set_boolean(Boolean b) { data_ = b; return true; }
       bool set_integer(Integer n) { data_ = n; return true; }
       bool set_real(Real r) { data_ = r; return true; }
@@ -119,6 +120,7 @@ namespace wayward {
       ReaderEnumeratorPtr enumerator() const final { return ref_.enumerator(); }
 
       // IWriter interface:
+      bool set_nothing() final { return ref_.set_nothing(); }
       bool set_boolean(Boolean b) final { return ref_.set_boolean(b); }
       bool set_integer(Integer n) final { return ref_.set_integer(n); }
       bool set_real(Real r) final { return ref_.set_real(r); }

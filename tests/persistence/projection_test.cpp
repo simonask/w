@@ -94,7 +94,7 @@ namespace {
     auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
-      EXPECT_EQ((bool)foo.nullable_string_value, (bool)results().rows_.at(counter).at(2));
+      EXPECT_EQ((bool)results().rows_.at(counter).at(2), (bool)foo.nullable_string_value);
       ++counter;
     });
     EXPECT_NE(0, counter);
@@ -108,7 +108,7 @@ namespace {
       ss.str(*results().rows_.at(counter).at(3));
       int32_t n;
       ss >> n;
-      EXPECT_EQ(foo.int32_value, n);
+      EXPECT_EQ(n, foo.int32_value);
       ++counter;
     });
     EXPECT_NE(0, counter);
@@ -122,7 +122,7 @@ namespace {
       ss.str(*results().rows_.at(counter).at(4));
       double n;
       ss >> n;
-      EXPECT_EQ(foo.double_value, n);
+      EXPECT_EQ(n, foo.double_value);
       ++counter;
     });
     EXPECT_NE(0, counter);

@@ -59,8 +59,12 @@ namespace persistence {
       return value.id.is_persisted();
     }
 
-    void extract_from_results(BelongsTo<T>& value, const IResultSet& r, size_t row, const std::string& col) const final {
-      get_type<PrimaryKey>()->extract_from_results(value.id, r, row, col);
+    bool deserialize_value(BelongsTo<T>& value, const wayward::data_franca::ScalarSpelunker& source) const final {
+      return get_type<PrimaryKey>()->deserialize_value(value.id, source);
+    }
+
+    bool serialize_value(const BelongsTo<T>& value, wayward::data_franca::ScalarMutator& target) const final {
+      return get_type<PrimaryKey>()->serialize_value(value.id, target);
     }
   };
 

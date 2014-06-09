@@ -1,6 +1,9 @@
 #include <persistence/datetime.hpp>
 #include <persistence/result_set.hpp>
 
+#include <wayward/support/data_franca/spelunker.hpp>
+#include <wayward/support/data_franca/mutator.hpp>
+
 namespace persistence {
   using wayward::DateTime;
 
@@ -9,14 +12,21 @@ namespace persistence {
     return t;
   }
 
-  void DateTimeType::extract_from_results(DateTime& value, const IResultSet& rs, size_t row, const std::string& col) const {
-    auto string = rs.get(row, col);
-
-    // TODO: Handle time zones!
-    auto m = DateTime::strptime(string, "%Y-%m-%d %H:%M:%s");
-    if (m) {
-      value = *m;
+  bool DateTimeType::deserialize_value(DateTime& value, const wayward::data_franca::ScalarSpelunker& source) const {
+    std::string string_rep;
+    if (source >> string_rep) {
+      auto m = DateTime::strptime(string_rep, "%Y-%m-%d %H:%M:%s");
+      if (m) {
+        value = *m;
+        return true;
+      }
     }
+    return false;
+  }
+
+  bool DateTimeType::serialize_value(const DateTime& value, wayward::data_franca::ScalarMutator& target) const {
+    target << value.strftime("%Y-%m-%d %H:%M:%s");
+    return true;
   }
 
   namespace relational_algebra {

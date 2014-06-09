@@ -44,6 +44,9 @@ namespace wayward {
     T& operator*() { return *get(); }
 
     void swap(Maybe<T>& other);
+
+    T* unsafe_get() { return reinterpret_cast<T*>(&storage_); }
+    const T& unsafe_get() const { return reinterpret_cast<const T*>(&storage_); }
   private:
     typename std::aligned_storage<sizeof(T), alignof(T)>::type storage_;
     bool has_value_ = false;

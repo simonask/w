@@ -10,32 +10,31 @@ namespace wayward {
     template <typename T>
     struct Adapter<Maybe<T>> : IAdapter {
       Maybe<T>& ref_;
-      Adapter(Maybe<T>& ref) : ref_(ref) {}
-
-      ReaderPtr reader() const { return make_reader(*ref_); }
-      AdapterPtr adapter() { return make_adapter(*ref_); }
+      Adapter<T> adapter_;
+      Adapter(Maybe<T>& ref) : ref_(ref), adapter_(*ref_.unsafe_get()) {}
 
       // IReader interface:
-      DataType type() const final { return ref_ ? reader()->type() : DataType::Nothing; }
-      Maybe<Boolean> get_boolean() const final { return ref_ ? reader()->get_boolean() : Nothing; }
-      Maybe<Integer> get_integer() const final { return ref_ ? reader()->get_integer() : Nothing; }
-      Maybe<Real>    get_real()    const final { return ref_ ? reader()->get_real() : Nothing; }
-      Maybe<String>  get_string()  const final { return ref_ ? reader()->get_string() : Nothing; }
-      bool has_key(const String& key) const final { return ref_ ? reader()->has_key(key) : false; }
-      ReaderPtr get(const String& key) const final { return ref_ ? reader()->get(key) : nullptr; }
-      size_t   length()       const final { return ref_ ? reader()->length() : 0; }
-      ReaderPtr at(size_t idx) const final { return ref_ ? reader()->at(idx) : nullptr; }
-      ReaderEnumeratorPtr enumerator() const final { return ref_ ? reader()->enumerator() : nullptr; }
+      DataType type() const final { return ref_ ? adapter_.type() : DataType::Nothing; }
+      Maybe<Boolean> get_boolean() const final { return ref_ ? adapter_.get_boolean() : Nothing; }
+      Maybe<Integer> get_integer() const final { return ref_ ? adapter_.get_integer() : Nothing; }
+      Maybe<Real>    get_real()    const final { return ref_ ? adapter_.get_real() : Nothing; }
+      Maybe<String>  get_string()  const final { return ref_ ? adapter_.get_string() : Nothing; }
+      bool has_key(const String& key) const final { return ref_ ? adapter_.has_key(key) : false; }
+      ReaderPtr get(const String& key) const final { return ref_ ? adapter_.get(key) : nullptr; }
+      size_t   length()       const final { return ref_ ? adapter_.length() : 0; }
+      ReaderPtr at(size_t idx) const final { return ref_ ? adapter_.at(idx) : nullptr; }
+      ReaderEnumeratorPtr enumerator() const final { return ref_ ? adapter_.enumerator() : nullptr; }
 
       // IWriter interface:
-      bool set_boolean(Boolean b) final { return ref_ ? adapter()->set_boolean(b) : false; }
-      bool set_integer(Integer n) final { return ref_ ? adapter()->set_integer(n) : false; }
-      bool set_real(Real r) final       { return ref_ ? adapter()->set_real(r) : false; }
-      bool set_string(String str) final { return ref_ ? adapter()->set_string(std::move(str)) : false; }
-      AdapterPtr reference_at_index(size_t idx) final { return ref_ ? adapter()->reference_at_index(idx) : nullptr; }
-      AdapterPtr push_back() final { return ref_ ? adapter()->push_back() : nullptr; }
-      AdapterPtr reference_at_key(const String& key) final { return ref_ ? adapter()->reference_at_key(key) : nullptr; }
-      bool erase(const String& key) final { return ref_ ? adapter()->erase(key) : false; }
+      bool set_nothing() final { ref_ = Nothing; return true; }
+      bool set_boolean(Boolean b) final { return ref_ ? adapter_.set_boolean(b) : false; }
+      bool set_integer(Integer n) final { return ref_ ? adapter_.set_integer(n) : false; }
+      bool set_real(Real r) final       { return ref_ ? adapter_.set_real(r) : false; }
+      bool set_string(String str) final { return ref_ ? adapter_.set_string(std::move(str)) : false; }
+      AdapterPtr reference_at_index(size_t idx) final { return ref_ ? adapter_.reference_at_index(idx) : nullptr; }
+      AdapterPtr push_back() final { return ref_ ? adapter_.push_back() : nullptr; }
+      AdapterPtr reference_at_key(const String& key) final { return ref_ ? adapter_.reference_at_key(key) : nullptr; }
+      bool erase(const String& key) final { return ref_ ? adapter_.erase(key) : false; }
     };
 
     template <>

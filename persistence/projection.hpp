@@ -19,6 +19,7 @@
 #include <wayward/support/meta.hpp>
 #include <wayward/support/error.hpp>
 #include <wayward/support/logger.hpp>
+#include <wayward/support/data_franca/adapters.hpp>
 
 #include <functional>
 #include <cassert>
@@ -160,7 +161,9 @@ namespace persistence {
       for (auto& pair: column_aliases_) {
         auto property = pair.first;
         auto& alias = pair.second;
-        property->set(*record, result_set, row, alias);
+        Maybe<std::string> col_value = result_set.get(row, alias);
+        wayward::data_franca::Adapter<Maybe<std::string>> reader { col_value };
+        property->deserialize(*record, reader);
       }
 
       // Populate child associations
@@ -260,7 +263,9 @@ namespace persistence {
       auto conn = current_connection_provider().acquire_connection_for_data_store(get_type<Primary>()->data_store());
       auto results = conn.execute(*p_copy.query, q_);
       uint64_t count = 0;
-      get_type<decltype(count)>()->extract_from_results(count, *results, 0, "count");
+      Maybe<std::string> count_column = results->get(0, "count");
+      std::stringstream ss(*count_column);
+      ss >> count;
       return count;
     }
 

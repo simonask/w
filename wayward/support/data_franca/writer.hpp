@@ -12,6 +12,7 @@ namespace wayward {
     struct IWriter {
       virtual ~IWriter() {}
 
+      virtual bool set_nothing() = 0;
       virtual bool set_boolean(Boolean b) = 0;
       virtual bool set_integer(Integer n) = 0;
       virtual bool set_real(Real r) = 0;
@@ -26,6 +27,7 @@ namespace wayward {
 
     template <typename Self, typename Subscript = Self>
     struct WriterInterface {
+      bool operator<<(NothingType);
       bool operator<<(Boolean b);
       bool operator<<(Integer n);
       bool operator<<(Real r);
@@ -54,6 +56,11 @@ namespace wayward {
     };
 
     template <typename Self, typename Subscript>
+    bool WriterInterface<Self, Subscript>::operator<<(NothingType) {
+      return writer().set_nothing();
+    }
+
+    template <typename Self, typename Subscript>
     bool WriterInterface<Self, Subscript>::operator<<(Boolean b) {
       return writer().set_boolean(b);
     }
@@ -65,7 +72,7 @@ namespace wayward {
 
     template <typename Self, typename Subscript>
     bool WriterInterface<Self, Subscript>::operator<<(Real r) {
-      return writer().set_read(r);
+      return writer().set_real(r);
     }
 
     template <typename Self, typename Subscript>

@@ -40,9 +40,14 @@ namespace persistence {
         return PQgetisnull(result, row, idx);
       }
 
-      std::string get(size_t row, const std::string& col) const final {
+      Maybe<std::string> get(size_t row, const std::string& col) const final {
         auto idx = PQfnumber(result, col.c_str());
-        return std::string{PQgetvalue(result, row, idx)};
+        bool is_null = PQgetisnull(result, row, idx);
+        if (!is_null) {
+          return std::string{PQgetvalue(result, row, idx)};
+        } else {
+          return wayward::Nothing;
+        }
       }
 
       std::vector<std::string> columns() const final {

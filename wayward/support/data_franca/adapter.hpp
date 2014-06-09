@@ -30,6 +30,7 @@ namespace wayward {
       ReaderEnumeratorPtr enumerator() const override { return nullptr; }
 
       // IWriter interface:
+      bool set_nothing() override { return false; }
       bool set_boolean(Boolean b) override { return false; }
       bool set_integer(Integer n) override { return false; }
       bool set_real(Real r) override       { return false; }

@@ -105,7 +105,7 @@ namespace ajg {
             return node.type() < other.node.type();
           }
         } else {
-          return node < other.node;
+          return false;
         }
       }
 

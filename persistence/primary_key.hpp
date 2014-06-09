@@ -6,6 +6,7 @@
 #include <persistence/type.hpp>
 #include <persistence/column_abilities.hpp>
 #include <persistence/result_set.hpp>
+#include <persistence/types.hpp>
 
 namespace persistence {
   using int64 = std::int64_t;
@@ -30,12 +31,12 @@ namespace persistence {
       return value.is_persisted();
     }
 
-    void extract_from_results(PrimaryKey& value, const IResultSet& r, size_t row, const std::string& col) const final {
-      std::stringstream ss;
-      ss.str(r.get(row, col));
-      int64_t v;
-      ss >> v;
-      value = PrimaryKey{v};
+    bool deserialize_value(PrimaryKey& value, const wayward::data_franca::ScalarSpelunker& source) const final {
+      return get_type<int64_t>()->deserialize_value(value.id, source);
+    }
+
+    bool serialize_value(const PrimaryKey& value, wayward::data_franca::ScalarMutator& target) const final {
+      return get_type<int64_t>()->serialize_value(value.id, target);
     }
   };
 

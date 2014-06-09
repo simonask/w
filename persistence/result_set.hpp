@@ -5,7 +5,11 @@
 #include <string>
 #include <vector>
 
+#include <wayward/support/maybe.hpp>
+
 namespace persistence {
+  using wayward::Maybe;
+
   struct IResultSet {
     virtual ~IResultSet() {}
 
@@ -13,7 +17,7 @@ namespace persistence {
     virtual size_t height() const = 0; // Number of rows
     virtual std::vector<std::string> columns() const = 0;
     virtual bool is_null_at(size_t idx, const std::string& col) const = 0;
-    virtual std::string get(size_t idx, const std::string& col) const = 0;
+    virtual Maybe<std::string> get(size_t idx, const std::string& col) const = 0;
   };
 }
 

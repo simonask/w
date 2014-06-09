@@ -17,7 +17,7 @@ namespace persistence {
       size_t height() const { return rows_.size(); }
       std::vector<std::string> columns() const { return columns_; }
       bool is_null_at(size_t idx, const std::string& col) const;
-      std::string get(size_t idx, const std::string& col) const;
+      Maybe<std::string> get(size_t idx, const std::string& col) const;
 
       std::vector<std::string> columns_;
       std::vector<std::vector<Maybe<std::string>>> rows_;
@@ -40,13 +40,8 @@ namespace persistence {
       return !m;
     }
 
-    inline std::string ResultSetMock::get(size_t idx, const std::string& col) const {
-      auto m = value_at(idx, col);
-      if (m) {
-        return *m;
-      } else {
-        return "";
-      }
+    inline Maybe<std::string> ResultSetMock::get(size_t idx, const std::string& col) const {
+      return value_at(idx, col);
     }
   }
 }

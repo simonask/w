@@ -7,6 +7,8 @@
 #include <persistence/result_set.hpp>
 
 #include <wayward/support/data_franca/adapter.hpp>
+#include <wayward/support/data_franca/spelunker.hpp>
+#include <wayward/support/data_franca/mutator.hpp>
 
 namespace persistence {
   struct IProperty {
@@ -28,7 +30,8 @@ namespace persistence {
     virtual ~IPropertyOf() {}
 
     virtual bool has_value(const T& record) const = 0;
-    virtual void set(T& record, const IResultSet&, size_t row_num, const std::string& col_name) const = 0;
+    virtual bool deserialize(T& record, const wayward::data_franca::ScalarSpelunker& value) const = 0;
+    virtual bool serialize(const T& record, wayward::data_franca::ScalarMutator& target) const = 0;
 
     virtual wayward::data_franca::ReaderPtr
     get_member_reader(const T&) const = 0;
@@ -50,10 +53,15 @@ namespace persistence {
       return get_type<M>()->has_value(value);
     }
 
-    void set(T& record, const IResultSet& results, size_t row_num, const std::string& col_name) const override {
+    bool deserialize(T& record, const wayward::data_franca::ScalarSpelunker& value) const override {
       M* value_ptr = &(record.*ptr_);
-      get_type<M>()->extract_from_results(*value_ptr, results, row_num, col_name);
-    };
+      return get_type<M>()->deserialize_value(*value_ptr, value);
+    }
+
+    bool serialize(const T& record, wayward::data_franca::ScalarMutator& target) const override {
+      const M* value_ptr = &(record.*ptr_);
+      return get_type<M>()->serialize_value(*value_ptr, target);
+    }
 
     wayward::data_franca::ReaderPtr
     get_member_reader(const T& object) const override {

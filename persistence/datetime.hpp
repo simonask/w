@@ -11,7 +11,8 @@ namespace persistence {
   struct DateTimeType : IDataTypeFor<wayward::DateTime> {
     std::string name() const final { return "DateTime"; }
     bool is_nullable() const final { return false; }
-    void extract_from_results(wayward::DateTime&, const IResultSet&, size_t row, const std::string& col) const final;
+    bool deserialize_value(wayward::DateTime& value, const wayward::data_franca::ScalarSpelunker& source) const final;
+    bool serialize_value(const wayward::DateTime& value, wayward::data_franca::ScalarMutator& target) const final;
     bool has_value(const wayward::DateTime&) const final { return true; }
   };
 

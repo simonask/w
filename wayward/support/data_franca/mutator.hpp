@@ -29,6 +29,7 @@ namespace wayward {
 
       const IReader& reader_iface() const;
       IWriter& writer_iface();
+      IAdapter& adapter_iface();
     private:
       friend struct ReaderInterface<Mutator>;
       friend struct WriterInterface<Mutator>;
@@ -61,10 +62,32 @@ namespace wayward {
       return *q_;
     }
 
+    inline IAdapter& Mutator::adapter_iface() {
+      if (q_ == nullptr) {
+        throw MutationError{"Attempted to modify an empty mutator."};
+      }
+      return *q_;
+    }
+
     template <>
     struct GetAdapter<Mutator> {
       static ReaderPtr get(const Mutator& m) { return std::static_pointer_cast<const IReader>(m.q_); }
       static AdapterPtr get(Mutator& m) { return m.q_; }
+    };
+
+    struct ScalarMutator final : ReaderInterface<ScalarMutator, Spelunker>, WriterInterface<ScalarMutator, Mutator> {
+      ScalarMutator(const ScalarMutator&) = default;
+      ScalarMutator(Mutator& mutator) : adapter_(mutator.adapter_iface()) {}
+      ScalarMutator(IAdapter& adapter) : adapter_(adapter) {}
+
+      explicit operator bool() const { return type() != DataType::Nothing; }
+      DataType type() const { return adapter_.type(); }
+
+      const IReader& reader_iface() const { return adapter_; }
+      IWriter& writer_iface() { return adapter_; }
+      IAdapter& adapter_iface() { return adapter_; }
+    private:
+      IAdapter& adapter_;
     };
   }
 }

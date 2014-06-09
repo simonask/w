@@ -22,6 +22,8 @@ namespace wayward {
       Spelunker& operator=(const Spelunker&) = default;
       Spelunker& operator=(Spelunker&&) = default;
 
+      explicit operator bool() const { return type() != DataType::Nothing; }
+
       Spelunker operator[](size_t idx) const { return this->reader_subscript(idx); }
       Spelunker operator[](const String& key) const { return this->reader_subscript(key); }
       Spelunker operator[](const char* key) const { return this->reader_subscript(key); }
@@ -43,6 +45,26 @@ namespace wayward {
     template <>
     struct GetAdapter<Spelunker> {
       static ReaderPtr get(const Spelunker& s) { return s.q_; }
+    };
+
+    /*
+      The ScalarSpelunker has identical semantics to the Spelunker, except it can only
+      represent scalar values (i.e., not lists and dictionaries). It's an optimization
+      to allow some types of deserialization without allocation.
+    */
+    struct ScalarSpelunker final : ReaderInterface<ScalarSpelunker, Spelunker> {
+      ScalarSpelunker(const ScalarSpelunker&) = default;
+      ScalarSpelunker(const Spelunker& spelunker) : reader_(spelunker.reader_iface()) { }
+      ScalarSpelunker(const IReader& reader) : reader_(reader) {}
+
+      explicit operator bool() const { return type() != DataType::Nothing; }
+
+      DataType type() const { return reader_.type(); }
+
+      const IReader& reader_iface() const { return reader_; }
+    private:
+      friend struct ReaderInterface<ScalarSpelunker, Spelunker>;
+      const IReader& reader_;
     };
   }
 }
