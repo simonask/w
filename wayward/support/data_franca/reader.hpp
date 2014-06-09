@@ -79,6 +79,7 @@ namespace wayward {
       bool operator>>(String& str) const;
       Subscript reader_subscript(size_t idx) const;
       Subscript reader_subscript(const String& key) const;
+      bool has_key(const String& key) const;
       size_t length() const;
       struct iterator;
       iterator begin() const;
@@ -98,21 +99,41 @@ namespace wayward {
     struct ReaderInterface<Self, Subscript>::iterator {
       iterator(const iterator&) = default;
       iterator(iterator&&) = default;
+
       bool operator==(const iterator& other) const {
-        return (enumerator_ == nullptr && other.enumerator_ == nullptr) || (enumerator_->at_end() == other.enumerator_->at_end());
+        if (enumerator_ == nullptr) {
+          if (other.enumerator_ == nullptr) {
+            return true;
+          } else {
+            return other.enumerator_->at_end();
+          }
+        } else {
+          if (other.enumerator_ == nullptr) {
+            return enumerator_->at_end();
+          } else {
+            return enumerator_->at_end() == other.enumerator_->at_end();
+          }
+        }
       }
+
       bool operator!=(const iterator& other) const { return !(*this == other); }
       const Subscript& operator*() const { return current_; }
       const Subscript* operator->() const { return &current_; }
 
       Maybe<String> key() const { return enumerator_->current_key(); }
 
-      iterator& operator++() { enumerator_->move_next(); current_ = Subscript{enumerator_->current_value()}; return *this; }
+      iterator& operator++() { enumerator_->move_next(); update_ptr(); return *this; }
     private:
-      iterator(ReaderEnumeratorPtr e) : enumerator_{std::move(e)}, current_{enumerator_->current_value()} {}
+      iterator(ReaderEnumeratorPtr e) : enumerator_{std::move(e)} { update_ptr(); }
       ReaderEnumeratorPtr enumerator_;
       Subscript current_;
       friend struct ReaderInterface<Self, Subscript>;
+      void update_ptr() {
+        if (enumerator_ && !enumerator_->at_end()) {
+          auto c = enumerator_->current_value();
+          current_ = std::move(c);
+        }
+      }
     };
 
     template <typename Self, typename Subscript>
@@ -228,6 +249,11 @@ namespace wayward {
     template <typename Self, typename Subscript>
     Subscript ReaderInterface<Self, Subscript>::reader_subscript(const String& key) const {
       return reader().get(key);
+    }
+
+    template <typename Self, typename Subscript>
+    bool ReaderInterface<Self, Subscript>::has_key(const String& key) const {
+      return reader().has_key(key);
     }
   }
 }

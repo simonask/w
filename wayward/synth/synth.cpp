@@ -121,7 +121,7 @@ namespace ajg {
         bool operator!=(const iterator& other) const { return !(*this == other); }
 
         AdaptedWaywardNode operator*() const {
-          return AdaptedWaywardNode{*it};
+          return AdaptedWaywardNode{Spelunker{*it}};
         }
 
         iterator& operator++() { ++it; return *this; }

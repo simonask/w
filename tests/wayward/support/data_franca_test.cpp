@@ -29,7 +29,7 @@ namespace {
     Spelunker s { v };
     EXPECT_EQ(DataType::List, s.type());
     Integer i = 1;
-    for (auto& it: s) {
+    for (auto it: s) {
       EXPECT_EQ(DataType::Integer, it.type());
       Integer n;
       EXPECT_EQ(true, it >> n);
@@ -79,7 +79,7 @@ namespace {
     Mutator s { v };
     EXPECT_EQ(DataType::List, s.type());
     Integer i = 1;
-    for (auto& it: s) {
+    for (auto it: s) {
       EXPECT_EQ(DataType::Integer, it.type());
       Integer n;
       EXPECT_EQ(true, it >> n);
