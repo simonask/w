@@ -58,8 +58,8 @@ namespace wayward {
     }
 
     template <typename T>
-    ReaderPtr make_reader(const T& object) {
-      return GetAdapter<T>::get(object);
+    ReaderPtr make_reader(T&& object) {
+      return GetAdapter<typename meta::RemoveConstRef<T>::Type>::get(std::forward<T>(object));
     }
 
     template <typename T>

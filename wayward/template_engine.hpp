@@ -15,7 +15,7 @@ namespace wayward {
     /*
       Initialize a template engine with options.
     */
-    virtual void initialize(const Options& options) = 0;
+    virtual void initialize(Options options) = 0;
 
     /*
       Render a template.
@@ -27,7 +27,7 @@ namespace wayward {
 
   void register_template_engine(std::string name, TemplateEngineInstantiator instantiator_function);
   std::shared_ptr<ITemplateEngine> template_engine(const std::string& name, const Options& options = Options{});
-  void set_template_engine(const std::string& name, const Options& options = Options{});
+  void set_template_engine(const std::string& name, Options options = Options{});
 
   std::shared_ptr<ITemplateEngine> current_template_engine();
 }

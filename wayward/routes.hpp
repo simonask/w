@@ -5,6 +5,8 @@
 #include <wayward/w.hpp>
 
 #include <persistence/context.hpp>
+#include <persistence/create.hpp>
+#include <persistence/destroy.hpp>
 #include <persistence/projection.hpp>
 
 namespace wayward {
@@ -19,6 +21,16 @@ namespace wayward {
     template <typename Type>
     persistence::Projection<Type> from() {
       return persistence::from<Type>(persistence_context);
+    }
+
+    template <typename Type>
+    persistence::RecordPtr<Type> create(const data_franca::Spelunker& data) {
+      return persistence::create<Type>(persistence_context);
+    }
+
+    template <typename Type>
+    bool destroy(persistence::RecordPtr<Type>& ptr) {
+      return persistence::destroy(persistence_context, ptr);
     }
   };
 }

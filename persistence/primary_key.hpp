@@ -18,7 +18,7 @@ namespace persistence {
     operator int64() const { return id; }
 
     bool is_persisted() const { return id > 0; }
-  private:
+  //private:
     int64 id = -1;
   };
 

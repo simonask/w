@@ -2,56 +2,62 @@
 #ifndef PERSISTENCE_PROJECTION_AS_STRUCTURED_DATA_HPP_INCLUDED
 #define PERSISTENCE_PROJECTION_AS_STRUCTURED_DATA_HPP_INCLUDED
 
-#include <wayward/support/structured_data.hpp>
+#include <wayward/support/data_franca/adapter.hpp>
 #include <persistence/projection.hpp>
 
-namespace persistence {
-
-}
-
 namespace wayward {
-  template <typename Primary, typename... Relations>
-  struct StructuredDataAdapter<persistence::Projection<Primary, Relations...>> : IStructuredData {
-    using Proj = persistence::Projection<Primary, Relations...>;
+  namespace data_franca {
+    template <typename Proj> struct ProjectionReader;
 
-    explicit StructuredDataAdapter(Proj proj) : proj_(std::move(proj)) {}
+    template <typename Primary, typename... Relations>
+    struct ProjectionReader<persistence::Projection<Primary, Relations...>> : IReader {
+      using Proj = persistence::Projection<Primary, Relations...>;
 
-    NodeType type() const final {
-      return NodeType::List;
-    }
+      ProjectionReader(Proj& proj) : proj_(proj) {}
 
-    size_t length() const final {
-      load();
-      return proj_.count();
-    }
+      // IReader interface:
+      DataType type() const override { return DataType::List; }
+      Maybe<Boolean> get_boolean() const final { return Nothing; }
+      Maybe<Integer> get_integer() const final { return Nothing; }
+      Maybe<Real>    get_real() const final { return Nothing; }
+      Maybe<String>  get_string() const final { return Nothing; }
+      bool has_key(const String& key) const final { return false; }
+      ReaderPtr get(const String& key) const final { return nullptr; }
 
-    std::vector<std::string> keys() const final {
-      return std::vector<std::string>{};
-    }
-
-    StructuredDataConstPtr get(const std::string& str) const final {
-      return nullptr;
-    }
-
-    StructuredDataConstPtr get(size_t idx) const final {
-      load();
-      return make_structured_data_adapter(values->at(idx));
-    }
-
-    Maybe<std::string>  get_string() const final { return Nothing; }
-    Maybe<int64_t> get_integer() const final { return Nothing; }
-    Maybe<double>  get_float() const final { return Nothing; }
-    Maybe<bool>    get_boolean() const final { return Nothing; }
-  private:
-    mutable Proj proj_;
-    mutable Maybe<std::vector<persistence::RecordPtr<Primary>>> values;
-
-    void load() const {
-      if (!values) {
-        values = proj_.all();
+      size_t length() const final {
+        load();
+        return proj_.count();
       }
-    }
-  };
+
+      ReaderPtr at(size_t idx) const final {
+        load();
+        return make_reader(values_->at(idx));
+      }
+
+      ReaderEnumeratorPtr enumerator() const final {
+        load();
+        return make_reader(*values_)->enumerator();
+      }
+
+    private:
+      Proj& proj_;
+      mutable Maybe<std::vector<persistence::RecordPtr<Primary>>> values_;
+
+      void load() const {
+        if (!values_) {
+          values_ = proj_.all();
+        }
+      }
+    };
+
+    template <typename Primary, typename... Relations>
+    struct GetAdapter<persistence::Projection<Primary, Relations...>> {
+      using Proj = persistence::Projection<Primary, Relations...>;
+      static ReaderPtr get(Proj& proj) {
+        return std::static_pointer_cast<const IReader>(std::make_shared<ProjectionReader<Proj>>(proj));
+      }
+    };
+  }
 }
 
 #endif // PERSISTENCE_PROJECTION_AS_STRUCTURED_DATA_HPP_INCLUDED

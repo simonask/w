@@ -16,15 +16,11 @@ namespace wayward {
       Spelunker(ReaderPtr ptr) : q_{std::move(ptr)} {}
       Spelunker(const Spelunker&) = default;
       Spelunker(Spelunker&&) = default;
-
-      Spelunker& operator=(const Spelunker&) = default;
-      Spelunker& operator=(Spelunker&&) = default;
-
       template <typename T>
       Spelunker(T&& object);
 
-      template <typename T>
-      Spelunker(std::initializer_list<T> list);
+      Spelunker& operator=(const Spelunker&) = default;
+      Spelunker& operator=(Spelunker&&) = default;
 
       Spelunker operator[](size_t idx) const { return this->reader_subscript(idx); }
       Spelunker operator[](const String& key) const { return this->reader_subscript(key); }
@@ -43,11 +39,6 @@ namespace wayward {
 
     template <typename T>
     Spelunker::Spelunker(T&& object) : q_(make_reader(std::forward<T>(object))) {}
-
-    template <typename T> struct GetOwningAdapter;
-
-    template <typename T>
-    Spelunker::Spelunker(std::initializer_list<T> list) : q_(new OwningMapAdapter<T>(list)) {}
 
     template <>
     struct GetAdapter<Spelunker> {

@@ -136,29 +136,71 @@ namespace wayward {
 
     template <typename Self, typename Subscript>
     bool ReaderInterface<Self, Subscript>::operator>>(Integer& n) const {
-      if (reader().type() == DataType::Integer) {
-        n = *reader().get_integer();
-        return true;
+      auto type = reader().type();
+      switch (type) {
+        case DataType::Integer: {
+          n = *reader().get_integer();
+          return true;
+        }
+        case DataType::Real: {
+          Real r = *reader().get_real();
+          n = static_cast<Integer>(r);
+          return true;
+        }
+        case DataType::String: {
+          std::stringstream ss(*reader().get_string());
+          return (ss >> n).eof();
+        }
+        default:
+          return false;
       }
-      return false;
     }
 
     template <typename Self, typename Subscript>
     bool ReaderInterface<Self, Subscript>::operator>>(Real& r) const {
-      if (reader().type() == DataType::Real) {
-        r = *reader().get_real();
-        return true;
+      auto type = reader().type();
+      switch (type) {
+        case DataType::Integer: {
+          Integer n = *reader().get_integer();
+          r = static_cast<Real>(n);
+          return true;
+        }
+        case DataType::Real: {
+          r = *reader().get_real();
+          return true;
+        }
+        case DataType::String: {
+          std::stringstream ss(*reader().get_string());
+          return (ss >> r).eof();
+        }
+        default:
+          return false;
       }
-      return false;
     }
 
     template <typename Self, typename Subscript>
     bool ReaderInterface<Self, Subscript>::operator>>(String& str) const {
-      if (reader().type() == DataType::String) {
-        str = *reader().get_string();
-        return true;
+      auto type = reader().type();
+      switch (type) {
+        case DataType::Integer: {
+          std::stringstream ss;
+          ss << *reader().get_integer();
+          str = ss.str();
+          return true;
+        }
+        case DataType::Real: {
+          std::stringstream ss;
+          ss << *reader().get_real();
+          str = ss.str();
+          return true;
+        }
+        case DataType::String: {
+          str = *reader().get_string();
+          return true;
+        }
+        default:
+          return false;
       }
-      return false;
     }
 
     template <typename Self, typename Subscript>

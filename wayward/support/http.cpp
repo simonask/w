@@ -106,7 +106,7 @@ namespace wayward {
         default: break;
       }
 
-      data_franca::Object params = data_franca::Object::dictionary();
+      r.params = data_franca::Object::dictionary();
 
       if (uri->query) {
         for (auto param = uri->query->tqh_first; param; param = param->next.tqe_next) {
@@ -114,11 +114,9 @@ namespace wayward {
           std::string v { param->val, param->vlen };
           k = URI::decode(k);
           v = URI::decode(v);
-          add_destructured_param_to_dict(params, std::move(k), std::move(v));
+          add_destructured_param_to_dict(r.params, std::move(k), std::move(v));
         }
       }
-
-      r.params = std::move(params);
 
       std::string query_raw { uri->query_raw ? reinterpret_cast<char*>(uri->query_raw) : "" };
       std::string fragment  { uri->fragment  ? reinterpret_cast<char*>(uri->fragment)  : "" };

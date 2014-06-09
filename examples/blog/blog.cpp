@@ -36,13 +36,13 @@ namespace app {
     }
 
     w::Response put_post(w::Request& req) {
-      p::assign_attributes(post, req.params["post"]);
-      p::save(post);
+      // p::assign_attributes(post, req.params["post"]);
+      // p::save(post);
       return w::redirect(w::format("/posts/{0}", post->id));
     }
 
     w::Response delete_post(w::Request& req) {
-      p::destroy(post);
+      // destroy(post);
       return w::redirect(w::format("/posts"));
     }
 
@@ -51,10 +51,10 @@ namespace app {
     }
 
     w::Response post_comment(w::Request& req) {
-      auto comment = create<Comment>(req["comment"]);
-      comment->post = post;
-      p::save(comment);
-      return w::redirect(w::format("/posts/{0}", post->id);
+      //auto comment = create<Comment>(req.params["comment"]);
+      //comment->post = post;
+      //p::save(comment);
+      return w::redirect(w::format("/posts/{0}", post->id));
     }
   };
 

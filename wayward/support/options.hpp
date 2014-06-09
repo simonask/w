@@ -6,7 +6,7 @@
 #include <wayward/support/data_franca/object.hpp>
 
 namespace wayward {
-  using Options = data_franca::Spelunker;
+  using Options = std::map<std::string, data_franca::Spelunker>;
 }
 
 #endif // WAYWARD_SUPPORT_OPTIONS_HPP_INCLUDED

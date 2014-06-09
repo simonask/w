@@ -254,7 +254,7 @@ namespace wayward {
   struct SynthTemplateEngine : ITemplateEngine {
     std::string template_path;
 
-    void initialize(const Options& options) final {
+    void initialize(Options options) final {
       options["template_path"] >> template_path;
     }
 
@@ -269,15 +269,9 @@ namespace wayward {
       Template templ { path, { template_path } };
 
       Context ctx;
-      if (params.type() == data_franca::DataType::Dictionary) {
-        for (auto it = params.begin(); it != params.end(); ++it) {
-          auto key = it.key();
-          ctx[*key] = synth::AdaptedWaywardNode{*it};
-        }
-      } else {
-        ctx["value"] = synth::AdaptedWaywardNode{params};
+      for (auto it = params.begin(); it != params.end(); ++it) {
+        ctx[it->first] = synth::AdaptedWaywardNode{it->second};
       }
-
 
       wayward::log::debug("synth", wayward::format("Rendering template: {0}", path));
 

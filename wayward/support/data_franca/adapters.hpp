@@ -3,9 +3,41 @@
 #define WAYWARD_SUPPORT_DATA_FRANCA_ADAPTERS_HPP_INCLUDED
 
 #include <wayward/support/data_franca/adapter.hpp>
+#include <wayward/support/maybe.hpp>
 
 namespace wayward {
   namespace data_franca {
+    template <typename T>
+    struct Adapter<Maybe<T>> : IAdapter {
+      Maybe<T>& ref_;
+      Adapter(Maybe<T>& ref) : ref_(ref) {}
+
+      ReaderPtr reader() const { return make_reader(*ref_); }
+      AdapterPtr adapter() { return make_adapter(*ref_); }
+
+      // IReader interface:
+      DataType type() const final { return ref_ ? reader()->type() : DataType::Nothing; }
+      Maybe<Boolean> get_boolean() const final { return ref_ ? reader()->get_boolean() : Nothing; }
+      Maybe<Integer> get_integer() const final { return ref_ ? reader()->get_integer() : Nothing; }
+      Maybe<Real>    get_real()    const final { return ref_ ? reader()->get_real() : Nothing; }
+      Maybe<String>  get_string()  const final { return ref_ ? reader()->get_string() : Nothing; }
+      bool has_key(const String& key) const final { return ref_ ? reader()->has_key(key) : false; }
+      ReaderPtr get(const String& key) const final { return ref_ ? reader()->get(key) : nullptr; }
+      size_t   length()       const final { return ref_ ? reader()->length() : 0; }
+      ReaderPtr at(size_t idx) const final { return ref_ ? reader()->at(idx) : nullptr; }
+      ReaderEnumeratorPtr enumerator() const final { return ref_ ? reader()->enumerator() : nullptr; }
+
+      // IWriter interface:
+      bool set_boolean(Boolean b) final { return ref_ ? adapter()->set_boolean(b) : false; }
+      bool set_integer(Integer n) final { return ref_ ? adapter()->set_integer(n) : false; }
+      bool set_real(Real r) final       { return ref_ ? adapter()->set_real(r) : false; }
+      bool set_string(String str) final { return ref_ ? adapter()->set_string(std::move(str)) : false; }
+      AdapterPtr reference_at_index(size_t idx) final { return ref_ ? adapter()->reference_at_index(idx) : nullptr; }
+      AdapterPtr push_back() final { return ref_ ? adapter()->push_back() : nullptr; }
+      AdapterPtr reference_at_key(const String& key) final { return ref_ ? adapter()->reference_at_key(key) : nullptr; }
+      bool erase(const String& key) final { return ref_ ? adapter()->erase(key) : false; }
+    };
+
     template <>
     struct Adapter<bool> : AdapterBase<bool> {
       Adapter(bool& ref) : AdapterBase<bool>(ref) {}
@@ -149,7 +181,7 @@ namespace wayward {
           return Nothing;
         }
 
-        bool at_end() const final { return it_ != end_; }
+        bool at_end() const final { return it_ == end_; }
 
         void move_next() final {
           if (!at_end()) {
@@ -189,7 +221,7 @@ namespace wayward {
     template <size_t N>
     struct GetAdapter<char[N]> {
       static ReaderPtr get(const char* str) {
-        return ReaderPtr{new StringCopyReader{String{str, N}}};
+        return ReaderPtr{new StringCopyReader{String{str, N-1}}};
       }
     };
   }

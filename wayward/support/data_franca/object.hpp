@@ -27,30 +27,17 @@ namespace wayward {
       Object(Real r)    : data_(r) {}
       Object(String s)  : data_(std::move(s)) {}
 
+      Object(const Object&) = default;
+      Object(Object&&) = default;
+      Object& operator=(Object&&) = default;
+      Object& operator=(const Object&) = default;
+
+
       // Convenience:
       Object(int n) : data_((Integer)n) {}
       Object(const char* str) : data_(std::string{str}) {}
       static Object dictionary() { Object o; o.data_ = Dictionary{}; return std::move(o); }
       static Object list() { Object o; o.data_ = List{}; return std::move(o); }
-
-      template <typename T>
-      static Object dictionary(std::initializer_list<std::pair<String, T>> kv) {
-        auto d = dictionary();
-        for (auto& it: kv) {
-          d[it.first] = it.second;
-        }
-        return std::move(d);
-      }
-
-      template <typename T>
-      static Object list(std::initializer_list<T> values) {
-        auto l = list();
-        l.reserve(values.size());
-        for (auto& it: values) {
-          l.push_back(std::move(it));
-        }
-        return std::move(l);
-      }
 
       Object* clone() const { return new Object(*this); }
 

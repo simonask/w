@@ -6,7 +6,7 @@
 #include <persistence/type.hpp>
 #include <persistence/result_set.hpp>
 
-#include <wayward/support/structured_data.hpp>
+#include <wayward/support/data_franca/adapter.hpp>
 
 namespace persistence {
   struct IProperty {
@@ -30,8 +30,11 @@ namespace persistence {
     virtual bool has_value(const T& record) const = 0;
     virtual void set(T& record, const IResultSet&, size_t row_num, const std::string& col_name) const = 0;
 
-    virtual std::shared_ptr<const ::wayward::IStructuredData>
-    get_value_as_structured_data(const T& record) const = 0;
+    virtual wayward::data_franca::ReaderPtr
+    get_member_reader(const T&) const = 0;
+
+    virtual wayward::data_franca::AdapterPtr
+    get_member_adapter(T&) const = 0;
   };
 
   template <typename T, typename M>
@@ -52,10 +55,16 @@ namespace persistence {
       get_type<M>()->extract_from_results(*value_ptr, results, row_num, col_name);
     };
 
-    std::shared_ptr<const ::wayward::IStructuredData>
-    get_value_as_structured_data(const T& record) const override {
-      const M* value_ptr = &(record.*ptr_);
-      return wayward::make_structured_data_adapter(*value_ptr);
+    wayward::data_franca::ReaderPtr
+    get_member_reader(const T& object) const override {
+      const M* value_ptr = &(object.*ptr_);
+      return wayward::data_franca::make_reader(*value_ptr);
+    }
+
+    wayward::data_franca::AdapterPtr
+    get_member_adapter(T& object) const override {
+      M* value_ptr = &(object.*ptr_);
+      return wayward::data_franca::make_adapter(*value_ptr);
     }
   };
 }

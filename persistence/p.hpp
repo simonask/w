@@ -20,6 +20,8 @@
 #include <persistence/persistence_macro.hpp>
 #include <persistence/record_as_structured_data.hpp>
 #include <persistence/projection_as_structured_data.hpp>
+#include <persistence/create.hpp>
+#include <persistence/assign_attributes.hpp>
 
 #if !defined(PERSISTENCE_NO_SHORTHAND_NAMESPACE)
 namespace p = persistence;

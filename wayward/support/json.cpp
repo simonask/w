@@ -44,7 +44,7 @@ namespace wayward {
           break;
         }
         case DataType::Integer: {
-          int64_t n;
+          Integer n;
           if (node >> n) {
             os << n;
           } else {
@@ -54,7 +54,7 @@ namespace wayward {
           break;
         }
         case DataType::Real: {
-          double n;
+          Real n;
           if (node >> n) {
             os << n;
           } else {
@@ -64,7 +64,7 @@ namespace wayward {
           break;
         }
         case DataType::String: {
-          std::string str;
+          String str;
           if (node >> str) {
             os << "\"";
             escape_json_stream(os, str);
@@ -79,9 +79,11 @@ namespace wayward {
           size_t len = node.length();
           os << '[';
           if (mode == JSONMode::Compact) {
-            for (size_t i = 0; i < len; ++i) {
-              node_to_json_stream(os, node[i], mode);
-              if (i+1 != len) {
+            auto end = node.end();
+            for (auto it = node.begin(); it != end;) {
+              node_to_json_stream(os, *it, mode);
+              ++it;
+              if (it != end) {
                 os << ", ";
               }
             }
@@ -89,10 +91,12 @@ namespace wayward {
             if (len != 0) {
               os << '\n';
               indentation(os, indent);
-              for (size_t i = 0; i < len; ++i) {
+              auto end = node.end();
+              for (auto it = node.begin(); it != end;) {
                 indentation(os, 1);
-                node_to_json_stream(os, node[i], mode, indent+1);
-                if (i+1 != len) {
+                node_to_json_stream(os, *it, mode, indent+1);
+                ++it;
+                if (it != end) {
                   os << ',';
                 }
                 os << '\n';
@@ -106,26 +110,28 @@ namespace wayward {
         case DataType::Dictionary: {
           os << '{';
           if (mode == JSONMode::Compact) {
-            for (auto it = node.begin(); it != node.end();) {
+            auto end = node.end();
+            for (auto it = node.begin(); it != end;) {
               os << "\"";
               escape_json_stream(os, *it.key());
               os << "\": ";
               node_to_json_stream(os, *it, mode);
               ++it;
-              if (it != node.end()) {
+              if (it != end) {
                 os << ", ";
               }
             }
           } else {
             if (node.length() != 0) {
               indentation(os, indent);
-              for (auto it = node.begin(); it != node.end();) {
+              auto end = node.end();
+              for (auto it = node.begin(); it != end;) {
                 indentation(os, 1);
                 escape_json_stream(os, *it.key());
                 os << "\": ";
                 node_to_json_stream(os, *it, mode, indent+1);
                 ++it;
-                if (it != node.end()) {
+                if (it != end) {
                   os << ", ";
                 }
                 os << '\n';

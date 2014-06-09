@@ -19,7 +19,7 @@ namespace wayward {
       using Iterator = Object::Dictionary::const_iterator;
       Iterator it_;
       Iterator end_;
-      DictEnumerator(Iterator it, Iterator end) : it_(it), end_(it) {}
+      DictEnumerator(Iterator it, Iterator end) : it_(it), end_(end) {}
       ReaderPtr current_value() const final { return make_reader(*it_->second); }
       Maybe<String> current_key() const final { return it_->first; }
       bool at_end() const final { return it_ == end_; }
