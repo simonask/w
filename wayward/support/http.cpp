@@ -2,6 +2,7 @@
 #include <wayward/support/event_loop.hpp>
 #include <wayward/support/fiber.hpp>
 #include <wayward/support/event_loop_private.hpp>
+#include <wayward/support/string.hpp>
 
 #include <cassert>
 #include <event2/event.h>
@@ -114,6 +115,17 @@ namespace wayward {
           std::string v { param->val, param->vlen };
           k = URI::decode(k);
           v = URI::decode(v);
+          add_destructured_param_to_dict(r.params, std::move(k), std::move(v));
+        }
+      }
+
+      if (r.method == "POST" && r.body.size()) {
+        auto kv_pairs = split(r.body, "&");
+        for (auto& p: kv_pairs) {
+          auto kv = split(p, "=", 2);
+          if (kv.size() < 2) continue;
+          auto k = URI::decode(kv[0]);
+          auto v = URI::decode(kv[1]);
           add_destructured_param_to_dict(r.params, std::move(k), std::move(v));
         }
       }
