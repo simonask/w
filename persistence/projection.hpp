@@ -626,6 +626,11 @@ namespace persistence {
   Projection<T> from(Context& ctx, std::string t0_alias) {
     return Projection<T>(ctx, std::move(t0_alias));
   }
+
+  template <typename T>
+  RecordPtr<T> find_by_primary_key(Context& ctx, PrimaryKey key) {
+    return from<T>(ctx).where(column(&T::id) == key).first();
+  }
 }
 
 #endif // PERSISTENCE_PROJECTION_HPP_INCLUDED

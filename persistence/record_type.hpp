@@ -14,7 +14,7 @@ namespace persistence {
   struct IRecordType : IType {
     virtual std::string relation() const = 0;
     virtual std::string data_store() const = 0;
-    virtual void initialize_associations_in_object(void*) const = 0;
+    virtual void initialize_associations_in_object(void*, Context*) const = 0;
 
     virtual const IProperty* find_property_by_column_name(const std::string& name) const = 0;
 
@@ -49,10 +49,10 @@ namespace persistence {
     std::vector<std::unique_ptr<IAssociationFrom<RT>>> associations_;
     const IPropertyOf<RT>* primary_key_ = nullptr;
 
-    void initialize_associations_in_object(void* obj) const final {
+    void initialize_associations_in_object(void* obj, Context* ctx) const final {
       RT& object = *reinterpret_cast<RT*>(obj);
       for (auto& p: associations_) {
-        p->initialize_in_object(object);
+        p->initialize_in_object(object, ctx);
       }
     }
 
@@ -106,8 +106,8 @@ namespace persistence {
   };
 
   template <typename T>
-  void initialize_associations(T& object) {
-    get_type<T>()->initialize_associations_in_object(&object);
+  void initialize_associations(T& object, Context& ctx) {
+    get_type<T>()->initialize_associations_in_object(&object, &ctx);
   }
 }
 

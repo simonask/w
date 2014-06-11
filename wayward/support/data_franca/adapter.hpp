@@ -44,8 +44,6 @@ namespace wayward {
     };
 
     template <typename T, typename Enable = void> struct Adapter;
-    template <typename T, typename Enable = void> struct OwningAdapter;
-
 
     template <typename T> struct GetAdapter;
 
@@ -73,6 +71,22 @@ namespace wayward {
         return std::static_pointer_cast<const IReader>(std::make_shared<Adapter<T>>(const_cast<T&>(object)));
       }
     };
+
+    template <typename T>
+    struct OwningAdapter : Adapter<T> {
+      T owned_;
+      OwningAdapter(T object) : Adapter<T>(owned_), owned_(std::move(object)) {}
+    };
+
+    template <typename T>
+    AdapterPtr make_owning_adapter(T&& object) {
+      return AdapterPtr{ new OwningAdapter<typename meta::RemoveConstRef<T>::Type>{ std::forward<T>(object) } };
+    }
+
+    template <typename T>
+    ReaderPtr make_owning_reader(T&& object) {
+      return ReaderPtr{ new OwningAdapter<typename meta::RemoveConstRef<T>::Type>{ std::forward<T>(object) } };
+    }
   }
 }
 

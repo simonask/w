@@ -6,25 +6,114 @@
 #include <persistence/primary_key.hpp>
 #include <persistence/column_abilities.hpp>
 
+#include <wayward/support/either.hpp>
+
 namespace persistence {
+  using wayward::Either;
+
+  struct Context;
+
+  template <typename T>
+  RecordPtr<T> find_by_primary_key(Context& ctx, PrimaryKey key);
+
   template <typename AssociatedType>
   struct BelongsTo : ISingularAssociationFieldTo<AssociatedType> {
     using Type = AssociatedType;
     const ISingularAssociationTo<AssociatedType>* association_ = nullptr;
-    RecordPtr<AssociatedType> ptr_;
-    PrimaryKey id;
 
-    bool operator==(const RecordPtr<AssociatedType>& rhs) const { return ptr_ == rhs; }
-    bool operator!=(const RecordPtr<AssociatedType>& rhs) const { return ptr_ != rhs; }
+    BelongsTo() : value_(PrimaryKey{}) {}
 
-    RecordPtr<AssociatedType>& operator=(RecordPtr<AssociatedType> ptr) { return ptr_ = std::move(ptr); }
+    Context* ctx_ = nullptr;
+    Either<PrimaryKey, RecordPtr<AssociatedType>> value_;
 
-    AssociatedType* operator->() const { return ptr_.get(); } // TODO: Populate on-demand
+    bool operator==(const RecordPtr<AssociatedType>& rhs) const { return value_ == rhs.value_; }
+    bool operator!=(const RecordPtr<AssociatedType>& rhs) const { return value_ != rhs.value_; }
+
+    BelongsTo<AssociatedType>& operator=(RecordPtr<AssociatedType> ptr) {
+      value_ = ptr;
+      return *this;
+    }
+
+    BelongsTo<AssociatedType>& operator=(int64_t id) {
+      value_ = PrimaryKey{id};
+      return *this;
+    }
+
+    PrimaryKey id() const {
+      auto ptr = id_ptr();
+      if (ptr) {
+        return *ptr;
+      } else {
+        return PrimaryKey{};
+      }
+    }
+
+    const PrimaryKey* id_ptr() const {
+      const PrimaryKey* ptr = nullptr;
+
+      value_.template when<PrimaryKey>([&](const PrimaryKey& key) {
+        if (key.is_persisted()) {
+          ptr = &key;
+        }
+      });
+
+      value_.template when<RecordPtr<AssociatedType>>([&](const RecordPtr<AssociatedType>& referenced) {
+        if (referenced) {
+          auto pk = dynamic_cast<const IPropertyOf<AssociatedType>*>(get_type<AssociatedType>()->primary_key());
+          if (pk) {
+            auto pk_typed = dynamic_cast<const PropertyOf<AssociatedType, PrimaryKey>*>(pk);
+            if (pk_typed) {
+              auto& pk_id = pk_typed->get(*referenced);
+              ptr = &pk_id;
+            }
+          }
+        }
+      });
+
+      return ptr;
+    }
+
+    RecordPtr<AssociatedType> operator->() {
+      return get();
+    }
+
+    void load() {
+      value_.template when<PrimaryKey>([&](const PrimaryKey& key) {
+        if (key.is_persisted()) {
+          value_ = find_by_primary_key<AssociatedType>(*ctx_, key);
+        }
+      });
+    }
 
     // ISingularAssociationTo<> interface
-    void populate(RecordPtr<AssociatedType> ptr) final {
-      ptr_ = std::move(ptr);
+    bool is_populated() const final {
+      return value_.template is_a<RecordPtr<AssociatedType>>();
     }
+
+    void populate(RecordPtr<AssociatedType> ptr) final {
+      value_ = std::move(ptr);
+    }
+
+    bool is_set() const final {
+      bool b = false;
+      value_.template when<PrimaryKey>([&](const PrimaryKey& key) {
+        b = key.is_persisted();
+      });
+      value_.template when<RecordPtr<AssociatedType>>([&](const RecordPtr<AssociatedType>& ptr) {
+        b = ptr != nullptr;
+      });
+      return b;
+    }
+
+    RecordPtr<AssociatedType> get() final {
+      load();
+      RecordPtr<AssociatedType> ptr;
+      value_.template when<RecordPtr<AssociatedType>>([&](const RecordPtr<AssociatedType>& p) {
+        ptr = p;
+      });
+      return std::move(ptr);
+    }
+
     const IRecordType& foreign_type() const final {
       return *get_type<AssociatedType>();
     }
@@ -36,7 +125,8 @@ namespace persistence {
     explicit BelongsToAssociation(std::string key, MemberPointer ptr) : SingularAssociation<O, A>{std::move(key)}, ptr_(ptr) {}
     MemberPointer ptr_;
 
-    void initialize_in_object(O& object) const final {
+    void initialize_in_object(O& object, Context* ctx) const final {
+      (object.*ptr_).ctx_ = ctx;
       (object.*ptr_).association_ = this;
     }
 
@@ -52,21 +142,30 @@ namespace persistence {
   template <typename Col, typename T>
   struct ColumnAbilities<Col, BelongsTo<T>>: LiteralEqualityAbilities<Col, std::int64_t> {};
 
+  struct IBelongsToType : IType {
+    virtual ~IBelongsToType() {}
+  };
+
   template <typename T>
-  struct BelongsToType : IDataTypeFor<BelongsTo<T>> {
+  struct BelongsToType : IDataTypeFor<BelongsTo<T>, IBelongsToType> {
     std::string name() const final { return wayward::format("BelongsTo<{0}>", get_type<T>()->name()); }
     bool is_nullable() const final { return false; }
 
     bool has_value(const BelongsTo<T>& value) const final {
-      return value.id.is_persisted();
+      return value.id().is_persisted();
     }
 
     bool deserialize_value(BelongsTo<T>& value, const wayward::data_franca::ScalarSpelunker& source) const final {
-      return get_type<PrimaryKey>()->deserialize_value(value.id, source);
+      PrimaryKey key;
+      if (get_type<PrimaryKey>()->deserialize_value(key, source)) {
+        value.value_ = std::move(key);
+        return true;
+      }
+      return false;
     }
 
     bool serialize_value(const BelongsTo<T>& value, wayward::data_franca::ScalarMutator& target) const final {
-      return get_type<PrimaryKey>()->serialize_value(value.id, target);
+      return get_type<PrimaryKey>()->serialize_value(value.id(), target);
     }
   };
 
@@ -75,6 +174,29 @@ namespace persistence {
     static const auto p = new BelongsToType<T>;
     return p;
   }
+
+  /*
+    We're specializing the Property class for BelongsTo associations, because
+    when seeing the association as a property (i.e., when dealing with it in SQL),
+    it should be a primary key, rather than the object data that data_franca adapters
+    perceive it to be.
+  */
+  template <typename T, typename M>
+  struct PropertyOf<T, BelongsTo<M>> : PropertyOfBase<T, BelongsTo<M>> {
+    using MemberPtr = typename PropertyOfBase<T, BelongsTo<M>>::MemberPtr;
+    PropertyOf(MemberPtr ptr, std::string col) : PropertyOfBase<T, BelongsTo<M>>(ptr, std::move(col)) {}
+
+    DataRef
+    get_data(const T& record) const override {
+      auto& assoc = this->get(record);
+      auto id = assoc.id_ptr();
+      if (id) {
+        return DataRef{ *id };
+      } else {
+        return DataRef{ Nothing };
+      }
+    }
+  };
 }
 
 #endif // PERSISTENCE_BELONGS_TO_HPP_INCLUDED

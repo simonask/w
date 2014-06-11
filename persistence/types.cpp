@@ -2,6 +2,11 @@
 #include <wayward/support/format.hpp>
 
 namespace persistence {
+  const NothingType* build_type(const TypeIdentifier<wayward::NothingType>*) {
+    static const NothingType* p = new NothingType;
+    return p;
+  }
+
   const StringType* build_type(const TypeIdentifier<std::string>*) {
     static const StringType* p = new StringType;
     return p;

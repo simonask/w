@@ -5,6 +5,7 @@
 #include <persistence/record_ptr.hpp>
 #include <wayward/support/data_franca/adapters.hpp>
 #include <wayward/support/datetime.hpp>
+#include <wayward/support/monad.hpp>
 
 namespace persistence {
 
@@ -118,8 +119,85 @@ namespace wayward {
     };
 
     template <typename T>
-    struct Adapter<persistence::BelongsTo<T>> : Adapter<persistence::RecordPtr<T>> {
-      Adapter(persistence::BelongsTo<T>& ref) : Adapter<persistence::RecordPtr<T>>(ref.ptr_) {}
+    struct SingularAssociationAdapter : AdapterBase<T> {
+      SingularAssociationAdapter(T& ref) : AdapterBase<T>(ref) {}
+
+      DataType type() const override {
+        if (this->ref_.is_populated()) {
+          return DataType::Dictionary;
+        } else if (this->ref_.is_set()) {
+          return DataType::Integer;
+        } else {
+          return DataType::Nothing;
+        }
+      }
+
+      Maybe<Integer> get_integer() const override {
+        return monad::fmap(this->ref_.id(), [&](const persistence::PrimaryKey& key) { return key.id; });
+      }
+
+      bool has_key(const String& key) const override {
+        if (type() == DataType::Dictionary) {
+          auto& t = this->ref_.foreign_type();
+          auto p = t.find_property_by_column_name(key);
+          return p != nullptr;
+        }
+        return false;
+      }
+
+      size_t length() const override {
+        if (type() == DataType::Dictionary) {
+          return this->ref_.foreign_type().num_properties();
+        }
+        return 0;
+      }
+
+      ReaderPtr get(const String& key) const override {
+        if (type() == DataType::Dictionary) {
+          auto ptr = this->ref_.get();
+          return make_reader(ptr)->get(key);
+        }
+        return nullptr;
+      }
+
+      ReaderEnumeratorPtr enumerator() const override {
+        if (type() == DataType::Dictionary) {
+          auto ptr = this->ref_.get();
+          return make_reader(ptr)->enumerator();
+        }
+        return nullptr;
+      }
+
+      bool set_integer(Integer n) override {
+        this->ref_.value_ = persistence::PrimaryKey{n};
+        return true;
+      }
+
+      AdapterPtr reference_at_key(const String& key) override {
+        if (type() == DataType::Dictionary) {
+          auto ptr = this->ref_.get();
+          return make_adapter(ptr)->reference_at_key(key);
+        }
+        return nullptr;
+      }
+
+      bool erase(const String& key) override {
+        if (type() == DataType::Dictionary) {
+          auto ptr = this->ref_.get();
+          return make_adapter(ptr)->erase(key);
+        }
+        return false;
+      }
+    };
+
+    template <typename T>
+    struct Adapter<persistence::BelongsTo<T>> : SingularAssociationAdapter<persistence::BelongsTo<T>> {
+      Adapter(persistence::BelongsTo<T>& ref) : SingularAssociationAdapter<persistence::BelongsTo<T>>(ref) {}
+    };
+
+    template <typename T>
+    struct Adapter<persistence::HasOne<T>> : SingularAssociationAdapter<persistence::HasOne<T>> {
+      Adapter(persistence::BelongsTo<T>& ref) : SingularAssociationAdapter<persistence::HasOne<T>>(ref) {}
     };
 
     // template <typename T>

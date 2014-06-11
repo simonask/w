@@ -7,6 +7,7 @@
 
 namespace persistence {
   struct IRecordType;
+  struct Context;
 
   /// Descriptors for the type reflection system:
 
@@ -36,7 +37,7 @@ namespace persistence {
   struct IAssociationFrom : IAssociation {
     virtual ~IAssociationFrom() {}
 
-    virtual void initialize_in_object(Owner& object) const = 0;
+    virtual void initialize_in_object(Owner& object, Context* context) const = 0;
   };
 
   struct ISingularAssociationField;
@@ -85,17 +86,23 @@ namespace persistence {
 
   struct ISingularAssociationField {
     virtual ~ISingularAssociationField() {}
+    virtual bool is_populated() const = 0;
+    virtual bool is_set() const = 0;
     virtual const IRecordType& foreign_type() const = 0;
   };
 
   template <typename T>
   struct ISingularAssociationFieldTo : ISingularAssociationField {
+    using Type = T;
+
     virtual ~ISingularAssociationFieldTo() {}
     virtual void populate(RecordPtr<T> record) = 0;
+    virtual RecordPtr<T> get() = 0;
   };
 
   struct IPluralAssociationField {
     virtual ~IPluralAssociationField() {}
+    virtual bool is_populated() const = 0;
     virtual const IRecordType& foreign_type() const = 0;
   };
 

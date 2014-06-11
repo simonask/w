@@ -104,6 +104,7 @@ namespace persistence {
 
     struct BooleanLiteral : Cloneable<BooleanLiteral, SingleValue> {
       bool value;
+      BooleanLiteral(bool b) : value(b) {}
       std::string to_sql(ISQLValueRenderer& visitor) const final { return visitor.render(*this); }
     };
 
@@ -366,6 +367,7 @@ namespace persistence {
       std::string relation;
       std::vector<std::string> columns;
       std::vector<CloningPtr<SingleValue>> values;
+      std::vector<std::string> returning_columns;
 
       std::string to_sql(ISQLQueryRenderer& visitor) const final { return visitor.render(*this); }
     };

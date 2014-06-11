@@ -13,6 +13,16 @@
 #include <wayward/support/data_franca/spelunker.hpp>
 
 namespace persistence {
+  struct NothingType : IDataTypeFor<wayward::NothingType> {
+    bool is_nullable() const final { return true; }
+    std::string name() const final { return "NothingType"; }
+    bool has_value(const wayward::NothingType&) const final { return false; }
+    bool deserialize_value(wayward::NothingType&, const wayward::data_franca::ScalarSpelunker&) const override { return true; }
+    bool serialize_value(const wayward::NothingType&, wayward::data_franca::ScalarMutator& target) const override { return target << wayward::Nothing; }
+  };
+
+  const NothingType* build_type(const TypeIdentifier<wayward::NothingType>*);
+
   struct StringType : IDataTypeFor<std::string> {
     bool is_nullable() const final { return false; }
     std::string name() const final { return "std::string"; }

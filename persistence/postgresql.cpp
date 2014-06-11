@@ -4,6 +4,7 @@
 
 #include <wayward/support/format.hpp>
 #include <wayward/support/logger.hpp>
+#include <wayward/support/data_franca/spelunker.hpp>
 #include <sstream>
 #include <iostream>
 
@@ -164,6 +165,50 @@ namespace persistence {
     } else {
       return "<UNKNOWN ERROR>";
     }
+  }
+
+  namespace {
+    wayward::CloningPtr<ast::SingleValue>
+    literal_for_spelunker(const wayward::data_franca::Spelunker& reader) {
+      using namespace wayward::data_franca;
+
+      switch (reader.type()) {
+        case DataType::Nothing: {
+          return wayward::CloningPtr<ast::SingleValue>{ new ast::SQLFragmentValue{"NULL"} };
+        }
+        case DataType::Boolean: {
+          return wayward::CloningPtr<ast::SingleValue>{ new ast::BooleanLiteral{*reader.reader_iface().get_boolean()} };
+        }
+        case DataType::Integer: {
+          return wayward::CloningPtr<ast::SingleValue>{ new ast::NumericLiteral{static_cast<double>(*reader.reader_iface().get_integer())} };
+        }
+        case DataType::Real: {
+          return wayward::CloningPtr<ast::SingleValue>{ new ast::NumericLiteral{*reader.reader_iface().get_real()} };
+        }
+        case DataType::String: {
+          return wayward::CloningPtr<ast::SingleValue>{ new ast::StringLiteral{*reader.reader_iface().get_string()} };
+        }
+        case DataType::List: {
+          auto list = wayward::CloningPtr<ast::List>{ new ast::List };
+          for (auto it: reader) {
+            list->elements.push_back(literal_for_spelunker(it));
+          }
+          return std::move(list);
+        }
+        case DataType::Dictionary: {
+          // TODO: Support JSON literals.
+          throw PostgreSQLError{"PostgreSQL does not have a literal representation of dictionary objects."};
+        }
+      }
+    }
+  }
+
+  wayward::CloningPtr<ast::SingleValue>
+  PostgreSQLConnection::literal_for_value(const DataRef& data) {
+    // TODO: Specializations for things like DateTime etc.
+
+    wayward::data_franca::Spelunker reader { data.reader() };
+    return literal_for_spelunker(reader);
   }
 
   std::unique_ptr<PostgreSQLConnection>

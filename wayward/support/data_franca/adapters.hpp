@@ -38,6 +38,11 @@ namespace wayward {
     };
 
     template <>
+    struct Adapter<NothingType> : AdapterBase<NothingType> {
+      Adapter(NothingType& ref) : AdapterBase<NothingType>(ref) {}
+    };
+
+    template <>
     struct Adapter<bool> : AdapterBase<bool> {
       Adapter(bool& ref) : AdapterBase<bool>(ref) {}
 
@@ -212,10 +217,7 @@ namespace wayward {
     };
 
     template <typename T>
-    struct OwningMapAdapter : Adapter<std::map<String, T>> {
-      std::map<String, T> map_;
-      OwningMapAdapter(std::map<String, T> map) : Adapter<std::map<String, T>>(map_), map_(std::move(map)) {}
-    };
+    using OwningMapAdapter = OwningAdapter<std::map<String, T>>;
 
     template <size_t N>
     struct GetAdapter<char[N]> {

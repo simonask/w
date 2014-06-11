@@ -5,7 +5,10 @@
 #include <string>
 #include <persistence/type.hpp>
 #include <persistence/result_set.hpp>
+#include <persistence/ast.hpp>
+#include <persistence/data_ref.hpp>
 
+#include <wayward/support/cloning_ptr.hpp>
 #include <wayward/support/data_franca/adapter.hpp>
 #include <wayward/support/data_franca/spelunker.hpp>
 #include <wayward/support/data_franca/mutator.hpp>
@@ -25,6 +28,10 @@ namespace persistence {
     std::string column_;
   };
 
+  namespace ast {
+    struct SingleValue;
+  }
+
   template <typename T>
   struct IPropertyOf : IProperty {
     virtual ~IPropertyOf() {}
@@ -38,42 +45,63 @@ namespace persistence {
 
     virtual wayward::data_franca::AdapterPtr
     get_member_adapter(T&) const = 0;
+
+    virtual DataRef
+    get_data(const T&) const = 0;
+  };
+
+  struct ASTError : wayward::Error {
+    ASTError(const std::string& msg) : wayward::Error(msg) {}
   };
 
   template <typename T, typename M>
-  struct PropertyOf : IPropertyOf<T>, Property<M> {
+  struct PropertyOfBase : IPropertyOf<T>, Property<M> {
     using MemberPtr = M T::*;
     MemberPtr ptr_;
-    explicit PropertyOf(MemberPtr ptr, std::string column) : Property<M>{column}, ptr_(ptr) {}
+    PropertyOfBase(MemberPtr ptr, std::string column) : Property<M>{column}, ptr_(ptr) {}
     const IType& type() const { return *get_type<M>(); }
     std::string column() const { return this->column_; }
 
+    const M& get(const T& record) const {
+      return record.*ptr_;
+    }
+
+    M& get(T& record) const {
+      return record.*ptr_;
+    }
+
     bool has_value(const T& record) const override {
-      auto& value = record.*ptr_;
-      return get_type<M>()->has_value(value);
+      return get_type<M>()->has_value(get(record));
     }
 
     bool deserialize(T& record, const wayward::data_franca::ScalarSpelunker& value) const override {
-      M* value_ptr = &(record.*ptr_);
-      return get_type<M>()->deserialize_value(*value_ptr, value);
+      return get_type<M>()->deserialize_value(get(record), value);
     }
 
     bool serialize(const T& record, wayward::data_franca::ScalarMutator& target) const override {
-      const M* value_ptr = &(record.*ptr_);
-      return get_type<M>()->serialize_value(*value_ptr, target);
+      return get_type<M>()->serialize_value(get(record), target);
     }
 
     wayward::data_franca::ReaderPtr
     get_member_reader(const T& object) const override {
-      const M* value_ptr = &(object.*ptr_);
-      return wayward::data_franca::make_reader(*value_ptr);
+      return wayward::data_franca::make_reader(get(object));
     }
 
     wayward::data_franca::AdapterPtr
     get_member_adapter(T& object) const override {
-      M* value_ptr = &(object.*ptr_);
-      return wayward::data_franca::make_adapter(*value_ptr);
+      return wayward::data_franca::make_adapter(get(object));
     }
+
+    DataRef
+    get_data(const T& object) const override {
+      return DataRef{get(object)};
+    }
+  };
+
+  template <typename T, typename M>
+  struct PropertyOf : PropertyOfBase<T, M> {
+    using MemberPtr = typename PropertyOfBase<T, M>::MemberPtr;
+    PropertyOf(MemberPtr ptr, std::string col) : PropertyOfBase<T, M>(ptr, std::move(col)) {}
   };
 }
 

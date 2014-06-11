@@ -4,13 +4,21 @@
 
 #include <persistence/result_set.hpp>
 
+#include <persistence/ast.hpp>
+
 #include <memory>
 
 namespace wayward {
   struct ILogger;
+
+  namespace data_franca {
+    struct Spelunker;
+  }
 }
 
 namespace persistence {
+  struct DataRef;
+
   namespace ast {
     struct IQuery;
   }
@@ -38,6 +46,7 @@ namespace persistence {
     virtual std::unique_ptr<IResultSet> execute(std::string sql) = 0;
     virtual std::unique_ptr<IResultSet> execute(const ast::IQuery& query) = 0;
     virtual std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) = 0;
+    virtual wayward::CloningPtr<ast::SingleValue> literal_for_value(const DataRef&) = 0;
   };
 
   void set_connection(IConnection* conn);

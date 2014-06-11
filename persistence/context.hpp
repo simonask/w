@@ -36,7 +36,7 @@ namespace persistence {
         pool = dynamic_cast<Pool<T>*>(it->second.get());
       }
       auto ptr = std::unique_ptr<T>(new T);
-      get_type<T>()->initialize_associations_in_object(ptr.get());
+      get_type<T>()->initialize_associations_in_object(ptr.get(), this);
       RecordPtr<T> rptr { ptr.get(), sentinel_ };
       pool->objects_.push_back(std::move(ptr));
       return std::move(rptr);

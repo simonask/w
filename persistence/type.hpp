@@ -19,8 +19,8 @@ namespace persistence {
 
   struct IResultSet;
 
-  template <typename T>
-  struct IDataTypeFor : IType {
+  template <class T, class Base = IType>
+  struct IDataTypeFor : Base {
     virtual bool deserialize_value(T& value, const wayward::data_franca::ScalarSpelunker& source) const = 0;
     virtual bool serialize_value(const T& value, wayward::data_franca::ScalarMutator& target) const = 0;
     virtual bool has_value(const T& value) const = 0;

@@ -25,7 +25,7 @@ namespace wayward {
 
     template <typename Type>
     persistence::RecordPtr<Type> create(const data_franca::Spelunker& data) {
-      return persistence::create<Type>(persistence_context);
+      return persistence::create<Type>(persistence_context, data);
     }
 
     template <typename Type>

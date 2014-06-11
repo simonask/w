@@ -77,7 +77,38 @@ namespace persistence {
     }
 
     std::string PostgreSQLQueryRenderer::render(const InsertQuery& x) {
-      return "NIY";
+      std::stringstream ss;
+      ss << "INSERT INTO " << x.relation << " (";
+      for (auto it = x.columns.begin(); it != x.columns.end();) {
+        ss << "\"" << *it << "\"";
+        ++it;
+        if (it != x.columns.end()) {
+          ss << ", ";
+        }
+      }
+      ss << ") VALUES (";
+      PostgreSQLValueRenderer vr { conn, symbolic_relation_resolver };
+      for (auto it = x.values.begin(); it != x.values.end();) {
+        ss << (*it)->to_sql(vr);
+        ++it;
+        if (it != x.values.end()) {
+          ss << ", ";
+        }
+      }
+      ss << ")";
+
+      if (x.returning_columns.size()) {
+        ss << " RETURNING ";
+        for (auto it = x.returning_columns.begin(); it != x.returning_columns.end();) {
+          ss << "\"" << *it << "\"";
+          ++it;
+          if (it != x.returning_columns.end()) {
+            ss << ", ";
+          }
+        }
+      }
+
+      return ss.str();
     }
 
     std::string PostgreSQLValueRenderer::render(const StarFrom& x) {

@@ -1,0 +1,5 @@
+{% extends "views/layout.html" %}
+<h1>Comments for post: {{ post.title }}</h1>
+{% for comment in post.comments %}
+<p>{{ comment.text }}</p>
+{% endfor %}

@@ -51,9 +51,9 @@ namespace app {
     }
 
     w::Response post_comment(w::Request& req) {
-      //auto comment = create<Comment>(req.params["comment"]);
-      //comment->post = post;
-      //p::save(comment);
+      auto comment = create<Comment>(req.params["comment"]);
+      comment->post = post;
+      p::save(comment);
       return w::redirect(w::format("/posts/{0}", post->id));
     }
   };
