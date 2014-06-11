@@ -12,7 +12,7 @@ namespace wayward {
   struct ILogger;
 
   namespace data_franca {
-    struct Spelunker;
+    struct Spectator;
   }
 }
 

@@ -4,9 +4,9 @@
 namespace {
   using namespace wayward::data_franca;
 
-  TEST(Spelunker, inspects_ints) {
+  TEST(Spectator, inspects_ints) {
     int n = 123;
-    Spelunker s { n };
+    Spectator s { n };
     EXPECT_EQ(DataType::Integer, s.type());
     Integer m;
     bool result = s >> m;
@@ -14,9 +14,9 @@ namespace {
     EXPECT_EQ(123, m);
   }
 
-  TEST(Spelunker, inspects_strings) {
+  TEST(Spectator, inspects_strings) {
     std::string a = "Hello, World!";
-    Spelunker s { a };
+    Spectator s { a };
     EXPECT_EQ(DataType::String, s.type());
     String m;
     bool result = s >> m;
@@ -24,9 +24,9 @@ namespace {
     EXPECT_EQ("Hello, World!", m);
   }
 
-  TEST(Spelunker, inspects_vectors_of_ints) {
+  TEST(Spectator, inspects_vectors_of_ints) {
     std::vector<int> v {1, 2, 3, 4};
-    Spelunker s { v };
+    Spectator s { v };
     EXPECT_EQ(DataType::List, s.type());
     Integer i = 1;
     for (auto it: s) {
@@ -38,9 +38,9 @@ namespace {
     }
   }
 
-  TEST(Spelunker, inspects_maps_of_ints) {
+  TEST(Spectator, inspects_maps_of_ints) {
     std::map<String, int> m { {"a", 123}, {"b", 567} };
-    Spelunker s { m };
+    Spectator s { m };
     EXPECT_EQ(DataType::Dictionary, s.type());
     std::string keys[] = {{"a"}, {"b"}};
     size_t i = 0;

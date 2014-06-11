@@ -8,7 +8,7 @@
 
 namespace persistence {
   template <typename T>
-  RecordPtr<T> create(Context& ctx, const wayward::data_franca::Spelunker& data = wayward::data_franca::Spelunker{}) {
+  RecordPtr<T> create(Context& ctx, const wayward::data_franca::Spectator& data = wayward::data_franca::Spectator{}) {
     auto record = ctx.create<T>();
     assign_attributes(record, data);
     return std::move(record);

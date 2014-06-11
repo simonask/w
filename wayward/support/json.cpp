@@ -27,7 +27,7 @@ namespace wayward {
       }
     }
 
-    void node_to_json_stream(std::ostream& os, const Spelunker& node, JSONMode mode, int indent = 0) {
+    void node_to_json_stream(std::ostream& os, const Spectator& node, JSONMode mode, int indent = 0) {
       switch (node.type()) {
         case DataType::Nothing: {
           os << "null";
@@ -152,7 +152,7 @@ namespace wayward {
     return ss.str();
   }
 
-  std::string as_json(const data_franca::Spelunker& node, JSONMode mode) {
+  std::string as_json(const data_franca::Spectator& node, JSONMode mode) {
     std::stringstream ss;
     node_to_json_stream(ss, node, mode);
     return ss.str();

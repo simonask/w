@@ -3,11 +3,11 @@
 #define PERSISTENCE_ASSIGN_ATTRIBUTES_HPP_INCLUDED
 
 #include <persistence/record_type.hpp>
-#include <wayward/support/data_franca/spelunker.hpp>
+#include <wayward/support/data_franca/spectator.hpp>
 
 namespace persistence {
   template <typename Record>
-  void assign_attributes(RecordPtr<Record> ptr, const wayward::data_franca::Spelunker& data) {
+  void assign_attributes(RecordPtr<Record> ptr, const wayward::data_franca::Spectator& data) {
     const IRecordType* record_type = get_type<Record>();
     for (size_t i = 0; i < record_type->num_properties(); ++i) {
       auto prop = &record_type->property_at(i);

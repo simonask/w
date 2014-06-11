@@ -175,7 +175,7 @@ namespace persistence {
       return value.id().is_persisted();
     }
 
-    bool deserialize_value(BelongsTo<T>& value, const wayward::data_franca::ScalarSpelunker& source) const final {
+    bool deserialize_value(BelongsTo<T>& value, const wayward::data_franca::ScalarSpectator& source) const final {
       PrimaryKey key;
       if (get_type<PrimaryKey>()->deserialize_value(key, source)) {
         value.value_ = std::move(key);

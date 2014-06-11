@@ -16,7 +16,7 @@ wayward_support_sources = Split("""
   wayward/support/http.cpp
   wayward/support/teamwork.cpp
   wayward/support/plugin.cpp
-  wayward/support/data_franca/spelunker.cpp
+  wayward/support/data_franca/spectator.cpp
   wayward/support/data_franca/mutator.cpp
   wayward/support/data_franca/object.cpp
   wayward/support/string.cpp

@@ -33,7 +33,7 @@ namespace persistence {
       return value.is_persisted();
     }
 
-    bool deserialize_value(PrimaryKey& value, const wayward::data_franca::ScalarSpelunker& source) const final {
+    bool deserialize_value(PrimaryKey& value, const wayward::data_franca::ScalarSpectator& source) const final {
       return get_type<int64_t>()->deserialize_value(value.id, source);
     }
 

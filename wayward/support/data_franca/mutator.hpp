@@ -3,11 +3,11 @@
 #define WAYWARD_SUPPORT_DATA_FRANCA_MUTATOR_HPP_INCLUDED
 
 #include <wayward/support/data_franca/adapter.hpp>
-#include <wayward/support/data_franca/spelunker.hpp>
+#include <wayward/support/data_franca/spectator.hpp>
 
 namespace wayward {
   namespace data_franca {
-    struct Mutator final : ReaderInterface<Mutator, Spelunker>, WriterInterface<Mutator> {
+    struct Mutator final : ReaderInterface<Mutator, Spectator>, WriterInterface<Mutator> {
       Mutator() {}
       Mutator(AdapterPtr ptr) : q_{std::move(ptr)} {}
       Mutator(const Mutator&) = default;
@@ -18,9 +18,9 @@ namespace wayward {
       template <typename T>
       Mutator(T&& object);
 
-      Spelunker operator[](size_t idx) const { return this->reader_subscript(idx); }
-      Spelunker operator[](const String& key) const { return this->reader_subscript(key); }
-      Spelunker operator[](const char* key) const { return this->reader_subscript(key); }
+      Spectator operator[](size_t idx) const { return this->reader_subscript(idx); }
+      Spectator operator[](const String& key) const { return this->reader_subscript(key); }
+      Spectator operator[](const char* key) const { return this->reader_subscript(key); }
       Mutator operator[](size_t idx) { return this->writer_subscript(idx); }
       Mutator operator[](const String& key) { return this->writer_subscript(key); }
       Mutator operator[](const char* key) { return this->writer_subscript(key); }
@@ -75,7 +75,7 @@ namespace wayward {
       static AdapterPtr get(Mutator& m) { return m.q_; }
     };
 
-    struct ScalarMutator final : ReaderInterface<ScalarMutator, Spelunker>, WriterInterface<ScalarMutator, Mutator> {
+    struct ScalarMutator final : ReaderInterface<ScalarMutator, Spectator>, WriterInterface<ScalarMutator, Mutator> {
       ScalarMutator(const ScalarMutator&) = default;
       ScalarMutator(Mutator& mutator) : adapter_(mutator.adapter_iface()) {}
       ScalarMutator(IAdapter& adapter) : adapter_(adapter) {}

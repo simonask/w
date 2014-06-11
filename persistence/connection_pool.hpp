@@ -30,7 +30,7 @@ namespace persistence {
     std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation& rel) final { return connection_->execute(query, rel); }
     std::shared_ptr<ILogger> logger() const final { return connection_->logger(); }
     void set_logger(std::shared_ptr<ILogger> l) final { connection_->set_logger(std::move(l)); }
-    wayward::CloningPtr<ast::SingleValue> literal_for_value(const DataRef& spelunker) final { return connection_->literal_for_value(spelunker); }
+    wayward::CloningPtr<ast::SingleValue> literal_for_value(const DataRef& spectator) final { return connection_->literal_for_value(spectator); }
   private:
     IConnectionPool* pool_ = nullptr;
     IConnection* connection_ = nullptr;

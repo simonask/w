@@ -7,7 +7,7 @@
 
 namespace wayward {
   namespace data_franca {
-    struct Spelunker;
+    struct Spectator;
 
     struct IWriter {
       virtual ~IWriter() {}

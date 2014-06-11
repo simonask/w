@@ -1,7 +1,7 @@
 #include <persistence/datetime.hpp>
 #include <persistence/result_set.hpp>
 
-#include <wayward/support/data_franca/spelunker.hpp>
+#include <wayward/support/data_franca/spectator.hpp>
 #include <wayward/support/data_franca/mutator.hpp>
 
 namespace persistence {
@@ -12,7 +12,7 @@ namespace persistence {
     return t;
   }
 
-  bool DateTimeType::deserialize_value(DateTime& value, const wayward::data_franca::ScalarSpelunker& source) const {
+  bool DateTimeType::deserialize_value(DateTime& value, const wayward::data_franca::ScalarSpectator& source) const {
     std::string string_rep;
     if (source >> string_rep) {
       auto m = DateTime::strptime(string_rep, "%Y-%m-%d %H:%M:%s");

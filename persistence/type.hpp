@@ -6,7 +6,7 @@
 
 namespace wayward {
   namespace data_franca {
-    struct ScalarSpelunker;
+    struct ScalarSpectator;
     struct ScalarMutator;
   }
 }
@@ -21,7 +21,7 @@ namespace persistence {
 
   template <class T, class Base = IType>
   struct IDataTypeFor : Base {
-    virtual bool deserialize_value(T& value, const wayward::data_franca::ScalarSpelunker& source) const = 0;
+    virtual bool deserialize_value(T& value, const wayward::data_franca::ScalarSpectator& source) const = 0;
     virtual bool serialize_value(const T& value, wayward::data_franca::ScalarMutator& target) const = 0;
     virtual bool has_value(const T& value) const = 0;
   };

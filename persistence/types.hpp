@@ -10,14 +10,14 @@
 #include <persistence/result_set.hpp>
 #include <wayward/support/maybe.hpp>
 #include <wayward/support/data_franca/mutator.hpp>
-#include <wayward/support/data_franca/spelunker.hpp>
+#include <wayward/support/data_franca/spectator.hpp>
 
 namespace persistence {
   struct NothingType : IDataTypeFor<wayward::NothingType> {
     bool is_nullable() const final { return true; }
     std::string name() const final { return "NothingType"; }
     bool has_value(const wayward::NothingType&) const final { return false; }
-    bool deserialize_value(wayward::NothingType&, const wayward::data_franca::ScalarSpelunker&) const override { return true; }
+    bool deserialize_value(wayward::NothingType&, const wayward::data_franca::ScalarSpectator&) const override { return true; }
     bool serialize_value(const wayward::NothingType&, wayward::data_franca::ScalarMutator& target) const override { return target << wayward::Nothing; }
   };
 
@@ -31,7 +31,7 @@ namespace persistence {
       return true;
     }
 
-    bool deserialize_value(std::string& value, const wayward::data_franca::ScalarSpelunker& input) const override {
+    bool deserialize_value(std::string& value, const wayward::data_franca::ScalarSpectator& input) const override {
       return input >> value;
     }
 
@@ -54,7 +54,7 @@ namespace persistence {
 
     bool has_value(const T& value) const final { return true; }
 
-    bool deserialize_value(T& value, const wayward::data_franca::ScalarSpelunker& source) const override {
+    bool deserialize_value(T& value, const wayward::data_franca::ScalarSpectator& source) const override {
       if (is_float()) {
         wayward::data_franca::Real r;
         if (source >> r) {
@@ -104,7 +104,7 @@ namespace persistence {
       return static_cast<bool>(value);
     }
 
-    bool deserialize_value(wayward::Maybe<T>& value, const wayward::data_franca::ScalarSpelunker& source) const final {
+    bool deserialize_value(wayward::Maybe<T>& value, const wayward::data_franca::ScalarSpectator& source) const final {
       if (source) {
         T val;
         inner_type_->deserialize_value(val, source);

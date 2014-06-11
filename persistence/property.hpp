@@ -10,7 +10,7 @@
 
 #include <wayward/support/cloning_ptr.hpp>
 #include <wayward/support/data_franca/adapter.hpp>
-#include <wayward/support/data_franca/spelunker.hpp>
+#include <wayward/support/data_franca/spectator.hpp>
 #include <wayward/support/data_franca/mutator.hpp>
 
 namespace persistence {
@@ -37,7 +37,7 @@ namespace persistence {
     virtual ~IPropertyOf() {}
 
     virtual bool has_value(const T& record) const = 0;
-    virtual bool deserialize(T& record, const wayward::data_franca::ScalarSpelunker& value) const = 0;
+    virtual bool deserialize(T& record, const wayward::data_franca::ScalarSpectator& value) const = 0;
     virtual bool serialize(const T& record, wayward::data_franca::ScalarMutator& target) const = 0;
 
     virtual wayward::data_franca::ReaderPtr
@@ -74,7 +74,7 @@ namespace persistence {
       return get_type<M>()->has_value(get(record));
     }
 
-    bool deserialize(T& record, const wayward::data_franca::ScalarSpelunker& value) const override {
+    bool deserialize(T& record, const wayward::data_franca::ScalarSpectator& value) const override {
       return get_type<M>()->deserialize_value(get(record), value);
     }
 

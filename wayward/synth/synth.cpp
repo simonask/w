@@ -1,6 +1,6 @@
 #include <wayward/support/format.hpp>
 #include <wayward/support/http.hpp>
-#include <wayward/support/data_franca/spelunker.hpp>
+#include <wayward/support/data_franca/spectator.hpp>
 #include <wayward/template_engine.hpp>
 #include <wayward/w.hpp>
 #include <ajg/synth.hpp>
@@ -8,7 +8,7 @@
 
 namespace ajg {
   namespace synth {
-    using wayward::data_franca::Spelunker;
+    using wayward::data_franca::Spectator;
     using wayward::data_franca::ReaderPtr;
     using wayward::data_franca::ReaderEnumeratorPtr;
     using wayward::data_franca::DataType;
@@ -20,8 +20,8 @@ namespace ajg {
 
     struct AdaptedWaywardNode {
 
-      explicit AdaptedWaywardNode(Spelunker node) : node(std::move(node)) {}
-      Spelunker node;
+      explicit AdaptedWaywardNode(Spectator node) : node(std::move(node)) {}
+      Spectator node;
 
       bool operator==(const AdaptedWaywardNode& other) const {
         if (!node || !other.node) {
@@ -110,9 +110,9 @@ namespace ajg {
       }
 
       struct iterator {
-        Spelunker::iterator it;
+        Spectator::iterator it;
 
-        iterator(Spelunker::iterator it) : it(std::move(it)) {}
+        iterator(Spectator::iterator it) : it(std::move(it)) {}
         iterator(const iterator&) = default;
         iterator(iterator&&) = default;
 
@@ -121,7 +121,7 @@ namespace ajg {
         bool operator!=(const iterator& other) const { return !(*this == other); }
 
         AdaptedWaywardNode operator*() const {
-          return AdaptedWaywardNode{Spelunker{*it}};
+          return AdaptedWaywardNode{Spectator{*it}};
         }
 
         iterator& operator++() { ++it; return *this; }
@@ -211,7 +211,7 @@ namespace ajg {
 
       AJG_SYNTH_ADAPTER_TYPEDEFS(Behavior);
 
-      const Spelunker& node() const { return this->adapted().node; }
+      const Spectator& node() const { return this->adapted().node; }
 
       boolean_type to_boolean() const { return (bool)node(); } // Conversion with operator bool()
       //datetime_type to_datetime() const { return boost::local_sec_clock::local_time(); /* TODO */ }

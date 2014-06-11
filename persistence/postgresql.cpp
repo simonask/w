@@ -4,7 +4,7 @@
 
 #include <wayward/support/format.hpp>
 #include <wayward/support/logger.hpp>
-#include <wayward/support/data_franca/spelunker.hpp>
+#include <wayward/support/data_franca/spectator.hpp>
 #include <sstream>
 #include <iostream>
 
@@ -169,7 +169,7 @@ namespace persistence {
 
   namespace {
     wayward::CloningPtr<ast::SingleValue>
-    literal_for_spelunker(const wayward::data_franca::Spelunker& reader) {
+    literal_for_spectator(const wayward::data_franca::Spectator& reader) {
       using namespace wayward::data_franca;
 
       switch (reader.type()) {
@@ -191,7 +191,7 @@ namespace persistence {
         case DataType::List: {
           auto list = wayward::CloningPtr<ast::List>{ new ast::List };
           for (auto it: reader) {
-            list->elements.push_back(literal_for_spelunker(it));
+            list->elements.push_back(literal_for_spectator(it));
           }
           return std::move(list);
         }
@@ -207,8 +207,8 @@ namespace persistence {
   PostgreSQLConnection::literal_for_value(const DataRef& data) {
     // TODO: Specializations for things like DateTime etc.
 
-    wayward::data_franca::Spelunker reader { data.reader() };
-    return literal_for_spelunker(reader);
+    wayward::data_franca::Spectator reader { data.reader() };
+    return literal_for_spectator(reader);
   }
 
   std::unique_ptr<PostgreSQLConnection>
