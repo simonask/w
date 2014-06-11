@@ -42,7 +42,7 @@ namespace persistence {
   template <typename T>
   bool insert(RecordPtr<T>& record) {
     if (is_persisted(record)) {
-      throw PersistError{"Trying to insert record with a valid primary key."};
+      throw PersistError{"Trying to insert record that already has a primary key."};
     }
 
     auto t = get_type<T>();
