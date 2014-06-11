@@ -16,6 +16,21 @@ namespace persistence {
   template <typename T>
   RecordPtr<T> find_by_primary_key(Context& ctx, PrimaryKey key);
 
+  template <typename T>
+  const PrimaryKey* get_pk_for_record(const RecordPtr<T>& record) {
+    auto pk = dynamic_cast<const IPropertyOf<T>*>(get_type<T>()->primary_key());
+    if (pk) {
+      auto pk_typed = dynamic_cast<const PropertyOf<T, PrimaryKey>*>(pk);
+      if (pk_typed) {
+        auto& pk_id = pk_typed->get(*record);
+        if (pk_id.is_persisted()) {
+          return &pk_id;
+        }
+      }
+    }
+    return nullptr;
+  }
+
   template <typename AssociatedType>
   struct BelongsTo : ISingularAssociationFieldTo<AssociatedType> {
     using Type = AssociatedType;
@@ -26,8 +41,8 @@ namespace persistence {
     Context* ctx_ = nullptr;
     Either<PrimaryKey, RecordPtr<AssociatedType>> value_;
 
-    bool operator==(const RecordPtr<AssociatedType>& rhs) const { return value_ == rhs.value_; }
-    bool operator!=(const RecordPtr<AssociatedType>& rhs) const { return value_ != rhs.value_; }
+    bool operator==(const RecordPtr<AssociatedType>& rhs) const { return get() == rhs; }
+    bool operator!=(const RecordPtr<AssociatedType>& rhs) const { return !(*this == rhs); }
 
     BelongsTo<AssociatedType>& operator=(RecordPtr<AssociatedType> ptr) {
       value_ = ptr;
@@ -59,14 +74,7 @@ namespace persistence {
 
       value_.template when<RecordPtr<AssociatedType>>([&](const RecordPtr<AssociatedType>& referenced) {
         if (referenced) {
-          auto pk = dynamic_cast<const IPropertyOf<AssociatedType>*>(get_type<AssociatedType>()->primary_key());
-          if (pk) {
-            auto pk_typed = dynamic_cast<const PropertyOf<AssociatedType, PrimaryKey>*>(pk);
-            if (pk_typed) {
-              auto& pk_id = pk_typed->get(*referenced);
-              ptr = &pk_id;
-            }
-          }
+          ptr = get_pk_for_record(referenced);
         }
       });
 
@@ -74,6 +82,10 @@ namespace persistence {
     }
 
     RecordPtr<AssociatedType> operator->() {
+      return get();
+    }
+
+    RecordPtr<AssociatedType> operator->() const {
       return get();
     }
 
@@ -110,6 +122,14 @@ namespace persistence {
       RecordPtr<AssociatedType> ptr;
       value_.template when<RecordPtr<AssociatedType>>([&](const RecordPtr<AssociatedType>& p) {
         ptr = p;
+      });
+      return std::move(ptr);
+    }
+
+    RecordPtr<AssociatedType> get() const {
+      RecordPtr<AssociatedType> ptr;
+      value_.template when<RecordPtr<AssociatedType>>([&](const RecordPtr<AssociatedType>& record) {
+        ptr = record;
       });
       return std::move(ptr);
     }

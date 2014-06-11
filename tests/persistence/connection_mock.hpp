@@ -28,6 +28,7 @@ namespace persistence {
       std::unique_ptr<IResultSet> execute(std::string sql) override;
       std::unique_ptr<IResultSet> execute(const ast::IQuery& query) override;
       std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) override;
+      ast::CloningPtr<ast::SingleValue> literal_for_value(const DataRef&) override { return nullptr; }
 
       std::string database_;
       std::string user_;
