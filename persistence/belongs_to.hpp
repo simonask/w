@@ -18,7 +18,7 @@ namespace persistence {
 
   template <typename T>
   const PrimaryKey* get_pk_for_record(const RecordPtr<T>& record) {
-    auto pk = dynamic_cast<const IPropertyOf<T>*>(get_type<T>()->primary_key());
+    auto pk = get_type<T>()->primary_key();
     if (pk) {
       auto pk_typed = dynamic_cast<const PropertyOf<T, PrimaryKey>*>(pk);
       if (pk_typed) {

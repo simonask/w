@@ -8,13 +8,12 @@
 namespace persistence {
   template <typename Record>
   void assign_attributes(RecordPtr<Record> ptr, const wayward::data_franca::Spectator& data) {
-    const IRecordType* record_type = get_type<Record>();
+    auto record_type = get_type<Record>();
     for (size_t i = 0; i < record_type->num_properties(); ++i) {
-      auto prop = &record_type->property_at(i);
+      auto prop = record_type->property_at(i);
       auto col = prop->column();
       if (data.has_key(col)) {
-        auto prop_for = dynamic_cast<const IPropertyOf<Record>*>(prop);
-        prop_for->deserialize(*ptr, data[col]);
+        prop->deserialize(*ptr, data[col]);
       }
     }
   }

@@ -16,15 +16,14 @@ namespace persistence {
     virtual std::string data_store() const = 0;
     virtual void initialize_associations_in_object(void*, Context*) const = 0;
 
-    virtual const IProperty* find_property_by_column_name(const std::string& name) const = 0;
+    virtual const IProperty* find_abstract_property_by_column_name(const std::string& name) const = 0;
 
-    virtual const IProperty* primary_key() const = 0;
+    virtual const IProperty* abstract_primary_key() const = 0;
 
     virtual size_t num_properties() const = 0;
-    virtual const IProperty& property_at(size_t idx) const = 0;
-
     virtual size_t num_associations() const = 0;
-    virtual const IAssociation& association_at(size_t idx) const = 0;
+    virtual const IProperty* abstract_property_at(size_t idx) const = 0;
+    virtual const IAssociation* abstract_association_at(size_t idx) const = 0;
   };
 
   struct RecordTypeBase : IRecordType {
@@ -42,8 +41,8 @@ namespace persistence {
     std::string data_store_ = "default";
   };
 
-  template <typename RT>
-  struct RecordType : RecordTypeBase {
+  template <class RT, class Base = RecordTypeBase>
+  struct RecordType : Base {
     // TODO: Constructors, destructors, etc.
     std::vector<std::unique_ptr<IPropertyOf<RT>>> properties_;
     std::vector<std::unique_ptr<IAssociationFrom<RT>>> associations_;
@@ -56,15 +55,20 @@ namespace persistence {
       }
     }
 
-    const IProperty* primary_key() const final { return primary_key_; }
-
+    // IRecordType interface:
+    const IProperty* find_abstract_property_by_column_name(const std::string& name) const final { return find_property_by_column_name(name); }
+    const IProperty* abstract_primary_key() const final { return primary_key(); }
     size_t num_properties() const final { return properties_.size(); }
-    const IProperty& property_at(size_t idx) const final { return *properties_.at(idx); }
-
     size_t num_associations() const final { return associations_.size(); }
-    const IAssociation& association_at(size_t idx) const final { return *associations_.at(idx); }
+    const IProperty* abstract_property_at(size_t idx) const final { return property_at(idx); }
+    const IAssociation* abstract_association_at(size_t idx) const final { return association_at(idx); }
 
-    const IProperty* find_property_by_column_name(const std::string& name) const {
+    // RecordType interface:
+    const IPropertyOf<RT>* primary_key() const { return primary_key_; }
+    const IPropertyOf<RT>* property_at(size_t idx) const { return properties_.at(idx).get(); }
+    const IAssociationFrom<RT>* association_at(size_t idx) const { return associations_.at(idx).get(); }
+
+    const IPropertyOf<RT>* find_property_by_column_name(const std::string& name) const {
       for (auto& prop: properties_) {
         if (prop->column() == name) {
           return prop.get();

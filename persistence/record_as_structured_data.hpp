@@ -30,10 +30,7 @@ namespace wayward {
         auto t = ::persistence::get_type<T>();
         auto prop = t->find_property_by_column_name(key);
         if (prop) {
-          auto property_of = dynamic_cast<const ::persistence::IPropertyOf<T>*>(prop);
-          if (property_of) {
-            return property_of->get_member_reader(*this->ref_);
-          }
+          return prop->get_member_reader(*this->ref_);
         }
         return nullptr;
       }
@@ -47,10 +44,7 @@ namespace wayward {
         auto t = ::persistence::get_type<T>();
         auto prop = t->find_property_by_column_name(key);
         if (prop) {
-          auto property_of = dynamic_cast<const ::persistence::IPropertyOf<T>*>(prop);
-          if (property_of) {
-            return property_of->get_member_adapter(*this->ref_);
-          }
+          return prop->get_member_adapter(*this->ref_);
         }
         return nullptr;
       }
@@ -66,20 +60,19 @@ namespace wayward {
 
       struct PropertyEnumerator : Cloneable<PropertyEnumerator, IReaderEnumerator> {
         persistence::RecordPtr<T> record;
-        const persistence::IRecordType* t;
+        const persistence::RecordType<T>* t;
         size_t i = 0;
         PropertyEnumerator(const PropertyEnumerator&) = default;
         PropertyEnumerator(PropertyEnumerator&&) = default;
         PropertyEnumerator(persistence::RecordPtr<T> record) : record(std::move(record)), t(::persistence::get_type<T>()) {}
 
         ReaderPtr current_value() const final {
-          auto prop = &t->property_at(i);
-          auto property_of = dynamic_cast<const ::persistence::IPropertyOf<T>*>(prop);
-          return property_of->get_member_reader(*record);
+          auto prop = t->property_at(i);
+          return prop->get_member_reader(*record);
         }
 
         Maybe<String> current_key() const final {
-          auto prop = &t->property_at(i);
+          auto prop = t->property_at(i);
           return prop->column();
         }
 
@@ -139,7 +132,7 @@ namespace wayward {
       bool has_key(const String& key) const override {
         if (type() == DataType::Dictionary) {
           auto& t = this->ref_.foreign_type();
-          auto p = t.find_property_by_column_name(key);
+          auto p = t.find_abstract_property_by_column_name(key);
           return p != nullptr;
         }
         return false;

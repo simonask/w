@@ -18,8 +18,7 @@ namespace persistence {
 
   template <typename T>
   bool is_persisted(const RecordPtr<T>& record) {
-    auto pk_raw = get_type<T>()->primary_key();
-    auto pk = dynamic_cast<const IPropertyOf<T>*>(pk_raw);
+    auto pk = get_type<T>()->primary_key();
     if (pk == nullptr) {
       throw PrimaryKeyError{"This record class does not seem to have a primary key column defined."};
     }
@@ -46,8 +45,7 @@ namespace persistence {
     }
 
     auto t = get_type<T>();
-    auto pk_raw = t->primary_key();
-    auto pk = dynamic_cast<const IPropertyOf<T>*>(pk_raw);
+    auto pk = t->primary_key();
 
     ast::InsertQuery query;
     query.relation = t->relation();
@@ -61,11 +59,10 @@ namespace persistence {
     auto conn = current_connection_provider().acquire_connection_for_data_store(t->data_store());
 
     for (size_t i = 0; i < t->num_properties(); ++i) {
-      auto p = &t->property_at(i);
+      auto p = t->property_at(i);
       if (p == t->primary_key()) continue;
-      auto pr = dynamic_cast<const IPropertyOf<T>*>(p);
       query.columns.push_back(p->column());
-      query.values.push_back(conn.literal_for_value(pr->get_data(*record)));
+      query.values.push_back(conn.literal_for_value(p->get_data(*record)));
     }
 
     conn.logger()->log(wayward::Severity::Debug, "p", wayward::format("Insert {0}", t->name()));
