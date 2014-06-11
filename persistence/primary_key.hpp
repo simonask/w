@@ -8,6 +8,8 @@
 #include <persistence/result_set.hpp>
 #include <persistence/types.hpp>
 
+#include <wayward/support/monad.hpp>
+
 namespace persistence {
   using int64 = std::int64_t;
 
@@ -44,6 +46,28 @@ namespace persistence {
 
   template <typename Col>
   struct ColumnAbilities<Col, PrimaryKey> : LiteralEqualityAbilities<Col, int64> {};
+}
+
+namespace wayward {
+  namespace monad {
+    template <> struct Join<persistence::PrimaryKey> {
+      using Type = persistence::PrimaryKey;
+    };
+    template <> struct Join<Maybe<persistence::PrimaryKey>> {
+      using Type = persistence::PrimaryKey;
+    };
+
+    template <>
+    struct Bind<persistence::PrimaryKey> {
+      template <typename F>
+      static auto bind(persistence::PrimaryKey k, F f) -> typename Join<Maybe<decltype(f(std::declval<int64_t>()))>>::Type {
+        if (k.is_persisted()) {
+          return f(k.id);
+        }
+        return Nothing;
+      }
+    };
+  }
 }
 
 #endif // PERSISTENCE_PRIMARY_KEY_HPP_INCLUDED
