@@ -21,6 +21,7 @@ namespace persistence {
     virtual const IRecordType* self_type() const = 0;
     virtual const IRecordType* foreign_type() const = 0;
     virtual std::string foreign_key() const = 0;
+    virtual std::string name() const = 0;
   };
 
   // Base class for things like BelongsTo<>, HasMany<>, etc.
@@ -95,7 +96,7 @@ namespace persistence {
     using Owner = typename Base::Owner;
     using AssociatedType = typename Base::AssociatedType;
     using MemberPtr = Anchor Owner::*;
-    AssociationBase(std::string key, MemberPtr member) : key_(std::move(key)), member_(member) {}
+    AssociationBase(MemberPtr member, std::string name, std::string key) : member_(member), name_(std::move(name)), key_(std::move(key)) {}
 
     Anchor* get(Owner& object) const { return &(object.*member_); }
     const Anchor* get(const Owner& object) const { return &(object.*member_); }
@@ -103,7 +104,7 @@ namespace persistence {
     IAssociationAnchor* get_anchor(Owner& object) const final { return get(object); }
     const IAssociationAnchor* get_anchor(const Owner& object) const final { return get(object); }
 
-    void initialize_in_object(Owner& object, Context* context) const {
+    void initialize_in_object(Owner& object, Context* context) const override {
       get(object)->initialize(this, context);
     }
 
@@ -119,9 +120,11 @@ namespace persistence {
 
     const IRecordType* foreign_type() const final { return get_type<AssociatedType>(); }
     const IRecordType* self_type() const final { return get_type<Owner>(); }
+    std::string name() const final { return name_; }
     std::string foreign_key() const final { return key_; }
 
   protected:
+    std::string name_;
     std::string key_;
     MemberPtr member_;
   };
@@ -130,14 +133,14 @@ namespace persistence {
   struct SingularAssociationBase : AssociationBase<Anchor, AssociationBetween<Owner, typename Anchor::AssociatedType>> {
     using BaseClass = AssociationBase<Anchor, AssociationBetween<Owner, typename Anchor::AssociatedType>>;
     using MemberPtr = typename BaseClass::MemberPtr;
-    SingularAssociationBase(std::string key, MemberPtr member) : BaseClass(std::move(key), member) {}
+    SingularAssociationBase(MemberPtr member, std::string name, std::string fkey) : BaseClass(member, std::move(name), std::move(fkey)) {}
   };
 
   template <class Owner, class Anchor>
   struct PluralAssociationBase : AssociationBase<Anchor, AssociationBetween<Owner, typename Anchor::AssociatedType>> {
     using BaseClass = AssociationBase<Anchor, AssociationBetween<Owner, typename Anchor::AssociatedType>>;
     using MemberPtr = typename BaseClass::MemberPtr;
-    PluralAssociationBase(std::string key, MemberPtr member) : BaseClass(std::move(key), member) {}
+    PluralAssociationBase(MemberPtr member, std::string name, std::string fkey) : BaseClass(member, std::move(name), std::move(fkey)) {}
   };
 }
 

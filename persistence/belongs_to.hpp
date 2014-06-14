@@ -141,7 +141,7 @@ namespace persistence {
   template <typename O, typename A>
   struct BelongsToAssociation : SingularAssociationBase<O, BelongsTo<A>> {
     using MemberPointer = BelongsTo<A> O::*;
-    explicit BelongsToAssociation(std::string key, MemberPointer ptr) : SingularAssociationBase<O, BelongsTo<A>>(std::move(key), ptr) {}
+    explicit BelongsToAssociation(MemberPointer ptr, std::string name, std::string fkey) : SingularAssociationBase<O, BelongsTo<A>>(ptr, std::move(name), std::move(fkey)) {}
   };
 
   template <typename Col, typename T>

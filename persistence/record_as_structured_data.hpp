@@ -139,8 +139,8 @@ namespace wayward {
     };
 
     template <typename T>
-    struct SingularAssociationAdapter : AdapterBase<T> {
-      SingularAssociationAdapter(T& ref, Bitflags<Options> o) : AdapterBase<T>(ref, o) {}
+    struct AssociationAdapter : AdapterBase<T> {
+      AssociationAdapter(T& ref, Bitflags<Options> o) : AdapterBase<T>(ref, o) {}
 
       bool can_load() const {
         return this->options_ & Options::AllowLoad;
@@ -153,13 +153,18 @@ namespace wayward {
       void load() const {
         const_cast<T&>(this->ref_).load();
       }
+    };
+
+    template <typename T>
+    struct SingularAssociationAdapter : AssociationAdapter<T> {
+      SingularAssociationAdapter(T& ref, Bitflags<Options> o) : AssociationAdapter<T>(ref, o) {}
 
       bool has_value() const {
         return this->ref_.is_set();
       }
 
       DataType type() const override {
-        if (can_load() || is_loaded()) {
+        if (this->can_load() || this->is_loaded()) {
           return DataType::Dictionary;
         } else if (has_value()) {
           return DataType::Integer;
@@ -189,8 +194,8 @@ namespace wayward {
 
       ReaderPtr value_reader() const {
         if (type() == DataType::Dictionary) {
-          if (can_load() && !is_loaded()) {
-            load();
+          if (this->can_load() && !this->is_loaded()) {
+            this->load();
           }
           auto ptr = this->ref_.get();
           return make_owning_reader(std::move(ptr), this->options_);
@@ -202,8 +207,8 @@ namespace wayward {
 
       AdapterPtr value_adapter() const {
         if (type() == DataType::Dictionary) {
-          if (can_load() && !is_loaded()) {
-            load();
+          if (this->can_load() && !this->is_loaded()) {
+            this->load();
           }
           auto ptr = this->ref_.get();
           return make_owning_adapter(std::move(ptr), this->options_);
@@ -236,9 +241,42 @@ namespace wayward {
     };
 
     template <typename T>
-    struct PluralAssociationAdapter : AdapterBase<T> {
-      // TODO
-      PluralAssociationAdapter(T& ref, Bitflags<Options> o) : AdapterBase<T>(ref, o) {}
+    struct PluralAssociationAdapter : AssociationAdapter<T> {
+      PluralAssociationAdapter(T& ref, Bitflags<Options> o) : AssociationAdapter<T>(ref, o) {}
+      mutable Maybe<ReaderPtr> reader_;
+
+      DataType type() const {
+        if (this->can_load() || this->is_loaded()) {
+          return DataType::List;
+        }
+        return DataType::Nothing;
+      }
+
+      ReaderPtr value_reader() const {
+        if (!reader_ && type() == DataType::List) {
+          if (this->can_load() && !this->is_loaded()) {
+            this->load();
+          }
+          reader_ = make_owning_reader(this->ref_.get(), this->options_);
+        }
+        return *reader_;
+      }
+
+      size_t length() const override {
+        return value_reader()->length();
+      }
+
+      ReaderPtr at(size_t idx) const override {
+        return value_reader()->at(idx);
+      }
+
+      ReaderEnumeratorPtr enumerator() const override {
+        return value_reader()->enumerator();
+      }
+
+      AdapterPtr reference_at_index(size_t idx) override {
+        return nullptr;
+      }
     };
 
     template <typename T>

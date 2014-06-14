@@ -40,7 +40,7 @@ namespace wayward {
     };
 
     template <typename T>
-    Spectator::Spectator(T&& object) : q_(make_reader(std::forward<T>(object))) {}
+    Spectator::Spectator(T&& object) : q_(make_reader(std::forward<T>(object), Options::AllowLoad)) {}
 
     template <>
     struct GetAdapter<Spectator> {

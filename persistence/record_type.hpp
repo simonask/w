@@ -81,7 +81,7 @@ namespace persistence {
 
     const IAssociationFrom<RT>* find_association_by_name(const std::string& name) const {
       for (auto& assoc: associations_) {
-        if (assoc->foreign_key() == name) {
+        if (assoc->name() == name) {
           return assoc.get();
         }
       }

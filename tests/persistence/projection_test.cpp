@@ -151,14 +151,14 @@ namespace {
     property(&Article::id, "id");
     property(&Article::title, "title");
     property(&Article::text, "text");
-    belongs_to(&Article::author, "author_id");
+    belongs_to(&Article::author, "author");
   }
 
   PERSISTENCE(User) {
     property(&User::id, "id");
     property(&User::name, "name");
-    has_many(&User::articles, "author_id");
-    belongs_to(&User::supervisor, "supervisor_id");
+    has_many(&User::articles, "articles", "author_id");
+    belongs_to(&User::supervisor, "supervisor");
   }
 
   namespace w = wayward;

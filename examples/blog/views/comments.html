@@ -1,5 +1,7 @@
 {% extends "views/layout.html" %}
+{% block content %}
 <h1>Comments for post: {{ post.title }}</h1>
 {% for comment in post.comments %}
 <p>{{ comment.text }}</p>
 {% endfor %}
+{% endblock %}
