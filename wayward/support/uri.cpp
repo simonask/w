@@ -73,7 +73,11 @@ namespace wayward {
           continue;
         }
       }
-      result.push_back(input[i]);
+
+      if (input[i] == '+')
+        result.push_back(' ');
+      else
+        result.push_back(input[i]);
     }
     return std::move(result);
   }
