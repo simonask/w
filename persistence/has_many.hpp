@@ -6,40 +6,30 @@
 
 namespace persistence {
   template <typename AssociatedType>
-  struct HasMany : IPluralAssociationFieldTo<AssociatedType> {
-    const IAssociationTo<AssociatedType>* association_ = nullptr;
+  struct HasMany : PluralAssociationAnchor<AssociatedType> {
     Maybe<std::vector<RecordPtr<AssociatedType>>> records_;
-
-    const IRecordType& foreign_type() const final {
-      return *get_type<AssociatedType>();
-    }
 
     void populate(std::vector<RecordPtr<AssociatedType>> records) final {
       records_ = std::move(records);
     }
 
-    bool is_populated() const final {
+    void load() final {
+      // TODO!
+    }
+
+    std::vector<RecordPtr<AssociatedType>> get() final {
+      return records_ ? *records_ : std::vector<RecordPtr<AssociatedType>>{};
+    }
+
+    bool is_loaded() const final {
       return (bool)records_;
     }
   };
 
   template <typename O, typename A>
-  struct HasManyAssociation : PluralAssociation<O, A> {
+  struct HasManyAssociation : PluralAssociationBase<O, HasMany<A>> {
     using MemberPointer = HasMany<A> O::*;
-    explicit HasManyAssociation(std::string key, MemberPointer ptr) : PluralAssociation<O, A>{std::move(key)}, ptr_(ptr) {}
-    MemberPointer ptr_;
-
-    void initialize_in_object(O& object, Context* ctx) const final {
-      (object.*ptr_).association_ = this;
-    }
-
-    IPluralAssociationField* get_field(O& object) const final {
-      return &(object.*ptr_);
-    }
-
-    const IPluralAssociationField* get_field(const O& object) const final {
-      return &(object.*ptr_);
-    }
+    explicit HasManyAssociation(std::string key, MemberPointer ptr) : PluralAssociationBase<O, HasMany<A>>{std::move(key), ptr} {}
   };
 }
 

@@ -72,7 +72,7 @@ namespace persistence {
     if (result) {
       auto mid = result->get(0, pk->column());
       if (mid) {
-        wayward::data_franca::Mutator mut { pk->get_member_adapter(*record) };
+        wayward::data_franca::Mutator mut { pk->get_member_adapter(*record, wayward::data_franca::Options::None) };
         mut << *mid;
         return true;
       }

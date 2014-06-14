@@ -17,6 +17,7 @@ namespace persistence {
     virtual void initialize_associations_in_object(void*, Context*) const = 0;
 
     virtual const IProperty* find_abstract_property_by_column_name(const std::string& name) const = 0;
+    virtual const IAssociation* find_abstract_association_by_name(const std::string& name) const = 0;
 
     virtual const IProperty* abstract_primary_key() const = 0;
 
@@ -57,6 +58,7 @@ namespace persistence {
 
     // IRecordType interface:
     const IProperty* find_abstract_property_by_column_name(const std::string& name) const final { return find_property_by_column_name(name); }
+    const IAssociation* find_abstract_association_by_name(const std::string& name) const final { return find_association_by_name(name); }
     const IProperty* abstract_primary_key() const final { return primary_key(); }
     size_t num_properties() const final { return properties_.size(); }
     size_t num_associations() const final { return associations_.size(); }
@@ -77,6 +79,15 @@ namespace persistence {
       return nullptr;
     }
 
+    const IAssociationFrom<RT>* find_association_by_name(const std::string& name) const {
+      for (auto& assoc: associations_) {
+        if (assoc->foreign_key() == name) {
+          return assoc.get();
+        }
+      }
+      return nullptr;
+    }
+
     template <typename M>
     const PropertyOf<RT, M>*
     find_property_by_member_pointer(M RT::*member) const {
@@ -88,11 +99,11 @@ namespace persistence {
     }
 
     template <typename M>
-    const SingularAssociation<RT, typename M::Type>*
-    find_singular_association_by_member_pointer(M RT::*member) const {
+    auto find_singular_association_by_member_pointer(M RT::*member) const -> const SingularAssociationBase<RT, M>* {
+      using Assoc = SingularAssociationBase<RT, M>;
       for (auto& assoc: associations_) {
-        auto p = dynamic_cast<const SingularAssociation<RT, typename M::Type>*>(assoc.get());
-        if (p) return p;
+        auto p = dynamic_cast<const Assoc*>(assoc.get());
+        if (p && p->member_ptr() == member) return p;
       }
       return nullptr;
     }

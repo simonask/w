@@ -44,7 +44,7 @@ namespace wayward {
 
     template <>
     struct GetAdapter<Spectator> {
-      static ReaderPtr get(const Spectator& s) { return s.q_; }
+      static ReaderPtr get(const Spectator& s, Bitflags<Options> o) { return s.q_; }
     };
 
     /*

@@ -31,25 +31,22 @@ namespace persistence {
     return nullptr;
   }
 
-  template <typename AssociatedType>
-  struct BelongsTo : ISingularAssociationFieldTo<AssociatedType> {
-    using Type = AssociatedType;
-    const ISingularAssociationTo<AssociatedType>* association_ = nullptr;
+  template <typename T>
+  struct BelongsTo : SingularAssociationAnchor<T> {
+    using AssociatedType = T;
 
     BelongsTo() : value_(PrimaryKey{}) {}
+    Either<PrimaryKey, RecordPtr<T>> value_;
 
-    Context* ctx_ = nullptr;
-    Either<PrimaryKey, RecordPtr<AssociatedType>> value_;
+    bool operator==(const RecordPtr<T>& rhs) const { return get() == rhs; }
+    bool operator!=(const RecordPtr<T>& rhs) const { return !(*this == rhs); }
 
-    bool operator==(const RecordPtr<AssociatedType>& rhs) const { return get() == rhs; }
-    bool operator!=(const RecordPtr<AssociatedType>& rhs) const { return !(*this == rhs); }
-
-    BelongsTo<AssociatedType>& operator=(RecordPtr<AssociatedType> ptr) {
+    BelongsTo<T>& operator=(RecordPtr<T> ptr) {
       value_ = ptr;
       return *this;
     }
 
-    BelongsTo<AssociatedType>& operator=(int64_t id) {
+    BelongsTo<T>& operator=(int64_t id) {
       value_ = PrimaryKey{id};
       return *this;
     }
@@ -72,7 +69,7 @@ namespace persistence {
         }
       });
 
-      value_.template when<RecordPtr<AssociatedType>>([&](const RecordPtr<AssociatedType>& referenced) {
+      value_.template when<RecordPtr<T>>([&](const RecordPtr<T>& referenced) {
         if (referenced) {
           ptr = get_pk_for_record(referenced);
         }
@@ -81,82 +78,70 @@ namespace persistence {
       return ptr;
     }
 
-    RecordPtr<AssociatedType> operator->() {
+    RecordPtr<T> operator->() {
+      load();
       return get();
     }
 
-    RecordPtr<AssociatedType> operator->() const {
+    RecordPtr<T> operator->() const {
       return get();
     }
 
-    void load() {
-      value_.template when<PrimaryKey>([&](const PrimaryKey& key) {
-        if (key.is_persisted()) {
-          value_ = find_by_primary_key<AssociatedType>(*ctx_, key);
-        }
-      });
-    }
-
-    // ISingularAssociationTo<> interface
-    bool is_populated() const final {
-      return value_.template is_a<RecordPtr<AssociatedType>>();
-    }
-
-    void populate(RecordPtr<AssociatedType> ptr) final {
-      value_ = std::move(ptr);
-    }
-
-    bool is_set() const final {
+    bool is_set() const {
       bool b = false;
       value_.template when<PrimaryKey>([&](const PrimaryKey& key) {
         b = key.is_persisted();
       });
-      value_.template when<RecordPtr<AssociatedType>>([&](const RecordPtr<AssociatedType>& ptr) {
+      value_.template when<RecordPtr<T>>([&](const RecordPtr<T>& ptr) {
         b = ptr != nullptr;
       });
       return b;
     }
 
-    RecordPtr<AssociatedType> get() final {
+
+    /// IAssociationAnchor interface:
+
+    bool is_loaded() const final {
+      return value_.template is_a<RecordPtr<T>>();
+    }
+
+    void load() final {
+      value_.template when<PrimaryKey>([&](const PrimaryKey& key) {
+        if (key.is_persisted()) {
+          value_ = find_by_primary_key<T>(*this->context_, key);
+        }
+      });
+    }
+
+
+    /// ISingularAssociationAnchor<T> interface:
+
+    void populate(RecordPtr<T> ptr) final {
+      value_ = std::move(ptr);
+    }
+
+    RecordPtr<T> get() {
       load();
-      RecordPtr<AssociatedType> ptr;
-      value_.template when<RecordPtr<AssociatedType>>([&](const RecordPtr<AssociatedType>& p) {
+      RecordPtr<T> ptr;
+      value_.template when<RecordPtr<T>>([&](const RecordPtr<T>& p) {
         ptr = p;
       });
       return std::move(ptr);
     }
 
-    RecordPtr<AssociatedType> get() const {
-      RecordPtr<AssociatedType> ptr;
-      value_.template when<RecordPtr<AssociatedType>>([&](const RecordPtr<AssociatedType>& record) {
+    RecordPtr<T> get() const {
+      RecordPtr<T> ptr;
+      value_.template when<RecordPtr<T>>([&](const RecordPtr<T>& record) {
         ptr = record;
       });
       return std::move(ptr);
     }
-
-    const IRecordType& foreign_type() const final {
-      return *get_type<AssociatedType>();
-    }
   };
 
   template <typename O, typename A>
-  struct BelongsToAssociation : SingularAssociation<O, A> {
+  struct BelongsToAssociation : SingularAssociationBase<O, BelongsTo<A>> {
     using MemberPointer = BelongsTo<A> O::*;
-    explicit BelongsToAssociation(std::string key, MemberPointer ptr) : SingularAssociation<O, A>{std::move(key)}, ptr_(ptr) {}
-    MemberPointer ptr_;
-
-    void initialize_in_object(O& object, Context* ctx) const final {
-      (object.*ptr_).ctx_ = ctx;
-      (object.*ptr_).association_ = this;
-    }
-
-    ISingularAssociationField* get_field(O& object) const final {
-      return &(object.*ptr_);
-    }
-
-    const ISingularAssociationField* get_field(const O& object) const final {
-      return &(object.*ptr_);
-    }
+    explicit BelongsToAssociation(std::string key, MemberPointer ptr) : SingularAssociationBase<O, BelongsTo<A>>(std::move(key), ptr) {}
   };
 
   template <typename Col, typename T>

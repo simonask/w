@@ -38,10 +38,6 @@ namespace persistence {
     {}
   };
 
-  struct AssociationError : wayward::Error {
-    AssociationError(std::string msg) : wayward::Error(std::move(msg)) {}
-  };
-
   template <typename... Relations> struct Joins;
 
   template <typename T, typename Jx = Joins<>> struct Projection;
@@ -114,7 +110,7 @@ namespace persistence {
 
   struct RelationProjector : wayward::ICloneable {
     RelationProjector(std::string relation_alias) : relation_alias_(std::move(relation_alias)) {}
-    virtual void project_and_populate_association(Context&, ISingularAssociationField&, const IResultSet& result_set, size_t row) = 0;
+    virtual void project_and_populate_association(Context&, IAssociationAnchor&, const IResultSet& result_set, size_t row) = 0;
 
     virtual void append_selects(std::vector<relational_algebra::SelectAlias>& out_selects) const = 0;
     virtual void rebuild_joins(std::map<std::string, RelationProjector*>& out_joins) = 0;
@@ -126,7 +122,7 @@ namespace persistence {
 
   template <typename T>
   struct RelationProjectorFor : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector> {
-    std::map<const ISingularAssociationFrom<T>*, CloningPtr<RelationProjector>> sub_projectors_;
+    std::map<const IAssociationFrom<T>*, CloningPtr<RelationProjector>> sub_projectors_;
     std::vector<std::pair<IPropertyOf<T>*, std::string>> column_aliases_;
 
     RelationProjectorFor(std::string relation_alias) : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector>(std::move(relation_alias))
@@ -162,24 +158,24 @@ namespace persistence {
         auto property = pair.first;
         auto& alias = pair.second;
         Maybe<std::string> col_value = result_set.get(row, alias);
-        wayward::data_franca::Adapter<Maybe<std::string>> reader { col_value };
+        wayward::data_franca::Adapter<Maybe<std::string>> reader { col_value, wayward::data_franca::Options::None };
         property->deserialize(*record, reader);
       }
 
       // Populate child associations
       for (auto& pair: sub_projectors_) {
-        ISingularAssociationField* real_association = pair.first->get_field(*record);
+        auto real_association = pair.first->get_anchor(*record);
         pair.second->project_and_populate_association(ctx, *real_association, result_set, row);
       }
 
       return std::move(record);
     }
 
-    void project_and_populate_association(Context& ctx, ISingularAssociationField& association, const IResultSet& result_set, size_t row) {
+    void project_and_populate_association(Context& ctx, IAssociationAnchor& association, const IResultSet& result_set, size_t row) {
       auto ptr = project(ctx, result_set, row);
-      auto typed_association = dynamic_cast<ISingularAssociationFieldTo<T>*>(&association);
+      auto typed_association = dynamic_cast<ISingularAssociationAnchor<T>*>(&association);
       if (typed_association == nullptr) {
-        throw AssociationTypeMismatchError(wayward::format("Could not populate association expecting type {0} with object of type {1}.", association.foreign_type().name(), get_type<T>()->name()));
+        throw AssociationTypeMismatchError(wayward::format("Could not populate association expecting type {0} with object of type {1}.", association.association()->foreign_type()->name(), get_type<T>()->name()));
       }
       typed_association->populate(std::move(ptr));
     }

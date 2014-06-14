@@ -41,10 +41,10 @@ namespace persistence {
     virtual bool serialize(const T& record, wayward::data_franca::ScalarMutator& target) const = 0;
 
     virtual wayward::data_franca::ReaderPtr
-    get_member_reader(const T&) const = 0;
+    get_member_reader(const T&, wayward::Bitflags<wayward::data_franca::Options> options) const = 0;
 
     virtual wayward::data_franca::AdapterPtr
-    get_member_adapter(T&) const = 0;
+    get_member_adapter(T&, wayward::Bitflags<wayward::data_franca::Options> options) const = 0;
 
     virtual DataRef
     get_data(const T&) const = 0;
@@ -83,13 +83,13 @@ namespace persistence {
     }
 
     wayward::data_franca::ReaderPtr
-    get_member_reader(const T& object) const override {
-      return wayward::data_franca::make_reader(get(object));
+    get_member_reader(const T& object, wayward::Bitflags<wayward::data_franca::Options> options) const override {
+      return wayward::data_franca::make_reader(get(object), options);
     }
 
     wayward::data_franca::AdapterPtr
-    get_member_adapter(T& object) const override {
-      return wayward::data_franca::make_adapter(get(object));
+    get_member_adapter(T& object, wayward::Bitflags<wayward::data_franca::Options> options) const override {
+      return wayward::data_franca::make_adapter(get(object), options);
     }
 
     DataRef

@@ -6,16 +6,25 @@
 #include <wayward/support/data_franca/writer.hpp>
 
 #include <wayward/support/meta.hpp>
+#include <wayward/support/bitflags.hpp>
 
 namespace wayward {
   namespace data_franca {
+    enum class Options {
+      None = 0,
+
+      // A flag that indicates that readers/adapters are allowed to make potentially slow
+      // requests to fetch all requested data.
+      AllowLoad = 1,
+    };
+
     struct IAdapter : IReader, IWriter {
       virtual ~IAdapter() {}
     };
 
     template <typename T>
     struct AdapterBase : IAdapter {
-      AdapterBase(T& ref) : ref_(ref) {}
+      AdapterBase(T& ref, Bitflags<Options> opts) : ref_(ref), options_(opts) {}
 
       // IReader interface:
       DataType type() const override { return DataType::Nothing; }
@@ -41,6 +50,7 @@ namespace wayward {
       bool erase(const String& key) override { return false; }
 
       T& ref_;
+      Bitflags<Options> options_;
     };
 
     template <typename T, typename Enable = void> struct Adapter;
@@ -48,44 +58,44 @@ namespace wayward {
     template <typename T> struct GetAdapter;
 
     template <typename T>
-    auto make_adapter(T&& object) ->
+    auto make_adapter(T&& object, Bitflags<Options> options) ->
     // C++14 now please...
     decltype(
-      GetAdapter<typename meta::RemoveConstRef<T>::Type>::get(std::forward<T>(object))
+      GetAdapter<typename meta::RemoveConstRef<T>::Type>::get(std::forward<T>(object), options)
     ) {
-      return GetAdapter<typename meta::RemoveConstRef<T>::Type>::get(std::forward<T>(object));
+      return GetAdapter<typename meta::RemoveConstRef<T>::Type>::get(std::forward<T>(object), options);
     }
 
     template <typename T>
-    ReaderPtr make_reader(T&& object) {
-      return GetAdapter<typename meta::RemoveConstRef<T>::Type>::get(std::forward<T>(object));
+    ReaderPtr make_reader(T&& object, Bitflags<Options> options = Options::None) {
+      return GetAdapter<typename meta::RemoveConstRef<T>::Type>::get(std::forward<T>(object), options);
     }
 
     template <typename T>
     struct GetAdapter {
-      static AdapterPtr get(T& object) {
-        return std::static_pointer_cast<IAdapter>(std::make_shared<Adapter<T>>(object));
+      static AdapterPtr get(T& object, Bitflags<Options> options) {
+        return std::static_pointer_cast<IAdapter>(std::make_shared<Adapter<T>>(object, options));
       }
-      static ReaderPtr get(const T& object) {
+      static ReaderPtr get(const T& object, Bitflags<Options> options) {
         // It's OK to const_cast here, because we immediately upcast to IReader, which is a const-only interface.
-        return std::static_pointer_cast<const IReader>(std::make_shared<Adapter<T>>(const_cast<T&>(object)));
+        return std::static_pointer_cast<const IReader>(std::make_shared<Adapter<T>>(const_cast<T&>(object), options));
       }
     };
 
     template <typename T>
     struct OwningAdapter : Adapter<T> {
       T owned_;
-      OwningAdapter(T object) : Adapter<T>(owned_), owned_(std::move(object)) {}
+      OwningAdapter(T object, Bitflags<Options> options) : Adapter<T>(owned_, options), owned_(std::move(object)) {}
     };
 
     template <typename T>
-    AdapterPtr make_owning_adapter(T&& object) {
-      return AdapterPtr{ new OwningAdapter<typename meta::RemoveConstRef<T>::Type>{ std::forward<T>(object) } };
+    AdapterPtr make_owning_adapter(T&& object, Bitflags<Options> options = Options::None) {
+      return AdapterPtr{ new OwningAdapter<typename meta::RemoveConstRef<T>::Type>{ std::forward<T>(object), options } };
     }
 
     template <typename T>
-    ReaderPtr make_owning_reader(T&& object) {
-      return ReaderPtr{ new OwningAdapter<typename meta::RemoveConstRef<T>::Type>{ std::forward<T>(object) } };
+    ReaderPtr make_owning_reader(T&& object, Bitflags<Options> options = Options::None) {
+      return ReaderPtr{ new OwningAdapter<typename meta::RemoveConstRef<T>::Type>{ std::forward<T>(object), options } };
     }
   }
 }

@@ -105,7 +105,7 @@ namespace wayward {
 
     template <>
     struct Adapter<Object> : IAdapter {
-      Adapter(Object& ref) : ref_(ref) {}
+      Adapter(Object& ref, Bitflags<Options> options) : ref_(ref), options_(options) {}
 
       // IReader interface:
       DataType type() const final { return ref_.type(); }
@@ -114,9 +114,9 @@ namespace wayward {
       Maybe<Real>    get_real()    const final { return ref_.get_real(); }
       Maybe<String>  get_string()  const final { return ref_.get_string(); }
       bool has_key(const String& key) const final { return ref_.has_key(key); }
-      ReaderPtr get(const String& key) const final { return make_reader(ref_.get(key)); }
+      ReaderPtr get(const String& key) const final { return make_reader(ref_.get(key), options_); }
       size_t   length()       const final { return ref_.length(); }
-      ReaderPtr at(size_t idx) const final { return make_reader(ref_.at(idx)); }
+      ReaderPtr at(size_t idx) const final { return make_reader(ref_.at(idx), options_); }
       ReaderEnumeratorPtr enumerator() const final { return ref_.enumerator(); }
 
       // IWriter interface:
@@ -125,22 +125,21 @@ namespace wayward {
       bool set_integer(Integer n) final { return ref_.set_integer(n); }
       bool set_real(Real r) final { return ref_.set_real(r); }
       bool set_string(String str) final { return ref_.set_string(std::move(str)); }
-      AdapterPtr reference_at_index(size_t idx) final { return make_adapter(ref_.reference_at_index(idx)); }
+      AdapterPtr reference_at_index(size_t idx) final { return make_adapter(ref_.reference_at_index(idx), options_); }
       AdapterPtr push_back() final {
         ref_.push_back(Object{});
         AdapterPtr ptr;
         ref_.data_.template when<Object::List>([&](Object::List& list) {
-          ptr = make_adapter(*list.back());
+          ptr = make_adapter(*list.back(), options_);
         });
         return std::move(ptr);
       }
-      AdapterPtr reference_at_key(const String& key) final { return make_adapter(ref_.reference_at_key(key)); }
+      AdapterPtr reference_at_key(const String& key) final { return make_adapter(ref_.reference_at_key(key), options_); }
       bool erase(const String& key) final { return ref_.erase(key); }
 
       Object& ref_;
+      Bitflags<Options> options_;
     };
-
-
   }
 }
 

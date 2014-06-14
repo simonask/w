@@ -13,7 +13,7 @@ namespace wayward {
     struct ProjectionReader<persistence::Projection<Primary, Relations...>> : IReader {
       using Proj = persistence::Projection<Primary, Relations...>;
 
-      ProjectionReader(Proj& proj) : proj_(proj) {}
+      ProjectionReader(Proj& proj, Options options) : proj_(proj), options_(options) {}
 
       // IReader interface:
       DataType type() const override { return DataType::List; }
@@ -31,16 +31,17 @@ namespace wayward {
 
       ReaderPtr at(size_t idx) const final {
         load();
-        return make_reader(values_->at(idx));
+        return make_reader(values_->at(idx), options_);
       }
 
       ReaderEnumeratorPtr enumerator() const final {
         load();
-        return make_reader(*values_)->enumerator();
+        return make_reader(*values_, options_)->enumerator();
       }
 
     private:
       Proj& proj_;
+      Options options_;
       mutable Maybe<std::vector<persistence::RecordPtr<Primary>>> values_;
 
       void load() const {
@@ -53,8 +54,8 @@ namespace wayward {
     template <typename Primary, typename... Relations>
     struct GetAdapter<persistence::Projection<Primary, Relations...>> {
       using Proj = persistence::Projection<Primary, Relations...>;
-      static ReaderPtr get(Proj& proj) {
-        return std::static_pointer_cast<const IReader>(std::make_shared<ProjectionReader<Proj>>(proj));
+      static ReaderPtr get(Proj& proj, Options options) {
+        return std::static_pointer_cast<const IReader>(std::make_shared<ProjectionReader<Proj>>(proj, options));
       }
     };
   }

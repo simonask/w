@@ -41,7 +41,7 @@ namespace wayward {
     };
 
     template <typename T>
-    Mutator::Mutator(T&& object) : q_(make_adapter(std::forward<T>(object))) {}
+    Mutator::Mutator(T&& object) : q_(make_adapter(std::forward<T>(object), Options::None)) {}
 
     inline DataType Mutator::type() const {
       return reader_iface().type();
@@ -71,8 +71,8 @@ namespace wayward {
 
     template <>
     struct GetAdapter<Mutator> {
-      static ReaderPtr get(const Mutator& m) { return std::static_pointer_cast<const IReader>(m.q_); }
-      static AdapterPtr get(Mutator& m) { return m.q_; }
+      static ReaderPtr get(const Mutator& m, Options options) { return std::static_pointer_cast<const IReader>(m.q_); }
+      static AdapterPtr get(Mutator& m, Options options) { return m.q_; }
     };
 
     struct ScalarMutator final : ReaderInterface<ScalarMutator, Spectator>, WriterInterface<ScalarMutator, Mutator> {
