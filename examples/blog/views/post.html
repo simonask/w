@@ -4,5 +4,20 @@
 <a href="/posts">Back to posts</a>
 </p>
 <h1>{{ post.title }}</h1>
+<p class="byline">Author: {{ post.author.name }} ({{ post.author.email }})</p>
 <p>{{ post.text }}</p>
+
+<h2>Comments</h2>
+{% for comment in comments %}
+<div class="comment">
+<p>{{ comment.text }}</p>
+<p class="byline"><em>{{ comment.author.name }} on {{ comment.created_at }}</em></p>
+</div>
+{% endfor %}
+
+<form action="/posts/{{ post.id }}/comments" method="POST" enctype="application/x-www-form-urlencoded">
+<input type="hidden" name="comment[author_id]" value="1" />
+<textarea name="comment[text]" id="comment_text"></textarea>
+<button type="submit">Comment</button>
+</form>
 {% endblock %}

@@ -25,19 +25,20 @@ namespace app {
     void before(w::Request& req) override {
       int64_t id;
       if (req.params["post_id"] >> id) {
-        post = from<Post>().where(p::column(&Post::id) == id).first();
+        post = from<Post>().where(p::column(&Post::id) == id).inner_join(&Post::author).first();
       }
       if (!post)
         throw w::not_found();
     }
 
     w::Response get_post(w::Request& req) {
-      return w::render("post.html", {{"post", post}});
+      auto comments = post->comments.scope().left_outer_join(&Comment::author);
+      return w::render("post.html", {{"post", post}, {"comments", comments}});
     }
 
     w::Response put_post(w::Request& req) {
-      // p::assign_attributes(post, req.params["post"]);
-      // p::save(post);
+      p::assign_attributes(post, req.params["post"]);
+      p::save(post);
       return w::redirect(w::format("/posts/{0}", post->id));
     }
 
@@ -47,7 +48,8 @@ namespace app {
     }
 
     w::Response get_comments(w::Request& req) {
-      return w::render("comments.html", {{"post", post}});
+      auto comments = post->comments.scope().left_outer_join(&Comment::author);
+      return w::render("comments.html", {{"post", post}, {"comments", comments}});
     }
 
     w::Response post_comment(w::Request& req) {
