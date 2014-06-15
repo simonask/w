@@ -200,11 +200,4 @@ namespace {
     EXPECT_EQ(0, m->second());
     EXPECT_EQ(repr, m->strftime("%Y-%m-%d %T"));
   }
-
-  TEST(DateTime, DISABLED_strftime_regression_1_timezones) {
-    // Pending.
-    auto t = DateTime::at(Timezone{8_hours}, 2014, 6, 15, 11, 0, 0);
-    auto str = t.strftime("%Y-%m-%d %T %z");
-    EXPECT_EQ("2014-06-15 11:00:00 +0800", str);
-  }
 }

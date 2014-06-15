@@ -32,7 +32,7 @@ namespace app {
     }
 
     w::Response get_post(w::Request& req) {
-      auto comments = post->comments.scope().left_outer_join(&Comment::author);
+      auto comments = post->comments.scope().left_outer_join(&Comment::author).order(&Comment::created_at);
       return w::render("post.html", {{"post", post}, {"comments", comments}});
     }
 

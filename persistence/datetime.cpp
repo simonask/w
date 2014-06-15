@@ -18,33 +18,29 @@ namespace persistence {
     std::string string_rep;
     if (source >> string_rep) {
       // PostgreSQL timestamp with time zone looks like this: YYYY-mm-dd HH:MM:ss+ZZ
-      // Unfortunately, POSIX strptime can't deal with the two-digit timezone at the end, so we parse that bit manually.
-
+      // Unfortunately, POSIX strptime can't deal with the two-digit timezone at the end, so we tinker with the string
+      // to get it into a parseable state.
       std::string local_time_string = string_rep.substr(0, 19);
-      auto m = DateTime::strptime(local_time_string, "%Y-%m-%d %T");
+      std::string timezone_string = string_rep.substr(string_rep.size() - 3);
+      local_time_string += timezone_string;
+      if (timezone_string.size() == 3) {
+        local_time_string += "00";
+      }
+
+      auto m = DateTime::strptime(local_time_string, "%Y-%m-%d %T%z");
+
       if (m) {
-        auto local_time = std::move(*m);
-        std::string timezone_indicator = string_rep.substr(string_rep.size() - 3);
-        std::stringstream ss(timezone_indicator);
-        int tz_hours {0};
-        ss >> tz_hours;
-        wayward::Seconds tz_seconds {tz_hours * 3600};
-        local_time.timezone_ = wayward::Timezone{tz_seconds, false};
-        value = std::move(local_time);
+        value = std::move(*m);
         return true;
+      } else {
+        fprintf(stderr, "ERROR: Couldn't parse DateTime: %s\n", local_time_string.c_str());
       }
     }
     return false;
   }
 
   bool DateTimeType::serialize_value(const DateTime& value, wayward::data_franca::ScalarMutator& target) const {
-    std::stringstream ss { value.strftime("%Y-%m-%d %T") };
-
-    // TODO: Use format() once it can do advanced integer formatting.
-    char buffer[4];
-    sprintf(buffer, "%+2lld", value.timezone_.utc_offset.repr_.count() / 3600);
-    ss << buffer;
-
+    std::stringstream ss { value.strftime("%Y-%m-%d %T%z") };
     target << ss.str();
     return true;
   }

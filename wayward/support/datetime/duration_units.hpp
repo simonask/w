@@ -23,7 +23,7 @@ namespace wayward {
     template <typename OtherIntervalType>
     DateTimeDuration(DateTimeDuration<OtherIntervalType> other) {
       using OtherRatio = typename DateTimeDuration<OtherIntervalType>::RatioToSeconds;
-      static_assert(OtherRatio::den >= RatioToSeconds::den, "Converting to duration with longer denominator would lose precision.");
+      static_assert(OtherRatio::den <= RatioToSeconds::den, "Converting to duration with longer denominator would lose precision.");
       const auto mul = OtherRatio::num * RatioToSeconds::den;
       const auto divide = OtherRatio::den * RatioToSeconds::num;
       repr_ = IntervalType{other.repr_.count() * mul / divide};

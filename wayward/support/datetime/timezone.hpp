@@ -9,10 +9,9 @@ namespace wayward {
     static const Timezone UTC;
     Timezone() {}
     Timezone(const Timezone&) = default;
-    explicit Timezone(Seconds utc_offset, bool is_dst = false) : utc_offset(utc_offset), is_dst(is_dst) {}
+    explicit Timezone(std::string name) : zone(std::move(name)) {}
 
-    Seconds utc_offset = Seconds{0};
-    bool is_dst = false;
+    std::string zone;
   };
 }
 
