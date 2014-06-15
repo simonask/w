@@ -16,7 +16,19 @@ namespace wayward {
     using RatioToSeconds = typename IntervalType::period;
     using Self = DateTimeDuration<IntervalType>;
     explicit DateTimeDuration(Repr r) : repr_(r) {}
-    DateTimeDuration(IntervalType repr) : repr_(repr) {}
+    DateTimeDuration(IntervalType interval) : repr_(interval) {}
+
+    DateTimeDuration(const DateTimeDuration<IntervalType>&) = default;
+
+    template <typename OtherIntervalType>
+    DateTimeDuration(DateTimeDuration<OtherIntervalType> other) {
+      using OtherRatio = typename DateTimeDuration<OtherIntervalType>::RatioToSeconds;
+      static_assert(OtherRatio::den >= RatioToSeconds::den, "Converting to duration with longer denominator would lose precision.");
+      const auto mul = OtherRatio::num * RatioToSeconds::den;
+      const auto divide = OtherRatio::den * RatioToSeconds::num;
+      repr_ = IntervalType{other.repr_.count() * mul / divide};
+    }
+
     operator IntervalType() const { return repr_; }
     Self& operator=(const Self&) = default;
 
@@ -72,6 +84,10 @@ namespace wayward {
     Self& operator%=(Self other) {
       repr_ %= other.repr_;
       return *this;
+    }
+
+    Self operator-() const {
+      return Self{-repr_};
     }
 
     IntervalType repr_;

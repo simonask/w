@@ -24,8 +24,8 @@ namespace wayward {
 
     DateTime() {}
     explicit DateTime(Repr repr) : repr_(repr) {}
+    DateTime(const DateTime&) = default;
     DateTime(Repr repr, Timezone tz) : repr_(repr), timezone_(tz) {}
-    operator Repr() const { return repr_; }
     Repr& r() { return repr_; }
     DateTime& operator=(const DateTime&) = default;
 
@@ -85,15 +85,15 @@ namespace wayward {
     std::string iso8601() const;
 
     struct CalendarValues {
-      int32_t year;
-      int32_t month;
-      int32_t day;
-      int32_t hour;
-      int32_t minute;
-      int32_t second;
-      int32_t millisecond;
-      int32_t microsecond;
-      int32_t nanosecond;
+      int32_t year = 0;
+      int32_t month = 0;
+      int32_t day = 0;
+      int32_t hour = 0;
+      int32_t minute = 0;
+      int32_t second = 0;
+      int32_t millisecond = 0;
+      int32_t microsecond = 0;
+      int32_t nanosecond = 0;
     };
 
     CalendarValues as_calendar_values() const;

@@ -15,6 +15,7 @@ namespace wayward {
 
 namespace {
   using wayward::DateTime;
+  using wayward::Timezone;
   using wayward::DateTimeDuration;
   using wayward::DateTimeInterval;
   using wayward::Nanoseconds;
@@ -185,5 +186,25 @@ namespace {
     auto x = minutes + seconds;
     auto expected = 90_seconds;
     EXPECT_EQ(x, expected);
+  }
+
+  TEST(DateTime, strptime_regression_1) {
+    std::string repr = "2014-06-15 12:07:00";
+    auto m = DateTime::strptime(repr, "%Y-%m-%d %T");
+    EXPECT_EQ(true, (bool)m);
+    EXPECT_EQ(2014, m->year());
+    EXPECT_EQ(6, m->month());
+    EXPECT_EQ(15, m->day());
+    EXPECT_EQ(12, m->hour());
+    EXPECT_EQ(7, m->minute());
+    EXPECT_EQ(0, m->second());
+    EXPECT_EQ(repr, m->strftime("%Y-%m-%d %T"));
+  }
+
+  TEST(DateTime, DISABLED_strftime_regression_1_timezones) {
+    // Pending.
+    auto t = DateTime::at(Timezone{8_hours}, 2014, 6, 15, 11, 0, 0);
+    auto str = t.strftime("%Y-%m-%d %T %z");
+    EXPECT_EQ("2014-06-15 11:00:00 +0800", str);
   }
 }

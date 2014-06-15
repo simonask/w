@@ -5,8 +5,20 @@
 
 #include <array>
 
+#include <time.h>
+
 namespace wayward {
   using namespace units;
+
+  namespace {
+    struct Call_tzset {
+      Call_tzset() {
+        ::tzset();
+      }
+    };
+
+    static Call_tzset g_call_tzset;
+  }
 
   const Timezone Timezone::UTC = Timezone();
 
@@ -182,6 +194,20 @@ namespace wayward {
     return at(cal);
   }
 
+    DateTime DateTime::at(Timezone tz, int32_t year, int32_t month, int32_t d, int32_t h, int32_t m, int32_t s, int32_t ms, int32_t us, int32_t ns) {
+    CalendarValues cal;
+    cal.year = year;
+    cal.month = month;
+    cal.day = d;
+    cal.hour = h;
+    cal.minute = m;
+    cal.second = s;
+    cal.millisecond = ms;
+    cal.microsecond = us;
+    cal.nanosecond = ns;
+    return at(tz, cal);
+  }
+
   DateTime DateTime::at(const CalendarValues& cal) {
     return DateTime{DateTime::Repr{calendar_values_to_nanoseconds_from_epoch(cal)}};
   }
@@ -251,7 +277,7 @@ namespace wayward {
   }
 
   Maybe<DateTime> DateTime::strptime(const std::string& input, const std::string& fmt) {
-    struct tm t;
+    struct tm t = {0};
     char* r = ::strptime(input.c_str(), fmt.c_str(), &t);
     if (r == nullptr || r == input.c_str()) {
       // Conversion failed.
@@ -262,7 +288,7 @@ namespace wayward {
   }
 
   std::string DateTime::iso8601() const {
-    return strftime("%Y-%m-%d %H:%M:%S %z");
+    return strftime("%Y-%m-%d %T %z");
   }
 
   bool DateTimeArithmetic<DateTimeInterval>::is_months(const DateTimeInterval& interval) {

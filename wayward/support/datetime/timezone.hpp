@@ -8,6 +8,7 @@ namespace wayward {
   struct Timezone {
     static const Timezone UTC;
     Timezone() {}
+    Timezone(const Timezone&) = default;
     explicit Timezone(Seconds utc_offset, bool is_dst = false) : utc_offset(utc_offset), is_dst(is_dst) {}
 
     Seconds utc_offset = Seconds{0};
