@@ -232,9 +232,17 @@ namespace ajg {
           return optional<value_type>(AdaptedWaywardNode{o[key]});
         }
 
+        // List lookup:
         if (o.type() == DataType::List) {
-          size_t idx = static_cast<size_t>(what.to_floating());
-          return optional<value_type>(AdaptedWaywardNode{o[idx]});
+          if (what.template is<integer_type>() || what.template is<floating_type>()) {
+            size_t idx = static_cast<size_t>(what.to_floating());
+            return optional<value_type>(AdaptedWaywardNode{o[idx]});
+          } else if (what.template is<string_type>()) {
+            std::string key = what.to_string();
+            if (key == "count" || key == "length") {
+              return optional<value_type>(AdaptedWaywardNode{(int64_t)o.length()});
+            }
+          }
         }
 
         return boost::none;
