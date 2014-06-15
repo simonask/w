@@ -44,9 +44,20 @@ namespace persistence {
       throw PersistError{"Trying to insert record that already has a primary key."};
     }
 
+    // Get the type and primary key.
     auto t = get_type<T>();
     auto pk = t->primary_key();
 
+    // Set created_at if it exists.
+    auto created_at_property = t->find_property_by_column_name("created_at");
+    if (created_at_property != nullptr) {
+      auto created_at_datetime_property = dynamic_cast<const PropertyOfBase<T, wayward::DateTime>*>(created_at_property);
+      if (created_at_datetime_property != nullptr) {
+        created_at_datetime_property->get(*record) = wayward::DateTime::now();
+      }
+    }
+
+    // Build the INSERT query.
     ast::InsertQuery query;
     query.relation = t->relation();
     size_t num = t->num_properties();
@@ -69,6 +80,7 @@ namespace persistence {
 
     auto result = conn.execute(query);
 
+    // Set the primary key of the record.
     if (result) {
       auto mid = result->get(0, pk->column());
       if (mid) {
