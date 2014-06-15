@@ -624,7 +624,7 @@ namespace persistence {
   }
 
   template <typename T>
-  RecordPtr<T> find_by_primary_key(Context& ctx, PrimaryKey key) {
+  RecordPtr<T> find(Context& ctx, PrimaryKey key) {
     return from<T>(ctx).where(column(&T::id) == key).first();
   }
 }

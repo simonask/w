@@ -14,7 +14,7 @@ namespace persistence {
   struct Context;
 
   template <typename T>
-  RecordPtr<T> find_by_primary_key(Context& ctx, PrimaryKey key);
+  RecordPtr<T> find(Context& ctx, PrimaryKey key);
 
   template <typename T>
   const PrimaryKey* get_pk_for_record(const RecordPtr<T>& record) {
@@ -108,7 +108,7 @@ namespace persistence {
     void load() final {
       value_.template when<PrimaryKey>([&](const PrimaryKey& key) {
         if (key.is_persisted()) {
-          value_ = find_by_primary_key<T>(*this->context_, key);
+          value_ = persistence::find<T>(*this->context_, key);
         }
       });
     }
