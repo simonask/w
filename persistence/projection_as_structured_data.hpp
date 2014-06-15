@@ -7,13 +7,11 @@
 
 namespace wayward {
   namespace data_franca {
-    template <typename Proj> struct ProjectionReader;
+    template <typename Primary, typename Joins>
+    struct Adapter<persistence::Projection<Primary, Joins>> : AdapterBase<persistence::Projection<Primary, Joins>> {
+      using Proj = persistence::Projection<Primary, Joins>;
 
-    template <typename Primary, typename... Relations>
-    struct ProjectionReader<persistence::Projection<Primary, Relations...>> : IReader {
-      using Proj = persistence::Projection<Primary, Relations...>;
-
-      ProjectionReader(Proj& proj, Bitflags<Options> options) : proj_(proj), options_(options) {}
+      Adapter(Proj& proj, Bitflags<Options> options) : AdapterBase<Proj>(proj, options) {}
 
       // IReader interface:
       DataType type() const override { return DataType::List; }
@@ -26,36 +24,34 @@ namespace wayward {
 
       size_t length() const final {
         load();
-        return proj_.count();
+        return this->ref_.count();
       }
 
       ReaderPtr at(size_t idx) const final {
         load();
-        return make_reader(values_->at(idx), options_);
+        return make_reader(values_->at(idx), this->options_);
       }
 
       ReaderEnumeratorPtr enumerator() const final {
         load();
-        return make_reader(*values_, options_)->enumerator();
+        return make_reader(*values_, this->options_)->enumerator();
       }
 
     private:
-      Proj& proj_;
-      Bitflags<Options> options_;
       mutable Maybe<std::vector<persistence::RecordPtr<Primary>>> values_;
 
       void load() const {
         if (!values_) {
-          values_ = proj_.all();
+          values_ = this->ref_.all();
         }
       }
     };
 
-    template <typename Primary, typename... Relations>
-    struct GetAdapter<persistence::Projection<Primary, Relations...>> {
-      using Proj = persistence::Projection<Primary, Relations...>;
-      static ReaderPtr get(Proj& proj, Bitflags<Options> options) {
-        return std::static_pointer_cast<const IReader>(std::make_shared<ProjectionReader<Proj>>(proj, options));
+    template <typename Primary, typename Joins>
+    struct GetAdapter<persistence::Projection<Primary, Joins>> {
+      using Proj = persistence::Projection<Primary, Joins>;
+      static AdapterPtr get(Proj& proj, Bitflags<Options> options) {
+        return std::static_pointer_cast<IAdapter>(std::make_shared<Adapter<Proj>>(proj, options));
       }
     };
   }
