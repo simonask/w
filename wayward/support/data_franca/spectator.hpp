@@ -18,6 +18,10 @@ namespace wayward {
       Spectator(Spectator&&) = default;
       template <typename T>
       Spectator(T&& object);
+      template <typename T>
+      Spectator(const T& object);
+      template <typename T>
+      Spectator(T& object);
 
       Spectator& operator=(const Spectator&) = default;
       Spectator& operator=(Spectator&&) = default;
@@ -40,7 +44,13 @@ namespace wayward {
     };
 
     template <typename T>
-    Spectator::Spectator(T&& object) : q_(make_reader(std::forward<T>(object), Options::AllowLoad)) {}
+    Spectator::Spectator(const T& object) : q_(make_reader(object, Options::AllowLoad)) {}
+
+    template <typename T>
+    Spectator::Spectator(T& object) : q_(make_reader(object, Options::AllowLoad)) {}
+
+    template <typename T>
+    Spectator::Spectator(T&& object) : q_(make_owning_reader(std::move(object), Options::AllowLoad)) {}
 
     template <>
     struct GetAdapter<Spectator> {
