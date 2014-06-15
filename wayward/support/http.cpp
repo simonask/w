@@ -120,6 +120,7 @@ namespace wayward {
       }
 
       if (r.method == "POST" && r.body.size()) {
+        printf("POST BODY: %s\n", r.body.c_str());
         auto kv_pairs = split(r.body, "&");
         for (auto& p: kv_pairs) {
           auto kv = split(p, "=", 2);
@@ -341,6 +342,17 @@ namespace wayward {
     {
       throw HTTPError(wayward::format("Invalid method: {0}", req.method));
     }
+
+    for (auto& pair: req.headers) {
+      auto kv = evhtp_header_new(pair.first.c_str(), pair.second.c_str(), 0, 0); // 0 means "do not copy"
+      evhtp_headers_add_header(r->headers_out, kv);
+    }
+
+    if (req.body.size()) {
+      evbuffer_add(r->buffer_out, req.body.c_str(), req.body.size());
+      evbuffer_add(r->buffer_out, "\n\n", 2);
+    }
+
     p_->initiating_fiber = fiber::current();
     p_->recorded_response = Nothing;
     p_->error = nullptr;
