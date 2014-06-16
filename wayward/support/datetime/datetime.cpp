@@ -24,16 +24,6 @@ namespace wayward {
   constexpr char GetTimeUnitName<Microseconds>::Value[];
   constexpr char GetTimeUnitName<Nanoseconds>::Value[];
 
-  namespace {
-    struct Call_tzset {
-      Call_tzset() {
-        ::tzset();
-      }
-    };
-
-    static Call_tzset g_call_tzset;
-  }
-
   DateTime DateTime::operator+(const DateTimeInterval& interval) const {
     DateTime copy = *this;
     copy += interval;
@@ -62,22 +52,23 @@ namespace wayward {
 
   namespace {
     bool
-    is_leap_year(int64_t year) {
+    is_leap_year(Years year) {
       // It's leap year every 4 years, except every 100 years, but then again every 400 years.
       // Source: http://en.wikipedia.org/wiki/Leap_year
-      return ((year % 4) == 0) && (((year % 100) != 0) || ((year % 400) == 0));
+      int y = year.count();
+      return ((y % 4) == 0) && (((y % 100) != 0) || ((y % 400) == 0));
     }
 
-    uint32_t
-    days_in_month(int64_t year, int64_t month) {
+    Days
+    days_in_month(Years year, Months month) {
       int64_t month_sign = month < 0 ? -1 : 1;
 
       month *= month_sign; // abs
-      year += month_sign * ((month - 1) / 12);
-      month = ((month - 1) % 12) + 1;
+      year += month_sign * ((month - 1_month) / 12);
+      month = ((month - 1_month) % 12) + 1_month;
       month *= month_sign; // undo abs
 
-      switch (month) {
+      switch (month.count()) {
         case 1: return 31;
         case 2: return is_leap_year(year) ? 29 : 28;
         case 3: return 31;
@@ -97,14 +88,14 @@ namespace wayward {
     struct tm
     calendar_values_to_tm(const DateTime::CalendarValues& cal) {
       struct tm t = {0};
-      t.tm_year = cal.year - 1900;
+      t.tm_year = (cal.year - 1900_years).count();
 
       // TODO: timegm gives an error when wrapping old dates, for some weird reason
-      t.tm_mon = cal.month - 1;
-      t.tm_mday = cal.day;
-      t.tm_hour = cal.hour;
-      t.tm_min = cal.minute;
-      t.tm_sec = cal.second;
+      t.tm_mon = (cal.month - 1_month).count();
+      t.tm_mday = cal.day.count();
+      t.tm_hour = cal.hour.count();
+      t.tm_min = cal.minute.count();
+      t.tm_sec = cal.second.count();
       t.tm_zone = const_cast<char*>(cal.timezone.zone.data());
       return t;
     }
@@ -112,12 +103,12 @@ namespace wayward {
     DateTime::CalendarValues
     tm_to_calendar_values(const struct tm& t) {
       DateTime::CalendarValues cal;
-      cal.year = t.tm_year + 1900;
-      cal.month = t.tm_mon + 1;
-      cal.day = t.tm_mday;
-      cal.hour = t.tm_hour;
-      cal.minute = t.tm_min;
-      cal.second = t.tm_sec;
+      cal.year = Years{t.tm_year + 1900};
+      cal.month = Months{t.tm_mon + 1};
+      cal.day = Days{t.tm_mday};
+      cal.hour = Hours{t.tm_hour};
+      cal.minute = Minutes{t.tm_min};
+      cal.second = Seconds{t.tm_sec};
       cal.timezone.zone = t.tm_zone;
       return cal;
     }
@@ -130,8 +121,11 @@ namespace wayward {
     Nanoseconds local_calendar_values_to_utc_epoch(const DateTime::CalendarValues& cal) {
       // TODO: The time zone must be the local timezone, otherwise it won't work :(
       struct tm t = calendar_values_to_tm(cal);
-      return local_tm_to_utc_epoch(t);
-      // TODO: Add sub-millisecond precision.
+      Nanoseconds ns = local_tm_to_utc_epoch(t);
+      ns += cal.nanosecond;
+      ns += cal.microsecond;
+      ns += cal.millisecond;
+      return ns;
     }
 
     struct tm utc_epoch_to_tm_utc(Nanoseconds ns) {
@@ -157,7 +151,14 @@ namespace wayward {
     DateTime::CalendarValues
     utc_epoch_to_local_calendar_values(Nanoseconds ns) {
       struct tm t = utc_epoch_to_tm_local(ns);
-      return tm_to_calendar_values(t);
+      auto cal = tm_to_calendar_values(t);
+
+      cal.nanosecond = ns % 1000000000;
+      cal.microsecond = cal.nanosecond.count() / 1000;
+      cal.nanosecond %= 1000;
+      cal.millisecond = cal.microsecond.count() / 1000;
+      cal.microsecond %= 1000;
+      return cal;
     }
   }
 
@@ -165,7 +166,7 @@ namespace wayward {
     return utc_epoch_to_local_calendar_values(repr_.time_since_epoch());
   }
 
-  DateTime DateTime::at(Timezone tz, int32_t year, int32_t month, int32_t d, int32_t h, int32_t m, int32_t s, int32_t ms, int32_t us, int32_t ns) {
+  DateTime DateTime::at(Timezone tz, Years year, Months month, Days d, Hours h, Minutes m, Seconds s, Milliseconds ms, Microseconds us, Nanoseconds ns) {
     CalendarValues cal;
     cal.year = year;
     cal.month = month;
@@ -180,7 +181,7 @@ namespace wayward {
     return at(cal);
   }
 
-  DateTime DateTime::at(int32_t year, int32_t month, int32_t d, int32_t h, int32_t m, int32_t s, int32_t ms, int32_t us, int32_t ns) {
+  DateTime DateTime::at(Years year, Months month, Days d, Hours h, Minutes m, Seconds s, Milliseconds ms, Microseconds us, Nanoseconds ns) {
     return at(clock().timezone(), year, month, d, h, m, s, ms, us, ns);
   }
 
@@ -192,47 +193,47 @@ namespace wayward {
     return Seconds{repr_.time_since_epoch().count() / 1000000};
   }
 
-  int32_t DateTime::year() const {
+  Years DateTime::year() const {
     auto cal = as_calendar_values();
     return cal.year;
   }
 
-  int32_t DateTime::month() const {
+  Months DateTime::month() const {
     auto cal = as_calendar_values();
     return cal.month;
   }
 
-  int32_t DateTime::day() const {
+  Days DateTime::day() const {
     auto cal = as_calendar_values();
     return cal.day;
   }
 
-  int32_t DateTime::hour() const {
+  Hours DateTime::hour() const {
     auto cal = as_calendar_values();
     return cal.hour;
   }
 
-  int32_t DateTime::minute() const {
+  Minutes DateTime::minute() const {
     auto cal = as_calendar_values();
     return cal.minute;
   }
 
-  int32_t DateTime::second() const {
+  Seconds DateTime::second() const {
     auto cal = as_calendar_values();
     return cal.second;
   }
 
-  int32_t DateTime::millisecond() const {
+  Milliseconds DateTime::millisecond() const {
     auto cal = as_calendar_values();
     return cal.millisecond;
   }
 
-  int32_t DateTime::microsecond() const {
+  Microseconds DateTime::microsecond() const {
     auto cal = as_calendar_values();
     return cal.microsecond;
   }
 
-  int32_t DateTime::nanosecond() const {
+  Nanoseconds DateTime::nanosecond() const {
     auto cal = as_calendar_values();
     return cal.nanosecond;
   }
@@ -297,7 +298,7 @@ namespace wayward {
 
     // If we're adding years from a leap year, we way end up with
     // an off-by-one-day error.
-    uint32_t dim = days_in_month(cal.year, cal.month);
+    Days dim = days_in_month(cal.year, cal.month);
     if (cal.day > dim) {
       cal.day = dim;
     }
@@ -310,7 +311,7 @@ namespace wayward {
     cal.month += by.repr_.count();
 
     // Don't leak into next month.
-    uint32_t dim = days_in_month(cal.year, cal.month);
+    Days dim = days_in_month(cal.year, cal.month);
     if (cal.day > dim) {
       cal.day = dim;
     }

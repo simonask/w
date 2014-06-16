@@ -15,7 +15,7 @@ namespace wayward {
     using Repr = typename IntervalType::rep;
     using RatioToSeconds = typename IntervalType::period;
     using Self = DateTimeDuration<IntervalType>;
-    explicit DateTimeDuration(Repr r) : repr_(r) {}
+    DateTimeDuration(Repr r = 0) : repr_(r) {}
     DateTimeDuration(IntervalType interval) : repr_(interval) {}
 
     DateTimeDuration(const DateTimeDuration<IntervalType>&) = default;
@@ -26,38 +26,47 @@ namespace wayward {
       static_assert(OtherRatio::den <= RatioToSeconds::den, "Converting to duration with longer denominator would lose precision.");
       const auto mul = OtherRatio::num * RatioToSeconds::den;
       const auto divide = OtherRatio::den * RatioToSeconds::num;
-      repr_ = IntervalType{other.repr_.count() * mul / divide};
+      repr_ = IntervalType{other.count() * mul / divide};
     }
+
+    bool operator==(const DateTimeDuration<IntervalType>& other) const { return repr_ == other.repr_; }
+    bool operator!=(const DateTimeDuration<IntervalType>& other) const { return repr_ != other.repr_; }
+    bool operator<(const DateTimeDuration<IntervalType>& other) const { return repr_ < other.repr_; }
+    bool operator>(const DateTimeDuration<IntervalType>& other) const { return repr_ > other.repr_; }
+    bool operator<=(const DateTimeDuration<IntervalType>& other) const { return repr_ <= other.repr_; }
+    bool operator>=(const DateTimeDuration<IntervalType>& other) const { return repr_ >= other.repr_; }
+
+    Repr count() const { return repr_.count(); }
 
     operator IntervalType() const { return repr_; }
     Self& operator=(const Self&) = default;
 
     template <typename T>
-    auto operator+(DateTimeDuration<T> other) -> DateTimeDuration<decltype(std::declval<IntervalType>() + other.repr_)> {
+    auto operator+(DateTimeDuration<T> other) const -> DateTimeDuration<decltype(std::declval<IntervalType>() + other.repr_)> {
       return repr_ + other.repr_;
     }
     template <typename T>
-    auto operator-(DateTimeDuration<T> other) -> DateTimeDuration<decltype(std::declval<IntervalType>() - other.repr_)> {
+    auto operator-(DateTimeDuration<T> other) const -> DateTimeDuration<decltype(std::declval<IntervalType>() - other.repr_)> {
       return repr_ - other.repr_;
     }
     template <typename T>
-    auto operator*(T scalar) -> DateTimeDuration<decltype(std::declval<IntervalType>() * scalar)> {
+    auto operator*(T scalar) const -> DateTimeDuration<decltype(std::declval<IntervalType>() * scalar)> {
       return repr_ * scalar;
     }
     template <typename T>
-    auto operator/(DateTimeDuration<T> other) -> decltype(std::declval<IntervalType>() / other.repr_) {
+    auto operator/(DateTimeDuration<T> other) const -> decltype(std::declval<IntervalType>() / other.repr_) {
       return repr_ / other.repr_;
     }
     template <typename T>
-    auto operator/(T scalar) -> DateTimeDuration<decltype(std::declval<IntervalType>() / scalar)> {
+    auto operator/(T scalar) const -> DateTimeDuration<decltype(std::declval<IntervalType>() / scalar)> {
       return repr_ / scalar;
     }
     template <typename T>
-    auto operator%(DateTimeDuration<T> other) -> DateTimeDuration<decltype(std::declval<IntervalType>() * other.repr_)> {
+    auto operator%(DateTimeDuration<T> other) const -> DateTimeDuration<decltype(std::declval<IntervalType>() * other.repr_)> {
       return repr_ % other.repr_;
     }
     template <typename T>
-    auto operator%(T scalar) -> decltype(std::declval<IntervalType>() % scalar) {
+    auto operator%(T scalar) const -> DateTimeDuration<decltype(std::declval<IntervalType>() % scalar)> {
       return repr_ % scalar;
     }
 
@@ -92,6 +101,12 @@ namespace wayward {
 
     IntervalType repr_;
   };
+
+  template <typename T, typename IntervalType>
+  typename std::enable_if<std::is_arithmetic<T>::value, DateTimeDuration<IntervalType>>::type
+  operator*(T scalar, DateTimeDuration<IntervalType> duration) {
+    return duration * scalar;
+  }
 
   using Years        = DateTimeDuration<std::chrono::duration<int64_t, std::ratio<365*24*60*60>>>;
   using Months       = DateTimeDuration<std::chrono::duration<int64_t, std::ratio<30*24*60*60>>>;
