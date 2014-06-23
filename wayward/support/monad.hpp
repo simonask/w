@@ -2,6 +2,8 @@
 #ifndef WAYWARD_SUPPORT_MONAD_HPP_INCLUDED
 #define WAYWARD_SUPPORT_MONAD_HPP_INCLUDED
 
+#include <utility>
+
 namespace wayward {
   namespace monad {
     template <typename T> struct Join;

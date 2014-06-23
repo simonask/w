@@ -2,6 +2,8 @@
 #ifndef WAYWARD_SUPPORT_DATETIME_TIMEZONE_HPP_INCLUDED
 #define WAYWARD_SUPPORT_DATETIME_TIMEZONE_HPP_INCLUDED
 
+#include <string>
+
 #include <wayward/support/datetime/duration_units.hpp>
 
 namespace wayward {
