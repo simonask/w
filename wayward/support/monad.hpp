@@ -14,7 +14,7 @@ namespace wayward {
     };
 
     template <template<class> class MonadA, class A, template<class> class MonadB, class B, class F>
-    auto lift(MonadA<A> a, MonadB<B> b, F f) -> MonadB<decltype(f(std::declval<A>(), std::declval<B>()))> {
+    auto lift(MonadA<A> a, MonadB<B> b, F f) -> typename Join<MonadB<decltype(f(std::declval<A>(), std::declval<B>()))>>::Type {
       return Bind<MonadA<A>>::bind(a, [&](A a_) {
         return Bind<MonadB<B>>::bind(b, [&](B b_) {
           return f(a_, b_);

@@ -135,16 +135,35 @@ namespace wayward {
     template <typename T> struct Join<Maybe<T>> {
       using Type = Maybe<T>;
     };
+    template <> struct Join<Maybe<void>> {
+      using Type = void;
+    };
+
+    template <typename T, typename RT> struct BindMaybeReturnWrapper;
+    template <typename T> struct BindMaybeReturnWrapper<T, void> {
+      template <typename F>
+      static auto wrap(Maybe<T> m, F&& f) -> void {
+        if (m) {
+          f(*m);
+        }
+      }
+    };
+    template <typename T, typename RT> struct BindMaybeReturnWrapper {
+      template <typename F>
+      static auto wrap(Maybe<T> m, F&& f) -> RT {
+        if (m) {
+          return f(*m);
+        }
+        return Nothing;
+      }
+    };
 
     template <typename T>
     struct Bind<Maybe<T>> {
       template <typename F>
-      static auto bind(Maybe<T> m, F f) -> typename Join<Maybe<decltype(f(*m))>>::Type {
-        if (m) {
-          return f(*m);
-        } else {
-          return Nothing;
-        }
+      static auto bind(Maybe<T> m, F&& f) -> typename Join<Maybe<decltype(f(*m))>>::Type {
+        using RT = typename Join<Maybe<decltype(f(*m))>>::Type;
+        return BindMaybeReturnWrapper<T, RT>::wrap(m, std::forward<F>(f));
       }
     };
   }

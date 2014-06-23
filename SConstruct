@@ -2,6 +2,7 @@ from wayward_build import *
 import os
 
 wayward_support_sources = Split("""
+  wayward/support/any.cpp
   wayward/support/format.cpp
   wayward/support/uri.cpp
   wayward/support/json.cpp
