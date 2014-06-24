@@ -46,21 +46,53 @@ namespace wayward {
     void swap(Maybe<T>& other);
 
     T* unsafe_get() { return reinterpret_cast<T*>(&storage_); }
-    const T& unsafe_get() const { return reinterpret_cast<const T*>(&storage_); }
+    const T* unsafe_get() const { return reinterpret_cast<const T*>(&storage_); }
   private:
     typename std::aligned_storage<sizeof(T), alignof(T)>::type storage_;
     bool has_value_ = false;
   };
 
+  template <typename T>
+  class Maybe<T&> {
+  public:
+    constexpr Maybe() : ref_(std::ref(*reinterpret_cast<T*>(nullptr))) {}
+    Maybe(T& value) : ref_(std::ref(value)), has_value_(true) {}
+    Maybe(const Maybe<T&>&) = default;
+    constexpr Maybe(NothingType) : ref_(std::ref(*reinterpret_cast<T*>(nullptr))), has_value_(false) {}
+    ~Maybe() {}
+    Maybe<T&>& operator=(std::reference_wrapper<T> ref) { ref_ = ref; has_value_ = true; return *this; }
+    Maybe<T&>& operator=(const Maybe<T&>& value) = default;
+
+    T* get() { if (has_value_) return &ref_.get(); throw EmptyMaybeDereference(); }
+    const T* get() const { if (has_value_) return &ref_.get(); throw EmptyMaybeDereference(); }
+
+    bool operator==(NothingType) const { return !has_value_; }
+    bool operator!=(NothingType) const { return has_value_; }
+
+    explicit operator bool() const { return has_value_; }
+    const T* operator->() const { return get(); }
+    const T& operator*() const { return ref_; }
+    T* operator->() { return get(); }
+    T& operator*() { return ref_; }
+
+    void swap(Maybe<T&>& other) { std::swap(ref_, other.ref_); std::swap(has_value_, other.has_value_); }
+
+    T* unsafe_get() { return &ref_.get(); }
+    const T* unsafe_get() const { return &ref_.get(); }
+  private:
+    std::reference_wrapper<T> ref_;
+    bool has_value_ = false;
+  };
+
   template <typename T, typename F>
-  void when_maybe(const Maybe<T>& m, F then) {
+  void when_maybe(const Maybe<T>& m, F&& then) {
     if (m) {
       then(*m);
     }
   }
 
   template <typename T, typename F>
-  void when_maybe(Maybe<T>& m, F then) {
+  void when_maybe(Maybe<T>& m, F&& then) {
     if (m) {
       then(*m);
     }
