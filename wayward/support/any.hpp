@@ -1,0 +1,189 @@
+#pragma once
+#ifndef WAYWARD_SUPPORT_ANY_HPP_INCLUDED
+#define WAYWARD_SUPPORT_ANY_HPP_INCLUDED
+
+#include <wayward/support/type_info.hpp>
+#include <wayward/support/maybe.hpp>
+#include <wayward/support/meta.hpp>
+
+namespace wayward {
+  struct Any {
+    template <class T>
+    Any(T&& object);
+    template <class T>
+    Any(const T& object);
+
+    Any() {}
+    Any(NothingType) {}
+
+    Any(const Any& other);
+    Any(Any&& other);
+    ~Any() { destruct(); }
+    Any& operator=(const Any&);
+    Any& operator=(Any&&);
+
+    template <class T> bool is_a() const;
+    template <class T> Maybe<T> get();
+    template <class T> Maybe<T> get() const;
+    template <class T, class F> auto when(F&& f) -> typename monad::Join<decltype(f(std::declval<T>()))>::Type;
+    template <class T, class F> auto when(F&& f) const -> typename monad::Join<decltype(f(std::declval<T>()))>::Type;
+
+  private:
+    const TypeInfo* type_info_ = &GetTypeInfo<NothingType>::Value;
+    static const size_t SmallObjectStorageSize = sizeof(void*) * 3;
+    static const size_t SmallObjectStorageAlignment = sizeof(void*);
+    using SmallObjectStorage = std::aligned_storage<SmallObjectStorageSize, SmallObjectStorageAlignment>::type;
+
+    union {
+      SmallObjectStorage inline_storage_;
+      void* heap_storage_;
+    };
+
+    bool is_small_object() const;
+    void ensure_allocation();
+    void destruct();
+    void* memory();
+    const void* memory() const;
+  };
+
+  struct AnyRef {
+    template <class T>
+    AnyRef(T& object) : type_info_(&GetTypeInfo<T>::Value), ref_(reinterpret_cast<void*>(&object)) {}
+
+    AnyRef() {}
+    AnyRef(const AnyRef& other) = default;
+    AnyRef& operator=(const AnyRef&) = default;
+
+    template <class T> bool is_a() const;
+    template <class T> Maybe<typename meta::RemoveConstRef<T>::Type &> get();
+    template <class T> Maybe<const typename meta::RemoveConstRef<T>::Type &> get() const;
+    template <class T, class F> auto when(F&& f) -> typename monad::Join<decltype(f(std::declval<T&>()))>::Type;
+    template <class T, class F> auto when(F&& f) const -> typename monad::Join<decltype(f(std::declval<const T&>()))>::Type;
+  private:
+    const TypeInfo* type_info_ = &GetTypeInfo<NothingType>::Value;
+    void* ref_ = nullptr;
+  };
+
+  struct AnyConstRef {
+    template <class T>
+    AnyConstRef(const T& object) : type_info_(&GetTypeInfo<T>::Value), ref_(reinterpret_cast<const void*>(&object)) {}
+
+    AnyConstRef() {}
+    AnyConstRef(const AnyConstRef& other) = default;
+    AnyConstRef& operator=(const AnyConstRef&) = default;
+
+    template <class T> bool is_a() const;
+    template <class T> Maybe<const typename meta::RemoveConstRef<T>::Type&> get() const;
+    template <class T, class F> auto when(F&& f) const -> typename monad::Join<decltype(f(std::declval<const T&>()))>::Type;
+  private:
+    const TypeInfo* type_info_ = &GetTypeInfo<NothingType>::Value;
+    const void* ref_ = nullptr;
+  };
+
+  template <class T>
+  Any::Any(T&& object) : type_info_(&GetTypeInfo<typename meta::RemoveConstRef<T>::Type>::Value) {
+    type_info_->move_construct(memory(), reinterpret_cast<void*>(&object));
+  }
+
+  template <class T>
+  Any::Any(const T& object) : type_info_(&GetTypeInfo<typename meta::RemoveConstRef<T>::Type>::Value) {
+    type_info_->copy_construct(memory(), reinterpret_cast<const void*>(&object));
+  }
+
+  template <class T>
+  bool Any::is_a() const {
+    return type_info_ == &GetTypeInfo<T>::Value;
+  }
+
+  template <class T>
+  Maybe<T> Any::get() const {
+    // This supports getting the internals as a reference-Maybe with get<T&>()
+    using Type = typename meta::RemoveConstRef<T>::Type;
+    if (is_a<Type>()) {
+      const Type& ref = *reinterpret_cast<const Type*>(memory());
+      return Maybe<T>(ref);
+    }
+    return Nothing;
+  }
+
+  template <class T>
+  Maybe<T> Any::get() {
+    // This supports getting the internals as a reference-Maybe with get<T&>()
+    using Type = typename meta::RemoveConstRef<T>::Type;
+    if (is_a<Type>()) {
+      Type& ref = *reinterpret_cast<Type*>(memory());
+      return Maybe<T>(ref);
+    }
+    return Nothing;
+  }
+
+  template <class T, class F>
+  auto Any::when(F&& f) -> typename monad::Join<decltype(f(std::declval<T>()))>::Type {
+    return monad::fmap(get<T>(), std::forward<F>(f));
+  }
+
+  template <class T, class F>
+  auto Any::when(F&& f) const -> typename monad::Join<decltype(f(std::declval<T>()))>::Type {
+    return monad::fmap(get<T>(), std::forward<F>(f));
+  }
+
+  template <class T>
+  bool AnyRef::is_a() const {
+    return type_info_ == &GetTypeInfo<T>::Value;
+  }
+
+  template <class T>
+  Maybe<const typename meta::RemoveConstRef<T>::Type &> AnyRef::get() const {
+    // This supports getting the internals as a reference-Maybe with get<T&>()
+    using Type = typename meta::RemoveConstRef<T>::Type;
+    if (is_a<Type>()) {
+      const Type& ref = *reinterpret_cast<const Type*>(ref_);
+      return Maybe<const Type&>(ref);
+    }
+    return Nothing;
+  }
+
+  template <class T>
+  Maybe<typename meta::RemoveConstRef<T>::Type &> AnyRef::get() {
+    // This supports getting the internals as a reference-Maybe with get<T&>()
+    using Type = typename meta::RemoveConstRef<T>::Type;
+    if (is_a<Type>()) {
+      Type& ref = *reinterpret_cast<Type*>(ref_);
+      return Maybe<Type&>(ref);
+    }
+    return Nothing;
+  }
+
+  template <class T, class F>
+  auto AnyRef::when(F&& f) -> typename monad::Join<decltype(f(std::declval<T&>()))>::Type {
+    return monad::fmap(get<T>(), std::forward<F>(f));
+  }
+
+  template <class T, class F>
+  auto AnyRef::when(F&& f) const -> typename monad::Join<decltype(f(std::declval<const T&>()))>::Type {
+    return monad::fmap(get<T>(), std::forward<F>(f));
+  }
+
+  template <class T>
+  bool AnyConstRef::is_a() const {
+    return type_info_ == &GetTypeInfo<T>::Value;
+  }
+
+  template <class T>
+  Maybe<const typename meta::RemoveConstRef<T>::Type &> AnyConstRef::get() const {
+    using Type = typename meta::RemoveConstRef<T>::Type;
+    if (is_a<Type>()) {
+      const Type& ref = *reinterpret_cast<const Type*>(ref_);
+      return Maybe<const Type&>(ref);
+    }
+    return Nothing;
+  }
+
+  template <class T, class F>
+  auto AnyConstRef::when(F&& f) const -> typename monad::Join<decltype(f(std::declval<const T&>()))>::Type {
+    return monad::fmap(get<T>(), std::forward<F>(f));
+  }
+
+}
+
+#endif // WAYWARD_SUPPORT_ANY_HPP_INCLUDED

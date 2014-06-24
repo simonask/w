@@ -55,10 +55,10 @@ namespace wayward {
   template <typename T>
   class Maybe<T&> {
   public:
-    constexpr Maybe() : ref_(std::ref(*reinterpret_cast<T*>(nullptr))) {}
+    constexpr Maybe() : ref_(std::ref(*reinterpret_cast<T*>((void*)0))) {}
     Maybe(T& value) : ref_(std::ref(value)), has_value_(true) {}
     Maybe(const Maybe<T&>&) = default;
-    constexpr Maybe(NothingType) : ref_(std::ref(*reinterpret_cast<T*>(nullptr))), has_value_(false) {}
+    constexpr Maybe(NothingType) : ref_(std::ref(*reinterpret_cast<T*>((void*)0))), has_value_(false) {}
     ~Maybe() {}
     Maybe<T&>& operator=(std::reference_wrapper<T> ref) { ref_ = ref; has_value_ = true; return *this; }
     Maybe<T&>& operator=(const Maybe<T&>& value) = default;
