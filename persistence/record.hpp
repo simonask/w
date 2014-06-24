@@ -4,8 +4,12 @@
 
 #include <persistence/record_type.hpp>
 #include <persistence/property.hpp>
+#include <persistence/connection_provider.hpp>
+#include <persistence/datetime.hpp>
 
+#include <wayward/support/datetime.hpp>
 #include <wayward/support/error.hpp>
+#include <wayward/support/logger.hpp>
 
 namespace persistence {
   struct PrimaryKeyError : wayward::Error {
