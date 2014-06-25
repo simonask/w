@@ -56,6 +56,7 @@ persistence_sources = Split("""
   persistence/relational_algebra.cpp
   persistence/types.cpp
   persistence/datetime.cpp
+  persistence/insert.cpp
   persistence/property.cpp
   """)
 
