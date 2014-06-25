@@ -10,6 +10,7 @@
 
 namespace wayward {
   struct ILogger;
+  struct AnyConstRef;
 
   namespace data_franca {
     struct Spectator;
@@ -17,7 +18,7 @@ namespace wayward {
 }
 
 namespace persistence {
-  struct DataRef;
+  using wayward::AnyConstRef;
 
   namespace ast {
     struct IQuery;
@@ -46,7 +47,7 @@ namespace persistence {
     virtual std::unique_ptr<IResultSet> execute(std::string sql) = 0;
     virtual std::unique_ptr<IResultSet> execute(const ast::IQuery& query) = 0;
     virtual std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) = 0;
-    virtual wayward::CloningPtr<ast::SingleValue> literal_for_value(const DataRef&) = 0;
+    virtual wayward::CloningPtr<ast::SingleValue> literal_for_value(const AnyConstRef&) = 0;
   };
 
   void set_connection(IConnection* conn);

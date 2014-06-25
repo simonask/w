@@ -56,6 +56,7 @@ persistence_sources = Split("""
   persistence/relational_algebra.cpp
   persistence/types.cpp
   persistence/datetime.cpp
+  persistence/property.cpp
   """)
 
 wayward_synth_sources = Split("""

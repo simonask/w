@@ -22,7 +22,7 @@ namespace persistence {
     if (pk) {
       auto pk_typed = dynamic_cast<const PropertyOf<T, PrimaryKey>*>(pk);
       if (pk_typed) {
-        auto& pk_id = pk_typed->get(*record);
+        auto& pk_id = pk_typed->get_known(*record);
         if (pk_id.is_persisted()) {
           return &pk_id;
         }
@@ -191,14 +191,17 @@ namespace persistence {
     using MemberPtr = typename PropertyOfBase<T, BelongsTo<M>>::MemberPtr;
     PropertyOf(MemberPtr ptr, std::string col) : PropertyOfBase<T, BelongsTo<M>>(ptr, std::move(col)) {}
 
-    DataRef
-    get_data(const T& record) const override {
-      auto& assoc = this->get(record);
+    Result<Any> get(AnyConstRef record) const override {
+      if (!record.is_a<T>()) {
+        return detail::make_type_error_for_mismatching_record_type(get_type<T>(), record.type_info());
+      }
+      auto object = record.get<T>();
+      auto& assoc = this->get_known(*object);
       auto id = assoc.id_ptr();
       if (id) {
-        return DataRef{ *id };
+        return Any{ *id };
       } else {
-        return DataRef{ Nothing };
+        return Any{};
       }
     }
   };
