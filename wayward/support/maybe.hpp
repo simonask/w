@@ -24,7 +24,7 @@ namespace wayward {
     constexpr Maybe() {}
     Maybe(T value) : has_value_(true) { new(&storage_) T(std::move(value)); }
     Maybe(const Maybe<T>& other);
-    Maybe(Maybe<T>&& other) : has_value_(false) { swap(other); }
+    Maybe(Maybe<T>&& other) : has_value_(other.has_value_) { if (has_value_) new(unsafe_get()) T(std::move(*other.unsafe_get())); }
     constexpr Maybe(NothingType) : has_value_(false) {}
     ~Maybe();
     Maybe<T>& operator=(T value);

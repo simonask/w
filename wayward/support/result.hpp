@@ -13,15 +13,45 @@ namespace wayward {
   struct Result {
     Result(T result) : result_{std::move(result)} {}
     Result(ErrorPtr error) : result_{std::move(error)} {}
+    Result(Result<T>&&) = default;
+    Result(const Result<T>&) = delete;
+    Result& operator=(Result<T>&&) = default;
+    Result& operator=(const Result<T>&) = delete;
 
     bool is_error() const { return !result_.template is_a<T>(); }
     bool good() const { return !is_error(); }
 
-    T get_result() && { return std::move(result_.template get<T>()); }
-    ErrorPtr get_error_ptr() && { return std::move(result_.template get<ErrorPtr>()); }
+    Maybe<T&> get() & { return result_.template get<T&>(); }
+    Maybe<const T&> get() const& { return result_.template get<const T&>(); }
+    Maybe<T> get() && { return std::move(result_).template get<T>(); }
+
+    Maybe<ErrorPtr&> error() & { return result_.template get<ErrorPtr&>(); }
+    Maybe<const ErrorPtr&> error() const& { return result_.template get<const ErrorPtr&>(); }
+    Maybe<ErrorPtr> error() && { return std::move(result_).template get<ErrorPtr>(); }
   private:
     Either<T, ErrorPtr> result_;
   };
+
+  template <>
+  struct Result<void> {
+    Result() {}
+    Result(NothingType) {}
+    Result(ErrorPtr error) : error_(std::move(error)) {}
+
+    bool is_error() const { return (bool)error_; }
+    bool good() const { return !is_error(); }
+
+    Maybe<ErrorPtr&> error() & { return error_ ? error_ : Maybe<ErrorPtr&>(Nothing); }
+    Maybe<const ErrorPtr&> error() const& { return error_ ? error_ : Maybe<const ErrorPtr&>(Nothing); }
+    Maybe<ErrorPtr> error() && { return error_ ? std::move(error_) : Maybe<ErrorPtr>(Nothing); }
+  private:
+    ErrorPtr error_;
+  };
+
+  template <typename E, typename... Args>
+  ErrorPtr make_error(Args&&... args) {
+    return ErrorPtr{ new E{std::forward<Args>(args)...} };
+  }
 
   namespace monad {
     template <typename T>
@@ -35,12 +65,24 @@ namespace wayward {
 
     template <typename T>
     struct Bind<Result<T>> {
-      template <typename F>
-      auto bind(Result<T> result, F f) -> typename Join<decltype(f(std::declval<T>()))>::Type {
-        if (result.is_error()) {
-          return std::move(result).get_error_ptr();
+      template <typename R, typename F>
+      static auto bind(R&& result, F&& f) -> typename Join<Result<decltype(f(std::declval<T>()))>>::Type {
+        if (result.good()) {
+          return f(std::move(*(std::forward<R>(result).get())));
         } else {
-          return f(std::move(result).get_result());
+          return std::move(*(std::forward<R>(result).error()));
+        }
+      }
+    };
+
+    template <>
+    struct Bind<Result<void>> {
+      template <typename R, typename F>
+      static auto bind(R&& result, F&& f) -> typename Join<Result<decltype(f())>>::Type {
+        if (result.good()) {
+          return f();
+        } else {
+          return std::forward<R>(result).error();
         }
       }
     };
