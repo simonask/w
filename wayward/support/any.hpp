@@ -22,6 +22,8 @@ namespace wayward {
     Any& operator=(const Any&);
     Any& operator=(Any&&);
 
+    const TypeInfo& type_info() const { return *type_info_; }
+
     template <class T> bool is_a() const;
     template <class T> Maybe<T> get();
     template <class T> Maybe<T> get() const;
@@ -54,6 +56,8 @@ namespace wayward {
     AnyRef(const AnyRef& other) = default;
     AnyRef& operator=(const AnyRef&) = default;
 
+    const TypeInfo& type_info() const { return *type_info_; }
+
     template <class T> bool is_a() const;
     template <class T> Maybe<typename meta::RemoveConstRef<T>::Type &> get();
     template <class T> Maybe<const typename meta::RemoveConstRef<T>::Type &> get() const;
@@ -71,6 +75,8 @@ namespace wayward {
     AnyConstRef() {}
     AnyConstRef(const AnyConstRef& other) = default;
     AnyConstRef& operator=(const AnyConstRef&) = default;
+
+    const TypeInfo& type_info() const { return *type_info_; }
 
     template <class T> bool is_a() const;
     template <class T> Maybe<const typename meta::RemoveConstRef<T>::Type&> get() const;
