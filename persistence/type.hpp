@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include <wayward/support/type_info.hpp>
+
 namespace wayward {
   namespace data_franca {
     struct ScalarSpectator;
@@ -12,9 +14,12 @@ namespace wayward {
 }
 
 namespace persistence {
+  using wayward::TypeInfo;
+
   struct IType {
     virtual std::string name() const = 0;
     virtual bool is_nullable() const = 0;
+    virtual const TypeInfo& type_info() const = 0;
   };
 
   struct IResultSet;
@@ -24,6 +29,8 @@ namespace persistence {
     virtual bool deserialize_value(T& value, const wayward::data_franca::ScalarSpectator& source) const = 0;
     virtual bool serialize_value(const T& value, wayward::data_franca::ScalarMutator& target) const = 0;
     virtual bool has_value(const T& value) const = 0;
+
+    const TypeInfo& type_info() const override { return wayward::GetTypeInfo<T>::Value; }
   };
 
   template <typename T>

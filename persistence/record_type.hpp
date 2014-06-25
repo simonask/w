@@ -49,6 +49,8 @@ namespace persistence {
     std::vector<std::unique_ptr<IAssociationFrom<RT>>> associations_;
     const IPropertyOf<RT>* primary_key_ = nullptr;
 
+    const TypeInfo& type_info() const final { return wayward::GetTypeInfo<RT>::Value; }
+
     void initialize_associations_in_object(void* obj, Context* ctx) const final {
       RT& object = *reinterpret_cast<RT*>(obj);
       for (auto& p: associations_) {
