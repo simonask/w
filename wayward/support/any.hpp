@@ -38,7 +38,7 @@ namespace wayward {
 
     union {
       SmallObjectStorage inline_storage_;
-      void* heap_storage_;
+      void* heap_storage_ = nullptr;
     };
 
     bool is_small_object() const;
@@ -97,11 +97,13 @@ namespace wayward {
 
   template <class T>
   Any::Any(T&& object) : type_info_(&GetTypeInfo<typename meta::RemoveConstRef<T>::Type>::Value) {
+    ensure_allocation();
     type_info_->move_construct(memory(), reinterpret_cast<void*>(&object));
   }
 
   template <class T>
   Any::Any(const T& object) : type_info_(&GetTypeInfo<typename meta::RemoveConstRef<T>::Type>::Value) {
+    ensure_allocation();
     type_info_->copy_construct(memory(), reinterpret_cast<const void*>(&object));
   }
 
