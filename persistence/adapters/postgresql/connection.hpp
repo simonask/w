@@ -1,6 +1,6 @@
 #pragma once
-#ifndef PERSISTENCE_POSTGRESQL_HPP_INCLUDED
-#define PERSISTENCE_POSTGRESQL_HPP_INCLUDED
+#ifndef PERSISTENCE_ADAPTERS_POSTGRESQL_CONNECTION_HPP_INCLUDED
+#define PERSISTENCE_ADAPTERS_POSTGRESQL_CONNECTION_HPP_INCLUDED
 
 #include <persistence/connection.hpp>
 #include <persistence/adapter.hpp>
@@ -15,10 +15,6 @@ namespace persistence {
 
   struct PostgreSQLAdapter : IAdapter {
     std::unique_ptr<IConnection> connect(std::string connection_string) const final;
-  };
-
-  struct PostgreSQLTypeMapper : ISQLTypeMapper {
-    wayward::CloningPtr<ast::SingleValue> literal_for_value(AnyConstRef value) final;
   };
 
   using wayward::ILogger;
@@ -51,4 +47,4 @@ namespace persistence {
   };
 }
 
-#endif // PERSISTENCE_POSTGRESQL_HPP_INCLUDED
+#endif // PERSISTENCE_ADAPTERS_POSTGRESQL_CONNECTION_HPP_INCLUDED

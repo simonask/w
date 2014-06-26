@@ -3,8 +3,8 @@
 #define PERSISTENCE_TEST_CONNECTION_MOCK_HPP_INCLUDED
 
 #include <persistence/connection.hpp>
-#include <persistence/postgresql.hpp>
-#include <persistence/postgresql_renderers.hpp>
+#include <persistence/adapters/postgresql/renderers.hpp>
+#include <persistence/adapters/postgresql/type_mapper.hpp>
 #include <wayward/support/any.hpp>
 
 #include <regex>

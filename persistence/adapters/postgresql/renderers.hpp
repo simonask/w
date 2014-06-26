@@ -1,10 +1,9 @@
 #pragma once
-#ifndef PERSISTENCE_POSTGRESQL_RENDERERS_HPP_INCLUDED
-#define PERSISTENCE_POSTGRESQL_RENDERERS_HPP_INCLUDED
+#ifndef PERSISTENCE_ADAPTERS_POSTGRESQL_RENDERERS_HPP_INCLUDED
+#define PERSISTENCE_ADAPTERS_POSTGRESQL_RENDERERS_HPP_INCLUDED
 
 #include <persistence/ast.hpp>
-#include <persistence/postgresql.hpp>
-
+#include <persistence/connection.hpp>
 #include <persistence/relational_algebra.hpp>
 
 namespace persistence {
@@ -46,4 +45,4 @@ namespace persistence {
   };
 }
 
-#endif // PERSISTENCE_POSTGRESQL_RENDERERS_HPP_INCLUDED
+#endif // PERSISTENCE_ADAPTERS_POSTGRESQL_RENDERERS_HPP_INCLUDED

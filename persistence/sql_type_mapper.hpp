@@ -11,6 +11,7 @@ namespace persistence {
   namespace ast {
     struct SingleValue;
   }
+  using wayward::AnyConstRef;
 
   struct ISQLTypeMapper {
     virtual wayward::CloningPtr<ast::SingleValue> literal_for_value(AnyConstRef value) = 0;
