@@ -211,7 +211,7 @@ namespace persistence {
   }
 
   wayward::CloningPtr<ast::SingleValue>
-  PostgreSQLConnection::literal_for_value(const AnyConstRef& data) {
+  PostgreSQLTypeMapper::literal_for_value(AnyConstRef data) {
     if (data.is_a<wayward::NothingType>()) {
       return make_literal<ast::SQLFragmentValue>("NULL");
     } else
@@ -238,6 +238,12 @@ namespace persistence {
       return make_literal<ast::StringLiteral>(data.get<wayward::DateTime>()->iso8601());
     }
     throw PostgreSQLError{ wayward::format("Unsupported type: {0}", data.type_info().name()) };
+  }
+
+  wayward::CloningPtr<ast::SingleValue>
+  PostgreSQLConnection::literal_for_value(AnyConstRef data) {
+    PostgreSQLTypeMapper mapper;
+    return mapper.literal_for_value(data);
   }
 
   std::unique_ptr<PostgreSQLConnection>

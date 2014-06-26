@@ -47,7 +47,7 @@ namespace persistence {
     virtual std::unique_ptr<IResultSet> execute(std::string sql) = 0;
     virtual std::unique_ptr<IResultSet> execute(const ast::IQuery& query) = 0;
     virtual std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) = 0;
-    virtual wayward::CloningPtr<ast::SingleValue> literal_for_value(const AnyConstRef&) = 0;
+    virtual wayward::CloningPtr<ast::SingleValue> literal_for_value(AnyConstRef) = 0;
   };
 
   void set_connection(IConnection* conn);
