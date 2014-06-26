@@ -24,7 +24,7 @@ namespace persistence {
   struct IProperty {
     virtual ~IProperty() {}
     virtual std::string column() const = 0;
-    virtual const IType& type() const = 0;
+    virtual const ISQLType& type() const = 0;
 
     virtual Result<Any> get(AnyConstRef record) const = 0;
     virtual Result<void> set(AnyRef record, AnyConstRef value) const = 0;
@@ -75,15 +75,15 @@ namespace persistence {
     using MemberPtr = M T::*;
     MemberPtr ptr_;
     PropertyOfBase(MemberPtr ptr, std::string column) : Property<M>{column}, ptr_(ptr) {}
-    const IType& type() const { return *get_type<M>(); }
+    const ISQLType& type() const { return *get_type<M>(); }
     std::string column() const { return this->column_; }
 
     Result<Any> get(AnyConstRef record) const override {
       if (!record.is_a<T>()) {
         return detail::make_type_error_for_mismatching_record_type(get_type<T>(), record.type_info());
       }
-      auto mref = record.get<T>();
-      return Any{ get_known(*mref) };
+      auto& mref = *record.get<const T&>();
+      return Any{ get_known(mref) };
     }
 
     Result<void> set(AnyRef record, AnyConstRef value) const override {
@@ -93,9 +93,9 @@ namespace persistence {
       if (!value.is_a<M>()) {
         return detail::make_type_error_for_mismatching_value_type(get_type<T>(), get_type<M>(), value.type_info());
       }
-      auto mref = record.get<T>();
+      auto& mref = *record.get<T&>();
       auto vref = value.get<M>();
-      get_known(*mref) = *vref;
+      get_known(mref) = *vref;
       return Nothing;
     }
 

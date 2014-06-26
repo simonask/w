@@ -4,7 +4,6 @@
 
 #include <persistence/connection.hpp>
 #include <persistence/adapters/postgresql/renderers.hpp>
-#include <persistence/adapters/postgresql/type_mapper.hpp>
 #include <wayward/support/any.hpp>
 
 #include <regex>
@@ -30,10 +29,6 @@ namespace persistence {
       std::unique_ptr<IResultSet> execute(std::string sql) override;
       std::unique_ptr<IResultSet> execute(const ast::IQuery& query) override;
       std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) override;
-      ast::CloningPtr<ast::SingleValue> literal_for_value(AnyConstRef value) override {
-        PostgreSQLTypeMapper mapper;
-        return mapper.literal_for_value(value);
-      }
 
       std::string database_;
       std::string user_;

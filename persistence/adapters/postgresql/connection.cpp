@@ -1,6 +1,5 @@
 #include "persistence/adapters/postgresql/connection.hpp"
 #include "persistence/adapters/postgresql/renderers.hpp"
-#include "persistence/adapters/postgresql/type_mapper.hpp"
 #include <libpq-fe.h>
 
 #include <wayward/support/any.hpp>
@@ -167,11 +166,6 @@ namespace persistence {
     } else {
       return "<UNKNOWN ERROR>";
     }
-  }
-  wayward::CloningPtr<ast::SingleValue>
-  PostgreSQLConnection::literal_for_value(AnyConstRef data) {
-    PostgreSQLTypeMapper mapper;
-    return mapper.literal_for_value(data);
   }
 
   std::unique_ptr<PostgreSQLConnection>

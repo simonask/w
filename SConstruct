@@ -52,7 +52,6 @@ persistence_sources = Split("""
   persistence/p.cpp
   persistence/adapters/postgresql/connection.cpp
   persistence/adapters/postgresql/renderers.cpp
-  persistence/adapters/postgresql/type_mapper.cpp
   persistence/primary_key.cpp
   persistence/relational_algebra.cpp
   persistence/datetime.cpp

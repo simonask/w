@@ -30,7 +30,7 @@ namespace {
   PERSISTENCE(Foo) {
     property(&Foo::id, "id");
     property(&Foo::created_at, "created_at");
-    property(&Foo::updated_at, "updated_at)");
+    property(&Foo::updated_at, "updated_at");
     property(&Foo::integer_value, "integer_value");
     property(&Foo::string_value, "string_value");
     property(&Foo::nullable_string_value, "nullable_string_value");
@@ -58,6 +58,6 @@ namespace {
     EXPECT_EQ(true, tuple.good());
     auto q = std::move(tuple.get()->query);
     auto sql = tuple.get()->conn.to_sql(q);
-    printf("SQL: %s\n", sql.c_str());
+    EXPECT_EQ(0, sql.find("INSERT INTO foos ("));
   }
 }

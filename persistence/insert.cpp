@@ -57,8 +57,8 @@ namespace persistence {
         if (p == pk) continue;
         query.columns.push_back(p->column());
         auto value = p->get(record);
-        if (value.good()) {
-          query.values.push_back(conn.literal_for_value(*value.get()));
+        if (value) {
+          query.values.push_back(p->type().make_literal(*value.get()));
         } else {
           return std::move(*std::move(value).error());
         }

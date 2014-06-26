@@ -4,7 +4,6 @@
 
 #include <persistence/connection.hpp>
 #include <persistence/adapter.hpp>
-#include <persistence/sql_type_mapper.hpp>
 
 #include <wayward/support/error.hpp>
 
@@ -36,7 +35,6 @@ namespace persistence {
     std::unique_ptr<IResultSet> execute(const ast::IQuery& query) final;
     std::unique_ptr<IResultSet> execute(std::string sql) final;
     std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) final;
-    wayward::CloningPtr<ast::SingleValue> literal_for_value(AnyConstRef data) final;
 
     static std::unique_ptr<PostgreSQLConnection>
     connect(std::string connection_string, std::string* out_error = nullptr);
