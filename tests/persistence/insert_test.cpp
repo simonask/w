@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <persistence/record.hpp>
+#include <persistence/datetime.hpp>
 #include <persistence/data_store.hpp>
-#include <persistence/types.hpp>
 #include <persistence/primary_key.hpp>
 #include <persistence/persistence_macro.hpp>
 
@@ -52,6 +52,9 @@ namespace {
   TEST_F(InsertionTest, generates_sql_to_insert) {
     Foo foo;
     auto tuple = persistence::detail::make_insert_query(foo, persistence::get_type<Foo>(), false);
+    if (!tuple.good()) {
+      throw **tuple.error();
+    }
     EXPECT_EQ(true, tuple.good());
     auto q = std::move(tuple.get()->query);
     auto sql = tuple.get()->conn.to_sql(q);

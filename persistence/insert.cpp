@@ -5,6 +5,8 @@
 #include "persistence/record.hpp"
 #include "persistence/primary_key.hpp"
 
+#include <wayward/support/format.hpp>
+
 namespace persistence {
   namespace detail {
     namespace monad = wayward::monad;
@@ -20,9 +22,12 @@ namespace persistence {
       auto pk = record_type->abstract_primary_key();
 
       if (pk) {
-        auto existing_pk = pk->get(record);
-        if (existing_pk.good() && !std::move(existing_pk).get()->is_a<NothingType>()) {
-          return make_error<PersistError>("Trying to insert record that already has a primary key.");
+        Result<Any> existing_pk = pk->get(record);
+        if (existing_pk.good()) {
+          PrimaryKey& primary_key_value = *existing_pk.get()->get<PrimaryKey&>();
+          if (primary_key_value.is_persisted()) {
+            return make_error<PersistError>(wayward::format("Trying to insert record that already has a primary key (real type: {0}).", existing_pk.get()->type_info().name()));
+          }
         }
       }
 
@@ -51,7 +56,12 @@ namespace persistence {
         auto p = record_type->abstract_property_at(i);
         if (p == pk) continue;
         query.columns.push_back(p->column());
-        query.values.push_back(conn.literal_for_value(p->get(record)));
+        auto value = p->get(record);
+        if (value.good()) {
+          query.values.push_back(conn.literal_for_value(*value.get()));
+        } else {
+          return std::move(*std::move(value).error());
+        }
       }
 
       return InsertQueryWithConnection{std::move(query), std::move(conn)};
