@@ -4,9 +4,17 @@
 
 #include <type_traits>
 #include <limits.h>
+#include <memory>
 
 namespace wayward {
   namespace meta {
+    struct TrueType { static const bool Value = true; };
+    struct FalseType { static const bool Value = false; };
+
+    template <class T> struct IsPointerLike { static const bool Value = std::is_pointer<T>::value; };
+    template <class T> struct IsPointerLike<std::unique_ptr<T>> : TrueType {};
+    template <class T> struct IsPointerLike<std::shared_ptr<T>> : TrueType {};
+
     constexpr size_t max(size_t a, size_t b) {
       return a < b ? b : a;
     }
