@@ -1,5 +1,6 @@
 #include <persistence/datetime.hpp>
 #include <persistence/result_set.hpp>
+#include <persistence/property.hpp>
 
 #include <wayward/support/data_franca/spectator.hpp>
 #include <wayward/support/data_franca/mutator.hpp>
@@ -14,7 +15,7 @@ namespace persistence {
     return t;
   }
 
-  bool DateTimeType::deserialize_value(DateTime& value, const wayward::data_franca::ScalarSpectator& source) const {
+  Result<void> DateTimeType::deserialize_value(DateTime& value, const wayward::data_franca::ScalarSpectator& source) const {
     std::string string_rep;
     if (source >> string_rep) {
       // PostgreSQL timestamp with time zone looks like this: YYYY-mm-dd HH:MM:ss+ZZ
@@ -31,23 +32,24 @@ namespace persistence {
 
       if (m) {
         value = std::move(*m);
-        return true;
-      } else {
-        fprintf(stderr, "ERROR: Couldn't parse DateTime: %s\n", local_time_string.c_str());
+        return Nothing;
       }
+      return wayward::make_error<wayward::Error>(wayward::format("Couldn't parse DateTime from string: '{0}'", string_rep));
     }
-    return false;
+    return wayward::make_error<wayward::Error>("ERROR: Couldn't parse DateTime (input not a string).");
   }
 
-  bool DateTimeType::serialize_value(const DateTime& value, wayward::data_franca::ScalarMutator& target) const {
+  Result<void> DateTimeType::serialize_value(const DateTime& value, wayward::data_franca::ScalarMutator& target) const {
     std::stringstream ss { value.strftime("%Y-%m-%d %T%z") };
     target << ss.str();
-    return true;
+    return Nothing;
   }
 
-  namespace relational_algebra {
-    Value RepresentAsLiteral<DateTime>::literal(const DateTime& dt) {
-      return Value{make_cloning_ptr(new persistence::ast::StringLiteral{dt.iso8601()})};
+  ast::Ptr<ast::SingleValue> DateTimeType::make_literal(AnyConstRef data) const {
+    if (!data.is_a<DateTime>()) {
+      throw TypeError("DateTimeType::make_literal called with a value that isn't a DateTime.");
     }
+    auto& dt = *data.get<const DateTime&>();
+    return make_cloning_ptr(new persistence::ast::StringLiteral{dt.iso8601()});
   }
 }

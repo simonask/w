@@ -13,17 +13,18 @@
 #include <wayward/support/data_franca/spectator.hpp>
 
 namespace persistence {
-  struct NothingType : IDataTypeFor<wayward::NothingType> {
+  struct NothingType : ISQLType {
     bool is_nullable() const final { return true; }
     std::string name() const final { return "NothingType"; }
-    bool has_value(const wayward::NothingType&) const final { return false; }
-    bool deserialize_value(wayward::NothingType&, const wayward::data_franca::ScalarSpectator&) const override { return true; }
-    bool serialize_value(const wayward::NothingType&, wayward::data_franca::ScalarMutator& target) const override { return target << wayward::Nothing; }
+    Result<void> deserialize_data(AnyRef, const wayward::data_franca::ScalarSpectator&) const final { return Success; }
+    Result<void> serialize_data(AnyConstRef, wayward::data_franca::ScalarMutator& target) const final { target << wayward::Nothing; return Success; }
+    const TypeInfo& type_info() const final { return wayward::GetTypeInfo<NothingType>::Value; }
+    ast::Ptr<ast::SingleValue> make_literal(AnyConstRef) const final { return ast::Ptr<ast::SingleValue>{ new ast::SQLFragmentValue("NULL") }; }
   };
 
   const NothingType* build_type(const TypeIdentifier<wayward::NothingType>*);
 
-  struct StringType : IDataTypeFor<std::string> {
+  struct StringType : DataTypeFor<std::string> {
     bool is_nullable() const final { return false; }
     std::string name() const final { return "std::string"; }
 
@@ -31,20 +32,28 @@ namespace persistence {
       return true;
     }
 
-    bool deserialize_value(std::string& value, const wayward::data_franca::ScalarSpectator& input) const override {
-      return input >> value;
+    Result<void> deserialize_value(std::string& value, const wayward::data_franca::ScalarSpectator& input) const override {
+      input >> value;
+      return Success;
     }
 
-    bool serialize_value(const std::string& value, wayward::data_franca::ScalarMutator& target) const override {
+    Result<void> serialize_value(const std::string& value, wayward::data_franca::ScalarMutator& target) const override {
       target << value;
-      return true;
+      return Success;
+    }
+
+    ast::Ptr<ast::SingleValue> make_literal(AnyConstRef data) const final {
+      if (!data.is_a<std::string>()) {
+        throw wayward::Error("StringType::make_literal called with data that isn't an std::string.");
+      }
+      return ast::Ptr<ast::SingleValue> { new ast::StringLiteral{*data.get<const std::string&>()} };
     }
   };
 
   const StringType* build_type(const TypeIdentifier<std::string>*);
 
   template <typename T>
-  struct NumericType : IDataTypeFor<T> {
+  struct NumericType : DataTypeFor<T> {
     NumericType(std::string name) : name_(std::move(name)) {}
     bool is_nullable() const final { return false; }
     std::string name() const final { return name_; }
@@ -54,30 +63,37 @@ namespace persistence {
 
     bool has_value(const T& value) const final { return true; }
 
-    bool deserialize_value(T& value, const wayward::data_franca::ScalarSpectator& source) const override {
+    Result<void> deserialize_value(T& value, const wayward::data_franca::ScalarSpectator& source) const override {
       if (is_float()) {
         wayward::data_franca::Real r;
         if (source >> r) {
           value = static_cast<T>(r);
-          return true;
+          return Success;
         }
       } else {
         wayward::data_franca::Integer n;
         if (source >> n) {
           value = static_cast<T>(n);
-          return true;
+          return Success;
         }
       }
-      return false;
+      return wayward::make_error<wayward::Error>("Input not an integer.");
     }
 
-    bool serialize_value(const T& value, wayward::data_franca::ScalarMutator& target) const override {
+    Result<void> serialize_value(const T& value, wayward::data_franca::ScalarMutator& target) const override {
       if (is_float()) {
         target << static_cast<wayward::data_franca::Real>(value);
       } else {
         target << static_cast<wayward::data_franca::Integer>(value);
       }
-      return true;
+      return Success;
+    }
+
+    ast::Ptr<ast::SingleValue> make_literal(AnyConstRef data) const final {
+      if (!data.is_a<T>()) {
+        throw wayward::Error("NumericType::make_literal called with a value that doesn't correspond to the expected type.");
+      }
+      return ast::Ptr<ast::SingleValue> { new ast::NumericLiteral{ (double)*data.get<T>() }};
     }
   private:
     std::string name_;
@@ -95,7 +111,7 @@ namespace persistence {
   }
 
   template <typename T>
-  struct MaybeType : IDataTypeFor<wayward::Maybe<T>> {
+  struct MaybeType : DataTypeFor<wayward::Maybe<T>> {
     MaybeType(const IDataTypeFor<T>* inner_type) : inner_type_(inner_type) {}
     std::string name() const final { return detail::maybe_type_name(inner_type_); }
     bool is_nullable() const { return true; }
@@ -104,24 +120,37 @@ namespace persistence {
       return static_cast<bool>(value);
     }
 
-    bool deserialize_value(wayward::Maybe<T>& value, const wayward::data_franca::ScalarSpectator& source) const final {
+    Result<void> deserialize_value(wayward::Maybe<T>& value, const wayward::data_franca::ScalarSpectator& source) const final {
       if (source) {
         T val;
-        inner_type_->deserialize_value(val, source);
+        auto r = inner_type_->deserialize_value(val, source);
         value = std::move(val);
+        return std::move(r);
       } else {
         value = wayward::Nothing;
+        return Success;
       }
-      return true;
+
     }
 
-    bool serialize_value(const wayward::Maybe<T>& value, wayward::data_franca::ScalarMutator& target) const final {
+    Result<void> serialize_value(const wayward::Maybe<T>& value, wayward::data_franca::ScalarMutator& target) const final {
       if (value) {
-        inner_type_->serialize_value(*value, target);
+        return inner_type_->serialize_value(*value, target);
       } else {
         target << wayward::Nothing;
+        return Success;
       }
-      return true;
+    }
+
+    ast::Ptr<ast::SingleValue> make_literal(AnyConstRef data) const final {
+      if (!data.is_a<wayward::Maybe<T>>()) {
+        throw wayward::Error("MaybeType::make_literal called with data that isn't a Maybe<T>.");
+      }
+      auto& m = *data.get<const Maybe<T>&>();
+      if (m) {
+        return inner_type_->make_literal(*m);
+      }
+      return ast::Ptr<ast::SingleValue> { new ast::SQLFragmentValue("NULL") };
     }
   private:
     const IDataTypeFor<T>* inner_type_ = nullptr;

@@ -20,6 +20,7 @@ namespace wayward {
 
     bool is_error() const { return !result_.template is_a<T>(); }
     bool good() const { return !is_error(); }
+    explicit operator bool() const { return good(); }
 
     Maybe<T&> get() & { return result_.template get<T&>(); }
     Maybe<const T&> get() const& { return result_.template get<const T&>(); }
@@ -32,14 +33,19 @@ namespace wayward {
     Either<T, ErrorPtr> result_;
   };
 
+  struct SuccessType { constexpr SuccessType() {} };
+  static const constexpr SuccessType Success;
+
   template <>
   struct Result<void> {
     Result() {}
     Result(NothingType) {}
+    Result(SuccessType) {}
     Result(ErrorPtr error) : error_(std::move(error)) {}
 
     bool is_error() const { return (bool)error_; }
     bool good() const { return !is_error(); }
+    explicit operator bool() const { return good(); }
 
     Maybe<ErrorPtr&> error() & { return error_ ? error_ : Maybe<ErrorPtr&>(Nothing); }
     Maybe<const ErrorPtr&> error() const& { return error_ ? error_ : Maybe<const ErrorPtr&>(Nothing); }

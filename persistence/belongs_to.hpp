@@ -147,12 +147,12 @@ namespace persistence {
   template <typename Col, typename T>
   struct ColumnAbilities<Col, BelongsTo<T>>: LiteralEqualityAbilities<Col, std::int64_t> {};
 
-  struct IBelongsToType : IType {
+  struct IBelongsToType : ISQLType {
     virtual ~IBelongsToType() {}
   };
 
   template <typename T>
-  struct BelongsToType : IDataTypeFor<BelongsTo<T>, IBelongsToType> {
+  struct BelongsToType : DataTypeFor<BelongsTo<T>, IBelongsToType> {
     std::string name() const final { return wayward::format("BelongsTo<{0}>", get_type<T>()->name()); }
     bool is_nullable() const final { return false; }
 
@@ -160,17 +160,30 @@ namespace persistence {
       return value.id().is_persisted();
     }
 
-    bool deserialize_value(BelongsTo<T>& value, const wayward::data_franca::ScalarSpectator& source) const final {
+    Result<void> deserialize_value(BelongsTo<T>& value, const wayward::data_franca::ScalarSpectator& source) const final {
       PrimaryKey key;
       if (get_type<PrimaryKey>()->deserialize_value(key, source)) {
         value.value_ = std::move(key);
-        return true;
+        return Success;
       }
-      return false;
+      return wayward::make_error<wayward::Error>("Could not deserialize primary key.");
     }
 
-    bool serialize_value(const BelongsTo<T>& value, wayward::data_franca::ScalarMutator& target) const final {
+    Result<void> serialize_value(const BelongsTo<T>& value, wayward::data_franca::ScalarMutator& target) const final {
       return get_type<PrimaryKey>()->serialize_value(value.id(), target);
+    }
+
+    ast::Ptr<ast::SingleValue> make_literal(AnyConstRef data) const final {
+      if (!data.is_a<BelongsTo<T>>()) {
+        throw TypeError("BelongsToType<T>::make_literal called with wrong data.");
+      }
+      auto& v = *data.get<const BelongsTo<T>&>();
+      auto id_ptr = v.id_ptr();
+      if (id_ptr) {
+        return get_type<decltype(*id_ptr)>()->make_literal(*id_ptr);
+      } else {
+        return ast::Ptr<ast::SingleValue> { new ast::SQLFragmentValue("NULL") };
+      }
     }
   };
 

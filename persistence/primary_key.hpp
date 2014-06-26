@@ -25,7 +25,7 @@ namespace persistence {
     int64 id = -1;
   };
 
-  struct PrimaryKeyType : IDataTypeFor<PrimaryKey> {
+  struct PrimaryKeyType : DataTypeFor<PrimaryKey> {
     std::string name() const final { return "PrimaryKey"; }
     bool is_nullable() const final { return false; }
 
@@ -33,13 +33,15 @@ namespace persistence {
       return value.is_persisted();
     }
 
-    bool deserialize_value(PrimaryKey& value, const wayward::data_franca::ScalarSpectator& source) const final {
+    Result<void> deserialize_value(PrimaryKey& value, const wayward::data_franca::ScalarSpectator& source) const final {
       return get_type<int64_t>()->deserialize_value(value.id, source);
     }
 
-    bool serialize_value(const PrimaryKey& value, wayward::data_franca::ScalarMutator& target) const final {
+    Result<void> serialize_value(const PrimaryKey& value, wayward::data_franca::ScalarMutator& target) const final {
       return get_type<int64_t>()->serialize_value(value.id, target);
     }
+
+    ast::Ptr<ast::SingleValue> make_literal(AnyConstRef data) const final;
   };
 
   const PrimaryKeyType* build_type(const TypeIdentifier<PrimaryKey>*);

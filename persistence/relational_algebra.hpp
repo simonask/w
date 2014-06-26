@@ -3,6 +3,7 @@
 #define PERSISTENCE_RELATIONAL_ALGEBRA_HPP_INCLUDED
 
 #include <persistence/ast.hpp>
+#include <persistence/types.hpp>
 #include <wayward/support/cloning_ptr.hpp>
 
 namespace persistence {
@@ -134,34 +135,12 @@ namespace persistence {
     Condition  negate(Condition&& cond);
     SQL        sql(std::string sql);
 
-    template <typename T, typename Enable = void> struct RepresentAsLiteral;
 
     template <typename T>
-    struct RepresentAsLiteral<T, typename std::enable_if<
-      (std::is_integral<T>::value && !std::is_same<T, bool>::value)
-      || std::is_floating_point<T>::value
-    >::type> {
-      static Value literal(T number) {
-        return Value {
-          // TODO: Fix this casting to double.
-          make_cloning_ptr(new ast::NumericLiteral{(double)number})
-        };
-      }
-    };
-
-    template <>
-    struct RepresentAsLiteral<std::string> {
-      static Value literal(std::string str) {
-        return Value {
-          make_cloning_ptr(new ast::StringLiteral{std::move(str)})
-        };
-      }
-    };
-
-
-    template <typename T>
-    Value literal(T lit) {
-      return RepresentAsLiteral<T>::literal(std::forward<T>(lit));
+    Value literal(T&& lit) {
+      using Type = typename wayward::meta::RemoveConstRef<T>::Type;
+      auto type = get_type<Type>();
+      return Value{ type->make_literal(lit) };
     }
 
     template <typename... Args>

@@ -47,8 +47,8 @@ namespace persistence {
     virtual ~IPropertyOf() {}
 
     virtual bool has_value(const T& record) const = 0;
-    virtual bool deserialize(T& record, const wayward::data_franca::ScalarSpectator& value) const = 0;
-    virtual bool serialize(const T& record, wayward::data_franca::ScalarMutator& target) const = 0;
+    virtual Result<void> deserialize(T& record, const wayward::data_franca::ScalarSpectator& value) const = 0;
+    virtual Result<void> serialize(const T& record, wayward::data_franca::ScalarMutator& target) const = 0;
 
     virtual wayward::data_franca::ReaderPtr
     get_member_reader(const T&, wayward::Bitflags<wayward::data_franca::Options> options) const = 0;
@@ -111,11 +111,11 @@ namespace persistence {
       return get_type<M>()->has_value(get_known(record));
     }
 
-    bool deserialize(T& record, const wayward::data_franca::ScalarSpectator& value) const override {
+    Result<void> deserialize(T& record, const wayward::data_franca::ScalarSpectator& value) const override {
       return get_type<M>()->deserialize_value(get_known(record), value);
     }
 
-    bool serialize(const T& record, wayward::data_franca::ScalarMutator& target) const override {
+    Result<void> serialize(const T& record, wayward::data_franca::ScalarMutator& target) const override {
       return get_type<M>()->serialize_value(get_known(record), target);
     }
 
