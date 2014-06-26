@@ -46,14 +46,20 @@ namespace wayward {
     void destruct();
     void* memory();
     const void* memory() const;
+
+    friend struct AnyRef;
+    friend struct AnyConstRef;
   };
 
   struct AnyRef {
     template <class T>
-    AnyRef(T& object) : type_info_(&GetTypeInfo<T>::Value), ref_(reinterpret_cast<void*>(&object)) {}
+    AnyRef(T& object) : type_info_(&GetTypeInfo<T>::Value), ref_(reinterpret_cast<void*>(&object)) {
+      static_assert(!std::is_const<T>::value, "Cannot make a reference to a const type.");
+    }
 
     AnyRef() {}
     AnyRef(const AnyRef& other) = default;
+    AnyRef(Any& any) : type_info_(&any.type_info()), ref_(any.memory()) {}
     AnyRef& operator=(const AnyRef&) = default;
 
     const TypeInfo& type_info() const { return *type_info_; }
@@ -66,6 +72,7 @@ namespace wayward {
   private:
     const TypeInfo* type_info_ = &GetTypeInfo<NothingType>::Value;
     void* ref_ = nullptr;
+    friend struct AnyConstRef;
   };
 
   struct AnyConstRef {
@@ -74,6 +81,8 @@ namespace wayward {
 
     AnyConstRef() {}
     AnyConstRef(const AnyConstRef& other) = default;
+    AnyConstRef(const Any& any) : type_info_(&any.type_info()), ref_(any.memory()) {}
+    AnyConstRef(const AnyRef& ref) : type_info_(&ref.type_info()), ref_(ref.ref_) {}
     AnyConstRef& operator=(const AnyConstRef&) = default;
 
     const TypeInfo& type_info() const { return *type_info_; }
