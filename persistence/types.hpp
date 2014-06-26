@@ -1,27 +1,27 @@
 #pragma once
-#ifndef WAYWARD_SUPPORT_TYPES_HPP_INCLUDED
-#define WAYWARD_SUPPORT_TYPES_HPP_INCLUDED
+#ifndef PERSISTENCE_TYPES_HPP_INCLUDED
+#define PERSISTENCE_TYPES_HPP_INCLUDED
 
 #include <string>
 #include <cstdint>
 #include <sstream>
 
-#include <wayward/support/type.hpp>
+#include <persistence/type.hpp>
+#include <persistence/result_set.hpp>
 #include <wayward/support/maybe.hpp>
 #include <wayward/support/data_franca/mutator.hpp>
 #include <wayward/support/data_franca/spectator.hpp>
-#include <wayward/support/datetime/type.hpp>
 
-namespace wayward {
-  struct NothingTypeType : IDataTypeFor<NothingType> {
+namespace persistence {
+  struct NothingType : IDataTypeFor<wayward::NothingType> {
     bool is_nullable() const final { return true; }
     std::string name() const final { return "NothingType"; }
-    bool has_value(const NothingType&) const final { return false; }
-    bool deserialize_value(NothingType&, const data_franca::ScalarSpectator&) const override { return true; }
-    bool serialize_value(const NothingType&, data_franca::ScalarMutator& target) const override { return target << Nothing; }
+    bool has_value(const wayward::NothingType&) const final { return false; }
+    bool deserialize_value(wayward::NothingType&, const wayward::data_franca::ScalarSpectator&) const override { return true; }
+    bool serialize_value(const wayward::NothingType&, wayward::data_franca::ScalarMutator& target) const override { return target << wayward::Nothing; }
   };
 
-  const NothingTypeType* build_type(const TypeIdentifier<NothingType>*);
+  const NothingType* build_type(const TypeIdentifier<wayward::NothingType>*);
 
   struct StringType : IDataTypeFor<std::string> {
     bool is_nullable() const final { return false; }
@@ -31,11 +31,11 @@ namespace wayward {
       return true;
     }
 
-    bool deserialize_value(std::string& value, const data_franca::ScalarSpectator& input) const override {
+    bool deserialize_value(std::string& value, const wayward::data_franca::ScalarSpectator& input) const override {
       return input >> value;
     }
 
-    bool serialize_value(const std::string& value, data_franca::ScalarMutator& target) const override {
+    bool serialize_value(const std::string& value, wayward::data_franca::ScalarMutator& target) const override {
       target << value;
       return true;
     }
@@ -54,15 +54,15 @@ namespace wayward {
 
     bool has_value(const T& value) const final { return true; }
 
-    bool deserialize_value(T& value, const data_franca::ScalarSpectator& source) const override {
+    bool deserialize_value(T& value, const wayward::data_franca::ScalarSpectator& source) const override {
       if (is_float()) {
-        data_franca::Real r;
+        wayward::data_franca::Real r;
         if (source >> r) {
           value = static_cast<T>(r);
           return true;
         }
       } else {
-        data_franca::Integer n;
+        wayward::data_franca::Integer n;
         if (source >> n) {
           value = static_cast<T>(n);
           return true;
@@ -71,11 +71,11 @@ namespace wayward {
       return false;
     }
 
-    bool serialize_value(const T& value, data_franca::ScalarMutator& target) const override {
+    bool serialize_value(const T& value, wayward::data_franca::ScalarMutator& target) const override {
       if (is_float()) {
-        target << static_cast<data_franca::Real>(value);
+        target << static_cast<wayward::data_franca::Real>(value);
       } else {
-        target << static_cast<data_franca::Integer>(value);
+        target << static_cast<wayward::data_franca::Integer>(value);
       }
       return true;
     }
@@ -95,31 +95,31 @@ namespace wayward {
   }
 
   template <typename T>
-  struct MaybeType : IDataTypeFor<Maybe<T>> {
+  struct MaybeType : IDataTypeFor<wayward::Maybe<T>> {
     MaybeType(const IDataTypeFor<T>* inner_type) : inner_type_(inner_type) {}
     std::string name() const final { return detail::maybe_type_name(inner_type_); }
     bool is_nullable() const { return true; }
 
-    bool has_value(const Maybe<T>& value) const final {
+    bool has_value(const wayward::Maybe<T>& value) const final {
       return static_cast<bool>(value);
     }
 
-    bool deserialize_value(Maybe<T>& value, const data_franca::ScalarSpectator& source) const final {
+    bool deserialize_value(wayward::Maybe<T>& value, const wayward::data_franca::ScalarSpectator& source) const final {
       if (source) {
         T val;
         inner_type_->deserialize_value(val, source);
         value = std::move(val);
       } else {
-        value = Nothing;
+        value = wayward::Nothing;
       }
       return true;
     }
 
-    bool serialize_value(const Maybe<T>& value, data_franca::ScalarMutator& target) const final {
+    bool serialize_value(const wayward::Maybe<T>& value, wayward::data_franca::ScalarMutator& target) const final {
       if (value) {
         inner_type_->serialize_value(*value, target);
       } else {
-        target << Nothing;
+        target << wayward::Nothing;
       }
       return true;
     }
@@ -128,10 +128,10 @@ namespace wayward {
   };
 
   template <typename T>
-  const MaybeType<T>* build_type(const TypeIdentifier<Maybe<T>>*) {
+  const MaybeType<T>* build_type(const TypeIdentifier<wayward::Maybe<T>>*) {
     static const MaybeType<T>* p = new MaybeType<T>{get_type<T>()};
     return p;
   }
 }
 
-#endif // WAYWARD_SUPPORT_TYPES_HPP_INCLUDED
+#endif // PERSISTENCE_TYPES_HPP_INCLUDED

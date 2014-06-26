@@ -2,7 +2,7 @@
 #ifndef PERSISTENCE_RECORD_TYPE_INCLUDED
 #define PERSISTENCE_RECORD_TYPE_INCLUDED
 
-#include <wayward/support/type.hpp>
+#include <persistence/type.hpp>
 #include <persistence/property.hpp>
 #include <persistence/association.hpp>
 #include <wayward/support/maybe.hpp>
@@ -11,7 +11,7 @@
 #include <memory>
 
 namespace persistence {
-  struct IRecordType : wayward::IType {
+  struct IRecordType : IType {
     virtual std::string relation() const = 0;
     virtual std::string data_store() const = 0;
     virtual void initialize_associations_in_object(void*, Context*) const = 0;

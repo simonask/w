@@ -5,14 +5,12 @@
 #include <wayward/support/any.hpp>
 #include <wayward/support/result.hpp>
 #include <persistence/record_ptr.hpp>
+#include <persistence/type.hpp>
 #include <persistence/connection_pool.hpp>
-#include <persistence/datetime.hpp>
-#include <wayward/support/type.hpp>
 
 namespace persistence {
   using wayward::AnyRef;
   using wayward::Result;
-  using wayward::get_type;
 
   struct IConnection;
   struct AcquiredConnection;
