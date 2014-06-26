@@ -3,15 +3,16 @@
 #define PERSISTENCE_PRIMARY_KEY_HPP_INCLUDED
 
 #include <cstdint>
-#include <persistence/type.hpp>
 #include <persistence/column_abilities.hpp>
 #include <persistence/result_set.hpp>
-#include <persistence/types.hpp>
 
+#include <wayward/support/type.hpp>
+#include <wayward/support/types.hpp>
 #include <wayward/support/monad.hpp>
 
 namespace persistence {
   using int64 = std::int64_t;
+  using wayward::get_type;
 
   struct PrimaryKey {
     PrimaryKey() {}
@@ -25,7 +26,7 @@ namespace persistence {
     int64 id = -1;
   };
 
-  struct PrimaryKeyType : IDataTypeFor<PrimaryKey> {
+  struct PrimaryKeyType : wayward::IDataTypeFor<PrimaryKey> {
     std::string name() const final { return "PrimaryKey"; }
     bool is_nullable() const final { return false; }
 
@@ -42,7 +43,7 @@ namespace persistence {
     }
   };
 
-  const PrimaryKeyType* build_type(const TypeIdentifier<PrimaryKey>*);
+  const PrimaryKeyType* build_type(const wayward::TypeIdentifier<PrimaryKey>*);
 
   template <typename Col>
   struct ColumnAbilities<Col, PrimaryKey> : LiteralEqualityAbilities<Col, int64> {};

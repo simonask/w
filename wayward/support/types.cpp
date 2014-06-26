@@ -1,9 +1,9 @@
-#include <persistence/types.hpp>
-#include <wayward/support/format.hpp>
+#include "wayward/support/types.hpp"
+#include "wayward/support/format.hpp"
 
-namespace persistence {
-  const NothingType* build_type(const TypeIdentifier<wayward::NothingType>*) {
-    static const NothingType* p = new NothingType;
+namespace wayward {
+  const NothingTypeType* build_type(const TypeIdentifier<wayward::NothingType>*) {
+    static const NothingTypeType* p = new NothingTypeType;
     return p;
   }
 

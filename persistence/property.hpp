@@ -3,10 +3,11 @@
 #define PERSISTENCE_PROPERTY_HPP_INCLUDED
 
 #include <string>
-#include <persistence/type.hpp>
 #include <persistence/result_set.hpp>
 #include <persistence/ast.hpp>
 
+#include <wayward/support/type.hpp>
+#include <wayward/support/types.hpp>
 #include <wayward/support/result.hpp>
 #include <wayward/support/any.hpp>
 #include <wayward/support/cloning_ptr.hpp>
@@ -15,11 +16,14 @@
 #include <wayward/support/data_franca/mutator.hpp>
 
 namespace persistence {
+  using wayward::IType;
   using wayward::Result;
   using wayward::Any;
   using wayward::AnyRef;
   using wayward::AnyConstRef;
   using wayward::Nothing;
+  using wayward::TypeInfo;
+  using wayward::get_type;
 
   struct IProperty {
     virtual ~IProperty() {}
@@ -75,7 +79,7 @@ namespace persistence {
     using MemberPtr = M T::*;
     MemberPtr ptr_;
     PropertyOfBase(MemberPtr ptr, std::string column) : Property<M>{column}, ptr_(ptr) {}
-    const IType& type() const { return *get_type<M>(); }
+    const IType& type() const { return *wayward::get_type<M>(); }
     std::string column() const { return this->column_; }
 
     Result<Any> get(AnyConstRef record) const override {

@@ -147,12 +147,12 @@ namespace persistence {
   template <typename Col, typename T>
   struct ColumnAbilities<Col, BelongsTo<T>>: LiteralEqualityAbilities<Col, std::int64_t> {};
 
-  struct IBelongsToType : IType {
+  struct IBelongsToType : wayward::IType {
     virtual ~IBelongsToType() {}
   };
 
   template <typename T>
-  struct BelongsToType : IDataTypeFor<BelongsTo<T>, IBelongsToType> {
+  struct BelongsToType : wayward::IDataTypeFor<BelongsTo<T>, IBelongsToType> {
     std::string name() const final { return wayward::format("BelongsTo<{0}>", get_type<T>()->name()); }
     bool is_nullable() const final { return false; }
 
@@ -175,7 +175,7 @@ namespace persistence {
   };
 
   template <typename T>
-  const BelongsToType<T>* build_type(const TypeIdentifier<BelongsTo<T>>*) {
+  const BelongsToType<T>* build_type(const wayward::TypeIdentifier<BelongsTo<T>>*) {
     static const auto p = new BelongsToType<T>;
     return p;
   }

@@ -16,7 +16,7 @@
       build_(); \
     } \
   }; \
-  inline const ::persistence::RecordType<TYPE>* build_type(const ::persistence::TypeIdentifier<TYPE>* dummy) { \
+  inline const ::persistence::RecordType<TYPE>* build_type(const ::wayward::TypeIdentifier<TYPE>* dummy) { \
     RecordTypeBuilder_ ## TYPE builder; \
     builder.type_ = new ::persistence::RecordType<TYPE>; \
     builder.build_with_defaults_(); \

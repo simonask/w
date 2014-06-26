@@ -3,7 +3,7 @@
 #include <persistence/projection.hpp>
 #include <persistence/primary_key.hpp>
 #include <persistence/persistence_macro.hpp>
-#include <persistence/types.hpp>
+#include <wayward/support/types.hpp>
 #include <persistence/data_store.hpp>
 
 #include "connection_mock.hpp"

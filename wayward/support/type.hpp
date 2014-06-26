@@ -1,28 +1,20 @@
 #pragma once
-#ifndef PERSISTENCE_TYPE_HPP_INCLUDED
-#define PERSISTENCE_TYPE_HPP_INCLUDED
-
-#include <string>
+#ifndef WAYWARD_SUPPORT_TYPE_HPP_INCLUDED
+#define WAYWARD_SUPPORT_TYPE_HPP_INCLUDED
 
 #include <wayward/support/type_info.hpp>
 
 namespace wayward {
-  namespace data_franca {
-    struct ScalarSpectator;
-    struct ScalarMutator;
-  }
-}
-
-namespace persistence {
-  using wayward::TypeInfo;
-
   struct IType {
     virtual std::string name() const = 0;
     virtual bool is_nullable() const = 0;
     virtual const TypeInfo& type_info() const = 0;
   };
 
-  struct IResultSet;
+  namespace data_franca {
+    struct ScalarSpectator;
+    struct ScalarMutator;
+  }
 
   template <class T, class Base = IType>
   struct IDataTypeFor : Base {
@@ -30,7 +22,7 @@ namespace persistence {
     virtual bool serialize_value(const T& value, wayward::data_franca::ScalarMutator& target) const = 0;
     virtual bool has_value(const T& value) const = 0;
 
-    const TypeInfo& type_info() const override { return wayward::GetTypeInfo<T>::Value; }
+    const TypeInfo& type_info() const override { return GetTypeInfo<T>::Value; }
   };
 
   template <typename T>
@@ -47,4 +39,4 @@ namespace persistence {
   }
 }
 
-#endif // PERSISTENCE_TYPE_HPP_INCLUDED
+#endif // WAYWARD_SUPPORT_TYPE_HPP_INCLUDED
