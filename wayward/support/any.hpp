@@ -51,10 +51,17 @@ namespace wayward {
     friend struct AnyConstRef;
   };
 
+  struct AnyConstRef;
+
   struct AnyRef {
     template <class T>
-    AnyRef(T& object) : type_info_(&GetTypeInfo<T>::Value), ref_(reinterpret_cast<void*>(&object)) {
+    AnyRef(T& object,
+      typename std::enable_if<!std::is_same<AnyRef, T>::value>::type* dummy = nullptr
+      ) : type_info_(&GetTypeInfo<T>::Value), ref_(reinterpret_cast<void*>(&object)) {
       static_assert(!std::is_const<T>::value, "Cannot make a reference to a const type.");
+      static_assert(!std::is_same<Any, T>::value, "Cannot construct AnyRef to Any.");
+      static_assert(!std::is_same<AnyRef, T>::value, "Cannot construct AnyRef to AnyRef.");
+      static_assert(!std::is_same<AnyConstRef, T>::value, "Cannot construct AnyRef to AnyConstRef.");
     }
 
     AnyRef() {}
@@ -77,7 +84,11 @@ namespace wayward {
 
   struct AnyConstRef {
     template <class T>
-    AnyConstRef(const T& object) : type_info_(&GetTypeInfo<T>::Value), ref_(reinterpret_cast<const void*>(&object)) {}
+    AnyConstRef(const T& object) : type_info_(&GetTypeInfo<T>::Value), ref_(reinterpret_cast<const void*>(&object)) {
+      static_assert(!std::is_same<Any, T>::value, "Cannot construct AnyConstRef to Any.");
+      static_assert(!std::is_same<AnyRef, T>::value, "Cannot construct AnyConstRef to AnyRef.");
+      static_assert(!std::is_same<AnyConstRef, T>::value, "Cannot construct AnyConstRef to AnyConstRef.");
+    }
 
     AnyConstRef() {}
     AnyConstRef(const AnyConstRef& other) = default;
@@ -97,12 +108,17 @@ namespace wayward {
 
   template <class T>
   Any::Any(T&& object) : type_info_(&GetTypeInfo<typename meta::RemoveConstRef<T>::Type>::Value) {
+    static_assert(!std::is_same<Any, T>::value, "Cannot construct Any containing Any.");
+    static_assert(!std::is_same<AnyConstRef, T>::value, "Cannot construct Any containing AnyConstRef.");
+    static_assert(!std::is_same<AnyRef, T>::value, "Cannot construct Any containing AnyRef.");
     ensure_allocation();
     type_info_->move_construct(memory(), reinterpret_cast<void*>(&object));
   }
 
   template <class T>
   Any::Any(const T& object) : type_info_(&GetTypeInfo<typename meta::RemoveConstRef<T>::Type>::Value) {
+    static_assert(!std::is_same<AnyConstRef, T>::value, "Cannot construct Any containing AnyConstRef.");
+    static_assert(!std::is_same<AnyRef, T>::value, "Cannot construct Any containing AnyRef.");
     ensure_allocation();
     type_info_->copy_construct(memory(), reinterpret_cast<const void*>(&object));
   }
