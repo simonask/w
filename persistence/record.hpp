@@ -21,6 +21,8 @@ namespace persistence {
     PersistError(const std::string& msg) : wayward::Error(msg) {}
   };
 
+  using wayward::make_error;
+
   template <typename T>
   bool is_persisted(const RecordPtr<T>& record) {
     auto pk = get_type<T>()->primary_key();
@@ -36,21 +38,28 @@ namespace persistence {
   }
 
   template <typename T>
-  bool update(const RecordPtr<T>& record) {
+  Result<void> update(const RecordPtr<T>& record) {
     if (!is_persisted(record)) {
-      throw PrimaryKeyError{"Cannot UPDATE because the record is new and doesn't have a primary key."};
+      return make_error<PrimaryKeyError>("Cannot UPDATE because the record is new and doesn't have a primary key.");
     }
-    throw PersistError{"Update NIY"};
+    return make_error<PersistError>("Update NIY");
   }
 
   template <typename T>
-  bool save(RecordPtr<T>& record) {
+  Result<void> save(RecordPtr<T>& record) {
     if (is_persisted(record)) {
-      update(record);
+      return update(record);
     } else {
-      insert(record);
+      return insert(record);
     }
-    return false; // TODO
+  }
+
+  template <typename T>
+  void save_or_throw(RecordPtr<T>& record) {
+    auto r = save(record);
+    if (!r) {
+      throw *r.error();
+    }
   }
 }
 

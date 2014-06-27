@@ -53,11 +53,11 @@ namespace {
     Foo foo;
     auto tuple = persistence::detail::make_insert_query(foo, persistence::get_type<Foo>(), false);
     if (!tuple.good()) {
-      throw **tuple.error();
+      throw *tuple.error();
     }
     EXPECT_EQ(true, tuple.good());
-    auto q = std::move(tuple.get()->query);
-    auto sql = tuple.get()->conn.to_sql(q);
+    auto q = std::move(tuple.get().query);
+    auto sql = tuple.get().conn.to_sql(q);
     EXPECT_EQ(0, sql.find("INSERT INTO foos ("));
   }
 }

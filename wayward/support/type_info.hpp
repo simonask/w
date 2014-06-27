@@ -4,8 +4,11 @@
 
 #include <type_traits>
 #include <typeinfo>
+#include <string>
 
 namespace wayward {
+  std::string demangle_symbol(const std::string&);
+
   struct TypeInfo {
     using Constructor = void(*)(void*);
     using Destructor  = void(*)(void*);
@@ -25,7 +28,7 @@ namespace wayward {
     MoveAssign move_assign;
     GetID get_id;
 
-    const char* name() const { return get_id().name(); }
+    std::string name() const { return demangle_symbol(get_id().name()); }
   };
 
   template <typename T>

@@ -22,13 +22,13 @@ namespace wayward {
     bool good() const { return !is_error(); }
     explicit operator bool() const { return good(); }
 
-    Maybe<T&> get() & { return result_.template get<T&>(); }
-    Maybe<const T&> get() const& { return result_.template get<const T&>(); }
-    Maybe<T> get() && { return std::move(result_).template get<T>(); }
+    T& get() & { return *result_.template get<T&>(); }
+    const T& get() const& { return *result_.template get<const T&>(); }
+    T get() && { return std::move(*std::move(result_).template get<T>()); }
 
-    Maybe<ErrorPtr&> error() & { return result_.template get<ErrorPtr&>(); }
-    Maybe<const ErrorPtr&> error() const& { return result_.template get<const ErrorPtr&>(); }
-    Maybe<ErrorPtr> error() && { return std::move(result_).template get<ErrorPtr>(); }
+    ErrorPtr& error() & { return *result_.template get<ErrorPtr&>(); }
+    const ErrorPtr& error() const& { return *result_.template get<const ErrorPtr&>(); }
+    ErrorPtr error() && { return std::move(*std::move(result_).template get<ErrorPtr>()); }
   private:
     Either<T, ErrorPtr> result_;
   };
@@ -47,9 +47,9 @@ namespace wayward {
     bool good() const { return !is_error(); }
     explicit operator bool() const { return good(); }
 
-    Maybe<ErrorPtr&> error() & { return error_ ? error_ : Maybe<ErrorPtr&>(Nothing); }
-    Maybe<const ErrorPtr&> error() const& { return error_ ? error_ : Maybe<const ErrorPtr&>(Nothing); }
-    Maybe<ErrorPtr> error() && { return error_ ? std::move(error_) : Maybe<ErrorPtr>(Nothing); }
+    ErrorPtr& error() & { return error_; }
+    const ErrorPtr& error() const& { return error_; }
+    ErrorPtr error() && { return std::move(error_); }
   private:
     ErrorPtr error_;
   };
@@ -74,9 +74,9 @@ namespace wayward {
       template <typename R, typename F>
       static auto bind(R&& result, F&& f) -> typename Join<Result<decltype(f(std::declval<T>()))>>::Type {
         if (result.good()) {
-          return f(std::move(*(std::forward<R>(result).get())));
+          return f(std::move((std::forward<R>(result).get())));
         } else {
-          return std::move(*(std::forward<R>(result).error()));
+          return std::move((std::forward<R>(result).error()));
         }
       }
     };

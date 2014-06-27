@@ -24,9 +24,9 @@ namespace persistence {
       if (pk) {
         Result<Any> existing_pk = pk->get(record);
         if (existing_pk.good()) {
-          PrimaryKey& primary_key_value = *existing_pk.get()->get<PrimaryKey&>();
+          PrimaryKey& primary_key_value = *existing_pk.get().get<PrimaryKey&>();
           if (primary_key_value.is_persisted()) {
-            return make_error<PersistError>(wayward::format("Trying to insert record that already has a primary key (real type: {0}).", existing_pk.get()->type_info().name()));
+            return make_error<PersistError>(wayward::format("Trying to insert record that already has a primary key (real type: {0}).", existing_pk.get().type_info().name()));
           }
         }
       }
@@ -58,9 +58,9 @@ namespace persistence {
         query.columns.push_back(p->column());
         auto value = p->get(record);
         if (value) {
-          query.values.push_back(p->type().make_literal(*value.get()));
+          query.values.push_back(p->type().make_literal(value.get()));
         } else {
-          return std::move(*std::move(value).error());
+          return std::move(std::move(value).error());
         }
       }
 
@@ -70,7 +70,14 @@ namespace persistence {
     Result<std::unique_ptr<IResultSet>>
     execute_insert(const ast::InsertQuery& query, IConnection& conn, const IRecordType* record_type) {
       conn.logger()->log(wayward::Severity::Debug, "p", wayward::format("Insert {0}", record_type->name()));
-      auto results = conn.execute(query);
+      std::unique_ptr<IResultSet> results;
+      try {
+        results = conn.execute(query);
+      }
+      catch (const wayward::Error& error) {
+        conn.logger()->log(wayward::Severity::Error, "p", wayward::format("Error executing SQL:\n{0}", error.what()));
+      }
+
       if (!results) {
         return make_error<PersistError>("Backend did not return any results (meaning INSERT probably failed).");
       }
