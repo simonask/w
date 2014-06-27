@@ -174,16 +174,16 @@ namespace persistence {
     }
 
     ast::Ptr<ast::SingleValue> make_literal(AnyConstRef data) const final {
-      if (!data.is_a<BelongsTo<T>>()) {
-        throw TypeError("BelongsToType<T>::make_literal called with wrong data.");
+      if (!data.is_a<NothingType>()) {
+        if (!data.is_a<PrimaryKey>()) {
+          wayward::fail<TypeError>("BelongsToType<T>::make_literal called with wrong data (expected {0}, got {1}).", get_type<PrimaryKey>()->name(), data.type_info().name());
+        }
+        auto& v = *data.get<const PrimaryKey&>();
+        if (v.is_persisted()) {
+          return get_type<decltype(v.id)>()->make_literal(v.id);
+        }
       }
-      auto& v = *data.get<const BelongsTo<T>&>();
-      auto id_ptr = v.id_ptr();
-      if (id_ptr) {
-        return get_type<decltype(*id_ptr)>()->make_literal(*id_ptr);
-      } else {
-        return ast::Ptr<ast::SingleValue> { new ast::SQLFragmentValue("NULL") };
-      }
+      return ast::Ptr<ast::SingleValue> { new ast::SQLFragmentValue("NULL") };
     }
   };
 
