@@ -22,6 +22,7 @@
 #include <persistence/projection_as_structured_data.hpp>
 #include <persistence/create.hpp>
 #include <persistence/assign_attributes.hpp>
+#include <persistence/validation_errors.hpp>
 
 #if !defined(PERSISTENCE_NO_SHORTHAND_NAMESPACE)
 namespace p = persistence;
