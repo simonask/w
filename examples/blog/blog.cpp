@@ -6,6 +6,10 @@
 
 namespace app {
   using p::RecordPtr;
+  using p::ValidationErrors;
+  using w::redirect;
+  using w::render;
+  using w::format;
 
   struct PostsRoutes : w::Routes {
     w::Response get_all_posts(w::Request& req) {
@@ -55,8 +59,14 @@ namespace app {
     w::Response post_comment(w::Request& req) {
       auto comment = create<Comment>(req.params["comment"]);
       comment->post = post;
-      p::save_or_throw(comment);
-      return w::redirect(w::format("/posts/{0}", post->id));
+
+      auto r = p::save(comment);
+      if (r) {
+        return redirect(format("/posts/{0}", post->id));
+      } else {
+        session.flash["error"] = r.error();
+        return redirect(format("/posts/{0}/comments", post->id));
+      }
     }
   };
 
