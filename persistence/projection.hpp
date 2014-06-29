@@ -2,11 +2,12 @@
 #ifndef PERSISTENCE_PROJECTION_HPP_INCLUDED
 #define PERSISTENCE_PROJECTION_HPP_INCLUDED
 
+#include <wayward/support/maybe.hpp>
+
 #include <persistence/result_set.hpp>
+#include <persistence/column.hpp>
 #include <persistence/ast.hpp>
 #include <persistence/relational_algebra.hpp>
-#include <wayward/support/maybe.hpp>
-#include <wayward/support/format.hpp>
 #include <persistence/column_traits.hpp>
 #include <persistence/column_abilities.hpp>
 #include <persistence/record_type.hpp>
@@ -32,142 +33,46 @@ namespace persistence {
   using wayward::Nothing;
   using wayward::CloningPtr;
 
-  struct UnregisteredPropertyError : wayward::Error {
-    UnregisteredPropertyError(std::string type_name)
-    : wayward::Error(wayward::format("Attempted to use unregistered property on type {0}. Use property(member, column) in the PERSISTENCE block for the type to register the property.", type_name))
-    {}
+  struct AssociationTypeMismatchError : wayward::Error {
+    AssociationTypeMismatchError(std::string msg) : Error(std::move(msg)) {}
   };
 
   template <typename... Relations> struct Joins;
 
   template <typename T, typename Jx = Joins<>> struct Projection;
 
-  template <typename Type, typename ColumnType>
-  struct Column : ColumnAbilities<Column<Type, ColumnType>, ColumnType> {
-    std::string column_name;
-    Maybe<std::string> explicit_alias;
+  struct RelationProjector {
+    using ColumnAliases = std::map<std::string, std::string>; // original->alias
 
-    Column(ColumnType Type::*member) {
-      const RecordType<Type>* t = get_type<Type>();
-      Maybe<std::string> column = t->find_column_by_member_pointer(member);
-      if (column) {
-        column_name = *column;
-      } else {
-        throw UnregisteredPropertyError(t->name());
-      }
-    }
-
-    Column(std::string relation_alias, ColumnType Type::*member) : explicit_alias(std::move(relation_alias)) {
-      const RecordType<Type>* t = get_type<Type>();
-      Maybe<std::string> column = t->find_column_by_member_pointer(member);
-      if (column) {
-        column_name = *column;
-      } else {
-        throw UnregisteredPropertyError(t->name());
-      }
-    }
-
-    Column(std::string column_name) : column_name(std::move(column_name)) {}
-    Column(std::string relation_alias, std::string column_name) : column_name(std::move(column_name)), explicit_alias(std::move(relation_alias)) {}
-
-    relational_algebra::Value value() const& {
-      if (explicit_alias) {
-        return relational_algebra::column(*explicit_alias, column_name);
-      } else {
-        return relational_algebra::column(reinterpret_cast<ast::SymbolicRelation>(get_type<Type>()), column_name);
-      }
-    }
-
-    relational_algebra::Value value() && {
-      if (explicit_alias) {
-        return relational_algebra::column(std::move(*explicit_alias), std::move(column_name));
-      } else {
-        return relational_algebra::column(reinterpret_cast<ast::SymbolicRelation>(get_type<Type>()), std::move(column_name));
-      }
-    }
-  };
-
-  template <typename Type, typename ColumnType>
-  Column<Type, ColumnType> column(ColumnType Type::*member) {
-    return Column<Type, ColumnType>(member);
-  }
-  template <typename Type, typename ColumnType>
-  Column<Type, ColumnType> column(std::string alias, ColumnType Type::*member) {
-    return Column<Type, ColumnType>(std::move(alias), member);
-  }
-  template <typename Type, typename ColumnType>
-  Column<Type, ColumnType> column(std::string column) {
-    return Column<Type, ColumnType>(std::move(column));
-  }
-  template <typename Type, typename ColumnType>
-  Column<Type, ColumnType> column(std::string alias, std::string column) {
-    return Column<Type, ColumnType>(std::move(alias), std::move(column));
-  }
-
-  struct AssociationTypeMismatchError : wayward::Error {
-    AssociationTypeMismatchError(std::string msg) : Error(std::move(msg)) {}
-  };
-
-  struct RelationProjector : wayward::ICloneable {
-    RelationProjector(std::string relation_alias) : relation_alias_(std::move(relation_alias)) {}
-    virtual void project_and_populate_association(Context&, IAssociationAnchor&, const IResultSet& result_set, size_t row) = 0;
-
-    virtual void append_selects(std::vector<relational_algebra::SelectAlias>& out_selects) const = 0;
-    virtual void rebuild_joins(std::map<std::string, RelationProjector*>& out_joins) = 0;
-
+    RelationProjector(std::string relation_alias, const IRecordType* record_type);
+    const IRecordType* record_type() const { return record_type_; }
     const std::string& relation_alias() const { return relation_alias_; }
+
+    virtual RelationProjector* clone() const = 0;
+
+    void add_join(const IAssociation*, CloningPtr<RelationProjector>);
+    void rebuild_joins(std::map<std::string, RelationProjector*>& out_joins);
+    void append_selects(std::vector<relational_algebra::SelectAlias>& out_selects) const;
+
+    void populate_with_results(Context&, AnyRef record_ref, const IResultSet&, size_t row);
+
+    virtual void project_and_populate_association(Context&, IAssociationAnchor&, const IResultSet& result_set, size_t row) = 0;
   private:
+    const IRecordType* record_type_;
     std::string relation_alias_;
+    std::map<const IAssociation*, CloningPtr<RelationProjector>> sub_projectors_;
+    ColumnAliases column_aliases_;
   };
 
   template <typename T>
-  struct RelationProjectorFor : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector> {
-    std::map<const IAssociationFrom<T>*, CloningPtr<RelationProjector>> sub_projectors_;
-    std::vector<std::pair<IPropertyOf<T>*, std::string>> column_aliases_;
-
-    RelationProjectorFor(std::string relation_alias) : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector>(std::move(relation_alias))
-    {
-      auto record_type = get_type<T>();
-      for (auto& property: record_type->properties_) {
-        auto alias = wayward::format("{0}_{1}", this->relation_alias(), property->column());
-        column_aliases_.push_back(std::make_pair(property.get(), std::move(alias)));
-      }
-    }
-
-    void rebuild_joins(std::map<std::string, RelationProjector*>& out_joins) final {
-      out_joins[this->relation_alias()] = static_cast<RelationProjector*>(this);
-      for (auto& pair: sub_projectors_) {
-        pair.second->rebuild_joins(out_joins);
-      }
-    }
-
-    void append_selects(std::vector<relational_algebra::SelectAlias>& out_selects) const final {
-      for (auto& pair: column_aliases_) {
-        out_selects.emplace_back(relational_algebra::column(this->relation_alias(), pair.first->column()), pair.second);
-      }
-      for (auto& pair: sub_projectors_) {
-        pair.second->append_selects(out_selects);
-      }
-    }
+  struct RelationProjectorFor final : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector> {
+    RelationProjectorFor(std::string relation_alias)
+    : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector>(std::move(relation_alias), wayward::get_type<T>())
+    {}
 
     RecordPtr<T> project(Context& ctx, const IResultSet& result_set, size_t row) {
       auto record = ctx.create<T>();
-
-      // Populate fields
-      for (auto& pair: column_aliases_) {
-        auto property = pair.first;
-        auto& alias = pair.second;
-        Maybe<std::string> col_value = result_set.get(row, alias);
-        wayward::data_franca::Adapter<Maybe<std::string>> reader { col_value, wayward::data_franca::Options::None };
-        //property->deserialize(*record, reader); // TODO!
-      }
-
-      // Populate child associations
-      for (auto& pair: sub_projectors_) {
-        auto real_association = pair.first->get_anchor(*record);
-        pair.second->project_and_populate_association(ctx, *real_association, result_set, row);
-      }
-
+      this->populate_with_results(ctx, *record, result_set, row);
       return std::move(record);
     }
 
@@ -522,7 +427,7 @@ namespace persistence {
 
       // Hook it up in the projector hierarchy:
       auto new_projector = new RelationProjectorFor<Association>(to_alias);
-      typed_projector->sub_projectors_[association] = make_cloning_ptr(new_projector);
+      typed_projector->add_join(association, make_cloning_ptr(new_projector));
 
       // Add it to the list of joins:
       q_.joins_[to_alias] = new_projector;

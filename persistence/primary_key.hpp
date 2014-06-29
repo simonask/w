@@ -34,10 +34,14 @@ namespace persistence {
     }
 
     void visit(PrimaryKey& pk, wayward::DataVisitor& visitor) const final {
-      if (has_value(pk)) {
+      if (visitor.can_modify()) {
         visitor(pk.id);
       } else {
-        visitor.visit_nil();
+        if (has_value(pk)) {
+          visitor(pk.id);
+        } else {
+          visitor.visit_nil();
+        }
       }
     }
   };

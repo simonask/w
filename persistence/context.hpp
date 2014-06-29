@@ -56,7 +56,7 @@ namespace persistence {
     LifetimeError(const std::string& msg) : wayward::Error(msg) {}
   };
 
-  Context::~Context() {
+  inline Context::~Context() {
     clear(); // Clear first to delete any RecordPtrs in associations.
     auto count = sentinel_.use_count() - 1;
     if (count > 0) {
