@@ -104,6 +104,7 @@ namespace persistence {
       explicit Projection(std::string relation);
       Projection(const Projection&) = default;
       Projection(Projection&&) = default;
+      Projection& operator=(const Projection&) = default;
       Projection& operator=(Projection&&) = default;
 
       Projection where(Condition) const&;
