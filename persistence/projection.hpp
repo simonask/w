@@ -420,14 +420,10 @@ namespace persistence {
         throw AssociationError(wayward::format("Unknown relation '{0}'.", from_alias));
       }
       auto projector = it->second;
-      auto typed_projector = dynamic_cast<RelationProjectorFor<Owner>*>(projector);
-      if (typed_projector == nullptr) {
-        throw AssociationError(wayward::format("The relation alias '{0}' does not describe objects of type '{1}'.", from_alias, source_type->name()));
-      }
 
       // Hook it up in the projector hierarchy:
       auto new_projector = new RelationProjectorFor<Association>(to_alias);
-      typed_projector->add_join(association, make_cloning_ptr(new_projector));
+      projector->add_join(association, make_cloning_ptr(new_projector));
 
       // Add it to the list of joins:
       q_.joins_[to_alias] = new_projector;
