@@ -5,7 +5,7 @@
 #include <wayward/support/any.hpp>
 #include <wayward/support/result.hpp>
 #include <persistence/record_ptr.hpp>
-#include <persistence/type.hpp>
+#include <wayward/support/type.hpp>
 #include <persistence/connection_pool.hpp>
 
 namespace persistence {
@@ -42,7 +42,7 @@ namespace persistence {
 
   template <class T>
   Result<void> insert(RecordPtr<T> record, bool set_created_at = true) {
-    return detail::insert(*record, get_type<T>(), set_created_at);
+    return detail::insert(*record, wayward::get_type<T>(), set_created_at);
   }
 }
 

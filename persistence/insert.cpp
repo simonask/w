@@ -4,6 +4,7 @@
 #include "persistence/record_type.hpp"
 #include "persistence/record.hpp"
 #include "persistence/primary_key.hpp"
+#include "persistence/data_as_literal.hpp"
 
 #include <wayward/support/format.hpp>
 
@@ -58,7 +59,8 @@ namespace persistence {
         query.columns.push_back(p->column());
         auto value = p->get(record);
         if (value) {
-          query.values.push_back(p->type().make_literal(value.get()));
+          DataAsLiteral data_as_literal;
+          query.values.push_back(data_as_literal.make_literal(value.get(), &p->type()));
         } else {
           return std::move(std::move(value).error());
         }

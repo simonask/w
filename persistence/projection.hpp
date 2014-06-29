@@ -14,12 +14,12 @@
 #include <persistence/connection_provider.hpp>
 #include <persistence/belongs_to.hpp>
 #include <persistence/context.hpp>
-#include <persistence/types.hpp>
 
 #include <wayward/support/meta.hpp>
 #include <wayward/support/error.hpp>
 #include <wayward/support/logger.hpp>
 #include <wayward/support/data_franca/adapters.hpp>
+#include <wayward/support/types.hpp>
 
 #include <functional>
 #include <cassert>
@@ -159,7 +159,7 @@ namespace persistence {
         auto& alias = pair.second;
         Maybe<std::string> col_value = result_set.get(row, alias);
         wayward::data_franca::Adapter<Maybe<std::string>> reader { col_value, wayward::data_franca::Options::None };
-        property->deserialize(*record, reader);
+        //property->deserialize(*record, reader); // TODO!
       }
 
       // Populate child associations

@@ -2,13 +2,11 @@
 #ifndef P_HPP_INCLUDED
 #define P_HPP_INCLUDED
 
-#include <persistence/type.hpp>
 #include <persistence/association.hpp>
 #include <persistence/record_type.hpp>
 #include <persistence/connection.hpp>
 #include <persistence/datetime.hpp>
 #include <persistence/relational_algebra.hpp>
-#include <persistence/types.hpp>
 #include <persistence/projection.hpp>
 #include <persistence/belongs_to.hpp>
 #include <persistence/has_many.hpp>

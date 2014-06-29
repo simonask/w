@@ -3,7 +3,7 @@
 #define PERSISTENCE_PROPERTY_HPP_INCLUDED
 
 #include <string>
-#include <persistence/type.hpp>
+#include <wayward/support/type.hpp>
 #include <persistence/result_set.hpp>
 #include <persistence/ast.hpp>
 
@@ -20,11 +20,14 @@ namespace persistence {
   using wayward::AnyRef;
   using wayward::AnyConstRef;
   using wayward::Nothing;
+  using wayward::IType;
+  using wayward::TypeInfo;
+  using wayward::get_type;
 
   struct IProperty {
     virtual ~IProperty() {}
     virtual std::string column() const = 0;
-    virtual const ISQLType& type() const = 0;
+    virtual const IType& type() const = 0;
 
     virtual Result<Any> get(AnyConstRef record) const = 0;
     virtual Result<void> set(AnyRef record, AnyConstRef value) const = 0;
@@ -47,14 +50,15 @@ namespace persistence {
     virtual ~IPropertyOf() {}
 
     virtual bool has_value(const T& record) const = 0;
-    virtual Result<void> deserialize(T& record, const wayward::data_franca::ScalarSpectator& value) const = 0;
-    virtual Result<void> serialize(const T& record, wayward::data_franca::ScalarMutator& target) const = 0;
 
     virtual wayward::data_franca::ReaderPtr
     get_member_reader(const T&, wayward::Bitflags<wayward::data_franca::Options> options) const = 0;
 
     virtual wayward::data_franca::AdapterPtr
     get_member_adapter(T&, wayward::Bitflags<wayward::data_franca::Options> options) const = 0;
+
+    virtual void
+    visit(T&, wayward::DataVisitor& visitor) const = 0;
   };
 
   struct ASTError : wayward::Error {
@@ -75,8 +79,12 @@ namespace persistence {
     using MemberPtr = M T::*;
     MemberPtr ptr_;
     PropertyOfBase(MemberPtr ptr, std::string column) : Property<M>{column}, ptr_(ptr) {}
-    const ISQLType& type() const { return *get_type<M>(); }
+    const IType& type() const { return *wayward::get_type<M>(); }
     std::string column() const { return this->column_; }
+
+    void visit(T& record, wayward::DataVisitor& visitor) const final {
+      visitor[this->column()](get_known(record));
+    }
 
     Result<Any> get(AnyConstRef record) const override {
       if (!record.is_a<T>()) {
@@ -109,14 +117,6 @@ namespace persistence {
 
     bool has_value(const T& record) const override {
       return get_type<M>()->has_value(get_known(record));
-    }
-
-    Result<void> deserialize(T& record, const wayward::data_franca::ScalarSpectator& value) const override {
-      return get_type<M>()->deserialize_value(get_known(record), value);
-    }
-
-    Result<void> serialize(const T& record, wayward::data_franca::ScalarMutator& target) const override {
-      return get_type<M>()->serialize_value(get_known(record), target);
     }
 
     wayward::data_franca::ReaderPtr

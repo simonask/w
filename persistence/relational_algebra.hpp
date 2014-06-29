@@ -3,12 +3,14 @@
 #define PERSISTENCE_RELATIONAL_ALGEBRA_HPP_INCLUDED
 
 #include <persistence/ast.hpp>
-#include <persistence/types.hpp>
+#include <wayward/support/types.hpp>
 #include <wayward/support/cloning_ptr.hpp>
 
 namespace persistence {
   namespace relational_algebra {
     using wayward::CloningPtr;
+    using wayward::AnyRef;
+    using wayward::IType;
 
     struct SQL {
       std::string sql;
@@ -130,8 +132,7 @@ namespace persistence {
     Value      column(std::string relation, std::string column);
     Value      column(ast::SymbolicRelation, std::string column);
     Value      aggregate_impl(std::string func, Value* args, size_t num_args);
-    Value      literal(std::string str);
-    Value      literal(double number);
+    Value      literal(AnyRef, const IType*);
     Condition  negate(Condition&& cond);
     SQL        sql(std::string sql);
 
@@ -139,8 +140,7 @@ namespace persistence {
     template <typename T>
     Value literal(T&& lit) {
       using Type = typename wayward::meta::RemoveConstRef<T>::Type;
-      auto type = get_type<Type>();
-      return Value{ type->make_literal(lit) };
+      return literal(AnyRef{ lit }, wayward::get_type<Type>());
     }
 
     template <typename... Args>

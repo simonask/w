@@ -147,12 +147,12 @@ namespace persistence {
   template <typename Col, typename T>
   struct ColumnAbilities<Col, BelongsTo<T>>: LiteralEqualityAbilities<Col, std::int64_t> {};
 
-  struct IBelongsToType : ISQLType {
+  struct IBelongsToType : IType {
     virtual ~IBelongsToType() {}
   };
 
   template <typename T>
-  struct BelongsToType : DataTypeFor<BelongsTo<T>, IBelongsToType> {
+  struct BelongsToType : wayward::DataTypeFor<BelongsTo<T>, IBelongsToType> {
     std::string name() const final { return wayward::format("BelongsTo<{0}>", get_type<T>()->name()); }
     bool is_nullable() const final { return false; }
 
@@ -160,35 +160,18 @@ namespace persistence {
       return value.id().is_persisted();
     }
 
-    Result<void> deserialize_value(BelongsTo<T>& value, const wayward::data_franca::ScalarSpectator& source) const final {
-      PrimaryKey key;
-      if (get_type<PrimaryKey>()->deserialize_value(key, source)) {
-        value.value_ = std::move(key);
-        return Success;
+    void visit(BelongsTo<T>& value, wayward::DataVisitor& visitor) const final {
+      auto ptr = value.id_ptr();
+      if (ptr) {
+        get_type<decltype(*ptr)>()->visit_data(*ptr, visitor);
+      } else {
+        visitor(Nothing);
       }
-      return wayward::make_error<wayward::Error>("Could not deserialize primary key.");
-    }
-
-    Result<void> serialize_value(const BelongsTo<T>& value, wayward::data_franca::ScalarMutator& target) const final {
-      return get_type<PrimaryKey>()->serialize_value(value.id(), target);
-    }
-
-    ast::Ptr<ast::SingleValue> make_literal(AnyConstRef data) const final {
-      if (!data.is_a<NothingType>()) {
-        if (!data.is_a<PrimaryKey>()) {
-          wayward::fail<TypeError>("BelongsToType<T>::make_literal called with wrong data (expected {0}, got {1}).", get_type<PrimaryKey>()->name(), data.type_info().name());
-        }
-        auto& v = *data.get<const PrimaryKey&>();
-        if (v.is_persisted()) {
-          return get_type<decltype(v.id)>()->make_literal(v.id);
-        }
-      }
-      return ast::Ptr<ast::SingleValue> { new ast::SQLFragmentValue("NULL") };
     }
   };
 
   template <typename T>
-  const BelongsToType<T>* build_type(const TypeIdentifier<BelongsTo<T>>*) {
+  const BelongsToType<T>* build_type(const wayward::TypeIdentifier<BelongsTo<T>>*) {
     static const auto p = new BelongsToType<T>;
     return p;
   }

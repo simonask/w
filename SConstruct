@@ -9,6 +9,7 @@ wayward_support_sources = Split("""
   wayward/support/datetime/datetime.cpp
   wayward/support/datetime/clock.cpp
   wayward/support/datetime/interval.cpp
+  wayward/support/datetime/type.cpp
   wayward/support/logger.cpp
   wayward/support/error.cpp
   wayward/support/command_line_options.cpp
@@ -21,6 +22,7 @@ wayward_support_sources = Split("""
   wayward/support/data_franca/mutator.cpp
   wayward/support/data_franca/object.cpp
   wayward/support/string.cpp
+  wayward/support/types.cpp
   3rdparty/libevhtp/evhtp.c
   3rdparty/libevhtp/htparse/htparse.c
   3rdparty/libevhtp/evthr/evthr.c
@@ -54,10 +56,9 @@ persistence_sources = Split("""
   persistence/adapters/postgresql/renderers.cpp
   persistence/primary_key.cpp
   persistence/relational_algebra.cpp
-  persistence/datetime.cpp
   persistence/insert.cpp
   persistence/property.cpp
-  persistence/types.cpp
+  persistence/data_as_literal.cpp
   """)
 
 wayward_synth_sources = Split("""
