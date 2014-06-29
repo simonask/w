@@ -41,50 +41,54 @@ namespace persistence {
 
   template <typename T, typename Jx = Joins<>> struct Projection;
 
-  struct RelationProjector {
-    using ColumnAliases = std::map<std::string, std::string>; // original->alias
+  namespace detail {
+    struct RelationProjector {
+      using ColumnAliases = std::map<std::string, std::string>; // original->alias
 
-    RelationProjector(std::string relation_alias, const IRecordType* record_type);
-    const IRecordType* record_type() const { return record_type_; }
-    const std::string& relation_alias() const { return relation_alias_; }
+      RelationProjector(std::string relation_alias, const IRecordType* record_type);
+      const IRecordType* record_type() const { return record_type_; }
+      const std::string& relation_alias() const { return relation_alias_; }
 
-    virtual RelationProjector* clone() const = 0;
+      virtual RelationProjector* clone() const = 0;
 
-    void add_join(const IAssociation*, CloningPtr<RelationProjector>);
-    void rebuild_joins(std::map<std::string, RelationProjector*>& out_joins);
-    void append_selects(std::vector<relational_algebra::SelectAlias>& out_selects) const;
+      void add_join(const IAssociation*, CloningPtr<RelationProjector>);
+      void rebuild_join_map_recursively(std::map<std::string, RelationProjector*>& out_joins);
+      void append_selects(std::vector<relational_algebra::SelectAlias>& out_selects) const;
 
-    void populate_with_results(Context&, AnyRef record_ref, const IResultSet&, size_t row);
+      void populate_with_results(Context&, AnyRef record_ref, const IResultSet&, size_t row);
 
-    virtual void project_and_populate_association(Context&, IAssociationAnchor&, const IResultSet& result_set, size_t row) = 0;
-  private:
-    const IRecordType* record_type_;
-    std::string relation_alias_;
-    std::map<const IAssociation*, CloningPtr<RelationProjector>> sub_projectors_;
-    ColumnAliases column_aliases_;
-  };
+      virtual void project_and_populate_association(Context&, IAssociationAnchor&, const IResultSet& result_set, size_t row) = 0;
+    private:
+      const IRecordType* record_type_;
+      std::string relation_alias_;
+      std::map<const IAssociation*, CloningPtr<RelationProjector>> sub_projectors_;
+      ColumnAliases column_aliases_;
+    };
 
-  template <typename T>
-  struct RelationProjectorFor final : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector> {
-    RelationProjectorFor(std::string relation_alias)
-    : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector>(std::move(relation_alias), wayward::get_type<T>())
-    {}
+    void throw_association_type_mismatch_error(const IRecordType* expected, const IRecordType* got);
 
-    RecordPtr<T> project(Context& ctx, const IResultSet& result_set, size_t row) {
-      auto record = ctx.create<T>();
-      this->populate_with_results(ctx, *record, result_set, row);
-      return std::move(record);
-    }
+    template <typename T>
+    struct RelationProjectorFor final : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector> {
+      RelationProjectorFor(std::string relation_alias)
+      : wayward::Cloneable<RelationProjectorFor<T>, RelationProjector>(std::move(relation_alias), wayward::get_type<T>())
+      {}
 
-    void project_and_populate_association(Context& ctx, IAssociationAnchor& association, const IResultSet& result_set, size_t row) {
-      auto ptr = project(ctx, result_set, row);
-      auto typed_association = dynamic_cast<ISingularAssociationAnchor<T>*>(&association);
-      if (typed_association == nullptr) {
-        throw AssociationTypeMismatchError(wayward::format("Could not populate association expecting type {0} with object of type {1}.", association.association()->foreign_type()->name(), get_type<T>()->name()));
+      RecordPtr<T> project(Context& ctx, const IResultSet& result_set, size_t row) {
+        auto record = ctx.create<T>();
+        this->populate_with_results(ctx, *record, result_set, row);
+        return std::move(record);
       }
-      typed_association->populate(std::move(ptr));
-    }
-  };
+
+      void project_and_populate_association(Context& ctx, IAssociationAnchor& association, const IResultSet& result_set, size_t row) {
+        auto ptr = project(ctx, result_set, row);
+        auto typed_association = dynamic_cast<ISingularAssociationAnchor<T>*>(&association);
+        if (typed_association == nullptr) {
+          throw_association_type_mismatch_error(association.association()->foreign_type(), get_type<T>());
+        }
+        typed_association->populate(std::move(ptr));
+      }
+    };
+  }
 
   template <typename Primary, typename... Relations>
   struct Projection<Primary, Joins<Relations...>> {
@@ -99,7 +103,7 @@ namespace persistence {
     : context_(ctx)
     {
       auto relation = get_type<Primary>()->relation();
-      q_.projector_ = make_cloning_ptr(new RelationProjectorFor<Primary>(relation));
+      q_.projector_ = make_cloning_ptr(new detail::RelationProjectorFor<Primary>(relation));
       p_.query->relation = relation;
       q_.joins_[relation] = q_.projector_.get();
       q_.first_relations_[get_type<Primary>()] = relation;
@@ -108,7 +112,7 @@ namespace persistence {
     Projection(Context& ctx, std::string t0_alias)
     : context_(ctx)
     {
-      q_.projector_ = make_cloning_ptr(new RelationProjectorFor<Primary>(t0_alias));
+      q_.projector_ = make_cloning_ptr(new detail::RelationProjectorFor<Primary>(t0_alias));
       p_.query->relation = get_type<Primary>()->relation();
       p_.query->relation_alias = t0_alias;
       q_.joins_[t0_alias] = q_.projector_.get();
@@ -121,7 +125,7 @@ namespace persistence {
      , p_(other.p_)
      , q_(other.q_)
      {
-      rebuild_joins();
+      rebuild_join_map();
      }
 
     Projection(Self&& other)
@@ -135,7 +139,7 @@ namespace persistence {
       q_ = other.q_;
       p_ = other.p_;
       materialized_ = nullptr; // reset because the query has changed.
-      rebuild_joins();
+      rebuild_join_map();
       return *this;
     }
 
@@ -422,7 +426,7 @@ namespace persistence {
       auto projector = it->second;
 
       // Hook it up in the projector hierarchy:
-      auto new_projector = new RelationProjectorFor<Association>(to_alias);
+      auto new_projector = new detail::RelationProjectorFor<Association>(to_alias);
       projector->add_join(association, make_cloning_ptr(new_projector));
 
       // Add it to the list of joins:
@@ -450,12 +454,12 @@ namespace persistence {
       }
     }
 
-    void rebuild_joins() {
+    void rebuild_join_map() {
       // This is necessary because we're keeping raw pointers in q_.joins_, so when we're a freshly cloned Projection,
       // we need to rebuild that lookup table.
 
       q_.joins_.clear();
-      q_.projector_->rebuild_joins(q_.joins_);
+      q_.projector_->rebuild_join_map(q_.joins_);
     }
 
     void materialize() {
@@ -486,12 +490,12 @@ namespace persistence {
     struct QueryInfo : relational_algebra::IResolveSymbolicRelation {
       // The root projector. It is kept on the heap to avoid fixing up pointers every time
       // we get moved around.
-      CloningPtr<RelationProjectorFor<Primary>> projector_;
+      CloningPtr<detail::RelationProjectorFor<Primary>> projector_;
 
       // The map of joins is alias=>projector, and it needs to be rebuilt every time we make a copy of this Projection.
-      // Ownership of the RelationProjector pointer is held by the hierarchy of projectors.
-      // We keep track of these to find the proper RelationProjector on which to add a join.
-      std::map<std::string, RelationProjector*> joins_;
+      // Ownership of the detail::RelationProjector pointer is held by the hierarchy of projectors.
+      // We keep track of these to find the proper detail::RelationProjector on which to add a join.
+      std::map<std::string, detail::RelationProjector*> joins_;
 
       // An unnamed relation is a relation that is joined upon another without an alias.
       // From the AST perspective, these are what ast::SymbolicRelation refer to.
