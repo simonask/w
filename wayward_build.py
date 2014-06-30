@@ -61,7 +61,7 @@ def WaywardEnvironment(base):
     env.Replace(CXX = 'clang++')
     env.Replace(CC  = 'clang')
     env.Append(CCFLAGS     = Split('-fcolor-diagnostics')) # SCons messes with the TTY so clang can't autodetect color capability.
-    env.Append(CXXFLAGS    = Split('-std=c++11'))
+    env.Append(CXXFLAGS    = Split('-std=c++1y'))
     env.Append(CFLAGS      = Split('-I/usr/local/include'))
     env.Append(LINKFLAGS   = Split('-rpath @loader_path/'))
     env.Append(SHLINKFLAGS = Split('-install_name @rpath/${TARGET.file}'))

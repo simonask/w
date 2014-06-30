@@ -3,6 +3,7 @@
 #define WAYWARD_SUPPORT_CLONING_PTR_HPP_INCLUDED
 
 #include <memory>
+#include <wayward/support/meta.hpp>
 
 namespace wayward {
   struct ICloneable {
@@ -101,6 +102,10 @@ namespace wayward {
   template <typename T>
   CloningPtr<T> make_cloning_ptr(T* ptr) {
     return CloningPtr<T>(ptr);
+  }
+
+  namespace meta {
+    template <class T> struct IsPointerLike<CloningPtr<T>> : TrueType {};
   }
 }
 

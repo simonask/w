@@ -3,12 +3,12 @@
 #define PERSISTENCE_PRIMARY_KEY_HPP_INCLUDED
 
 #include <cstdint>
-#include <persistence/type.hpp>
+#include <wayward/support/type.hpp>
 #include <persistence/column_abilities.hpp>
 #include <persistence/result_set.hpp>
-#include <persistence/types.hpp>
 
 #include <wayward/support/monad.hpp>
+#include <wayward/support/types.hpp>
 
 namespace persistence {
   using int64 = std::int64_t;
@@ -25,7 +25,7 @@ namespace persistence {
     int64 id = -1;
   };
 
-  struct PrimaryKeyType : IDataTypeFor<PrimaryKey> {
+  struct PrimaryKeyType : wayward::DataTypeFor<PrimaryKey> {
     std::string name() const final { return "PrimaryKey"; }
     bool is_nullable() const final { return false; }
 
@@ -33,16 +33,20 @@ namespace persistence {
       return value.is_persisted();
     }
 
-    bool deserialize_value(PrimaryKey& value, const wayward::data_franca::ScalarSpectator& source) const final {
-      return get_type<int64_t>()->deserialize_value(value.id, source);
-    }
-
-    bool serialize_value(const PrimaryKey& value, wayward::data_franca::ScalarMutator& target) const final {
-      return get_type<int64_t>()->serialize_value(value.id, target);
+    void visit(PrimaryKey& pk, wayward::DataVisitor& visitor) const final {
+      if (visitor.can_modify()) {
+        visitor(pk.id);
+      } else {
+        if (has_value(pk)) {
+          visitor(pk.id);
+        } else {
+          visitor.visit_nil();
+        }
+      }
     }
   };
 
-  const PrimaryKeyType* build_type(const TypeIdentifier<PrimaryKey>*);
+  const PrimaryKeyType* build_type(const wayward::TypeIdentifier<PrimaryKey>*);
 
   template <typename Col>
   struct ColumnAbilities<Col, PrimaryKey> : LiteralEqualityAbilities<Col, int64> {};

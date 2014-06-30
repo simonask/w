@@ -2,7 +2,8 @@
 #ifndef PERSISTENCE_RECORD_TYPE_INCLUDED
 #define PERSISTENCE_RECORD_TYPE_INCLUDED
 
-#include <persistence/type.hpp>
+#include <wayward/support/type.hpp>
+
 #include <persistence/property.hpp>
 #include <persistence/association.hpp>
 #include <wayward/support/maybe.hpp>
@@ -11,6 +12,8 @@
 #include <memory>
 
 namespace persistence {
+  using wayward::IType;
+
   struct IRecordType : IType {
     virtual std::string relation() const = 0;
     virtual std::string data_store() const = 0;
@@ -27,7 +30,8 @@ namespace persistence {
     virtual const IAssociation* abstract_association_at(size_t idx) const = 0;
   };
 
-  struct RecordTypeBase : IRecordType {
+  template <class Base>
+  struct RecordTypeBase : Base {
     // IType
     std::string name() const final { return name_; }
     bool is_nullable() const final { return false; }
@@ -42,12 +46,20 @@ namespace persistence {
     std::string data_store_ = "default";
   };
 
-  template <class RT, class Base = RecordTypeBase>
-  struct RecordType : Base {
+  template <class RT>
+  struct RecordType : RecordTypeBase<wayward::DataTypeFor<RT, IRecordType>> {
     // TODO: Constructors, destructors, etc.
     std::vector<std::unique_ptr<IPropertyOf<RT>>> properties_;
     std::vector<std::unique_ptr<IAssociationFrom<RT>>> associations_;
     const IPropertyOf<RT>* primary_key_ = nullptr;
+
+    bool has_value(const RT&) const final { return true; }
+
+    void visit(RT& value, wayward::DataVisitor& visitor) const final {
+      for (auto& prop: properties_) {
+        prop->visit(value, visitor);
+      }
+    }
 
     void initialize_associations_in_object(void* obj, Context* ctx) const final {
       RT& object = *reinterpret_cast<RT*>(obj);

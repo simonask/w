@@ -119,10 +119,31 @@ namespace wayward {
     }
 
     template <typename T>
-    typename std::enable_if<meta::IndexOf<T, Types>::Value < NumTypes, Maybe<T>>::type
-    get() const {
-      if (is_a<T>()) {
-        return Maybe<T>{*memory_as<T>()};
+    typename std::enable_if<meta::IndexOf<typename meta::RemoveConstRef<T>::Type, Types>::Value < NumTypes, Maybe<T>>::type
+    get() & {
+      using RawType = typename meta::RemoveConstRef<T>::Type;
+      if (is_a<typename meta::RemoveConstRef<T>::Type>()) {
+        return Maybe<T>{ *memory_as<RawType>() };
+      }
+      return Nothing;
+    }
+
+    template <typename T>
+    typename std::enable_if<meta::IndexOf<typename meta::RemoveConstRef<T>::Type, Types>::Value < NumTypes, Maybe<T>>::type
+    get() const & {
+      using RawType = typename meta::RemoveConstRef<T>::Type;
+      if (is_a<typename meta::RemoveConstRef<T>::Type>()) {
+        return Maybe<T>{ *memory_as<RawType>() };
+      }
+      return Nothing;
+    }
+
+    template <typename T>
+    typename std::enable_if<meta::IndexOf<typename meta::RemoveConstRef<T>::Type, Types>::Value < NumTypes, Maybe<typename meta::RemoveConstRef<T>::Type>>::type
+    get() && {
+      using RawType = typename meta::RemoveConstRef<T>::Type;
+      if (is_a<RawType>()) {
+        return Maybe<RawType>(std::move(*memory_as<RawType>()));
       }
       return Nothing;
     }

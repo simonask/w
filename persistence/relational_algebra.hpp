@@ -3,11 +3,14 @@
 #define PERSISTENCE_RELATIONAL_ALGEBRA_HPP_INCLUDED
 
 #include <persistence/ast.hpp>
+#include <wayward/support/types.hpp>
 #include <wayward/support/cloning_ptr.hpp>
 
 namespace persistence {
   namespace relational_algebra {
     using wayward::CloningPtr;
+    using wayward::AnyRef;
+    using wayward::IType;
 
     struct SQL {
       std::string sql;
@@ -101,6 +104,7 @@ namespace persistence {
       explicit Projection(std::string relation);
       Projection(const Projection&) = default;
       Projection(Projection&&) = default;
+      Projection& operator=(const Projection&) = default;
       Projection& operator=(Projection&&) = default;
 
       Projection where(Condition) const&;
@@ -129,39 +133,15 @@ namespace persistence {
     Value      column(std::string relation, std::string column);
     Value      column(ast::SymbolicRelation, std::string column);
     Value      aggregate_impl(std::string func, Value* args, size_t num_args);
-    Value      literal(std::string str);
-    Value      literal(double number);
+    Value      literal(AnyRef, const IType*);
     Condition  negate(Condition&& cond);
     SQL        sql(std::string sql);
 
-    template <typename T, typename Enable = void> struct RepresentAsLiteral;
 
     template <typename T>
-    struct RepresentAsLiteral<T, typename std::enable_if<
-      (std::is_integral<T>::value && !std::is_same<T, bool>::value)
-      || std::is_floating_point<T>::value
-    >::type> {
-      static Value literal(T number) {
-        return Value {
-          // TODO: Fix this casting to double.
-          make_cloning_ptr(new ast::NumericLiteral{(double)number})
-        };
-      }
-    };
-
-    template <>
-    struct RepresentAsLiteral<std::string> {
-      static Value literal(std::string str) {
-        return Value {
-          make_cloning_ptr(new ast::StringLiteral{std::move(str)})
-        };
-      }
-    };
-
-
-    template <typename T>
-    Value literal(T lit) {
-      return RepresentAsLiteral<T>::literal(std::forward<T>(lit));
+    Value literal(T&& lit) {
+      using Type = typename wayward::meta::RemoveConstRef<T>::Type;
+      return literal(AnyRef{ lit }, wayward::get_type<Type>());
     }
 
     template <typename... Args>

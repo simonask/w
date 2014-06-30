@@ -64,7 +64,7 @@ namespace persistence {
         if (p == nullptr) {
           throw AssociationError{"Owner of HasMany association has a primary key that isn't a PrimaryKey property."};
         }
-        return p->get(*obj);
+        return p->get_known(*obj);
       };
     }
   };

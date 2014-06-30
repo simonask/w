@@ -16,6 +16,8 @@ namespace wayward {
     virtual void after(Request&) {}
     virtual Response around(Request& req, std::function<Response(Request&)> yield) { return yield(req); }
 
+    Session session;
+
     persistence::Context persistence_context;
 
     template <typename Type>

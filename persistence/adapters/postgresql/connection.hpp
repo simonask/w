@@ -1,10 +1,9 @@
 #pragma once
-#ifndef PERSISTENCE_POSTGRESQL_HPP_INCLUDED
-#define PERSISTENCE_POSTGRESQL_HPP_INCLUDED
+#ifndef PERSISTENCE_ADAPTERS_POSTGRESQL_CONNECTION_HPP_INCLUDED
+#define PERSISTENCE_ADAPTERS_POSTGRESQL_CONNECTION_HPP_INCLUDED
 
 #include <persistence/connection.hpp>
 #include <persistence/adapter.hpp>
-#include <persistence/data_ref.hpp>
 
 #include <wayward/support/error.hpp>
 
@@ -36,7 +35,6 @@ namespace persistence {
     std::unique_ptr<IResultSet> execute(const ast::IQuery& query) final;
     std::unique_ptr<IResultSet> execute(std::string sql) final;
     std::unique_ptr<IResultSet> execute(const ast::IQuery& query, const relational_algebra::IResolveSymbolicRelation&) final;
-    wayward::CloningPtr<ast::SingleValue> literal_for_value(const DataRef& data) final;
 
     static std::unique_ptr<PostgreSQLConnection>
     connect(std::string connection_string, std::string* out_error = nullptr);
@@ -47,4 +45,4 @@ namespace persistence {
   };
 }
 
-#endif // PERSISTENCE_POSTGRESQL_HPP_INCLUDED
+#endif // PERSISTENCE_ADAPTERS_POSTGRESQL_CONNECTION_HPP_INCLUDED

@@ -10,6 +10,7 @@
 namespace persistence {
   struct IRecordType;
   struct Context;
+  struct IAssociationAnchor;
 
   struct AssociationError : wayward::Error {
     AssociationError(const std::string& msg) : wayward::Error(msg) {}
@@ -22,6 +23,7 @@ namespace persistence {
     virtual const IRecordType* foreign_type() const = 0;
     virtual std::string foreign_key() const = 0;
     virtual std::string name() const = 0;
+    virtual IAssociationAnchor* get_anchor(AnyRef) const = 0;
   };
 
   // Base class for things like BelongsTo<>, HasMany<>, etc.
@@ -73,15 +75,23 @@ namespace persistence {
   template <class Owner>
   struct IAssociationFrom : IAssociation {
     virtual void initialize_in_object(Owner& object, Context* context) const = 0;
-    virtual IAssociationAnchor* get_anchor(Owner& object) const = 0;
-    virtual const IAssociationAnchor* get_anchor(const Owner& object) const = 0;
+    virtual IAssociationAnchor* get_anchor_known(Owner& object) const = 0;
+    virtual const IAssociationAnchor* get_anchor_known(const Owner& object) const = 0;
     virtual wayward::data_franca::ReaderPtr get_member_reader(const Owner& object, wayward::Bitflags<wayward::data_franca::Options>) const = 0;
     virtual wayward::data_franca::AdapterPtr get_member_adapter(Owner& object, wayward::Bitflags<wayward::data_franca::Options>) const = 0;
   };
 
   template <class Owner>
   struct AssociationFrom : IAssociationFrom<Owner> {
+    // XXX: For some reason, Clang doesn't see these, and complains that
+    // derived classes are abstract, unless they also get defined in AssociationBase. :()
     const IRecordType* self_type() const { return get_type<Owner>(); }
+    IAssociationAnchor* get_anchor(AnyRef record) const {
+      if (&record.type_info() != &get_type<Owner>()->type_info()) {
+        throw wayward::TypeError{"Tried to get association with wrong object type."};
+      }
+      return get_anchor_known(*record.get<Owner&>());
+    }
   };
 
   template <class Owner_, class T_>
@@ -101,8 +111,8 @@ namespace persistence {
     Anchor* get(Owner& object) const { return &(object.*member_); }
     const Anchor* get(const Owner& object) const { return &(object.*member_); }
 
-    IAssociationAnchor* get_anchor(Owner& object) const final { return get(object); }
-    const IAssociationAnchor* get_anchor(const Owner& object) const final { return get(object); }
+    IAssociationAnchor* get_anchor_known(Owner& object) const final { return get(object); }
+    const IAssociationAnchor* get_anchor_known(const Owner& object) const final { return get(object); }
 
     void initialize_in_object(Owner& object, Context* context) const override {
       get(object)->initialize(this, context);
@@ -122,6 +132,14 @@ namespace persistence {
     const IRecordType* self_type() const final { return get_type<Owner>(); }
     std::string name() const final { return name_; }
     std::string foreign_key() const final { return key_; }
+
+    // See line 86.
+    IAssociationAnchor* get_anchor(AnyRef record) const final {
+      if (&record.type_info() != &get_type<Owner>()->type_info()) {
+        throw wayward::TypeError{"Tried to get association with wrong object type."};
+      }
+      return get_anchor_known(*record.get<Owner&>());
+    }
 
   protected:
     std::string name_;

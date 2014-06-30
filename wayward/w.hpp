@@ -16,6 +16,7 @@
 #include <wayward/support/plugin.hpp>
 
 #include <wayward/template_engine.hpp>
+#include <wayward/session.hpp>
 
 #if !defined(WAYWARD_NO_SHORTHAND_NAMESPACE)
 namespace w = wayward;

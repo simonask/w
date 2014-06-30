@@ -1,4 +1,5 @@
-#include <persistence/relational_algebra.hpp>
+#include "persistence/relational_algebra.hpp"
+#include "persistence/data_as_literal.hpp"
 
 namespace persistence {
   namespace relational_algebra {
@@ -44,10 +45,9 @@ namespace persistence {
       };
     }
 
-    Value literal(double n) {
-      return Value {
-        make_cloning_ptr(new ast::NumericLiteral{n})
-      };
+    Value literal(AnyRef data, const IType* type) {
+      DataAsLiteral data_as_literal;
+      return Value { data_as_literal.make_literal(data, type) };
     }
 
     SQL sql(std::string sql) {

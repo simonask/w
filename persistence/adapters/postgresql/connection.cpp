@@ -1,7 +1,8 @@
-#include <persistence/postgresql.hpp>
-#include <persistence/postgresql_renderers.hpp>
+#include "persistence/adapters/postgresql/connection.hpp"
+#include "persistence/adapters/postgresql/renderers.hpp"
 #include <libpq-fe.h>
 
+#include <wayward/support/any.hpp>
 #include <wayward/support/format.hpp>
 #include <wayward/support/logger.hpp>
 #include <wayward/support/data_franca/spectator.hpp>
@@ -165,50 +166,6 @@ namespace persistence {
     } else {
       return "<UNKNOWN ERROR>";
     }
-  }
-
-  namespace {
-    wayward::CloningPtr<ast::SingleValue>
-    literal_for_spectator(const wayward::data_franca::Spectator& reader) {
-      using namespace wayward::data_franca;
-
-      switch (reader.type()) {
-        case DataType::Nothing: {
-          return wayward::CloningPtr<ast::SingleValue>{ new ast::SQLFragmentValue{"NULL"} };
-        }
-        case DataType::Boolean: {
-          return wayward::CloningPtr<ast::SingleValue>{ new ast::BooleanLiteral{*reader.reader_iface().get_boolean()} };
-        }
-        case DataType::Integer: {
-          return wayward::CloningPtr<ast::SingleValue>{ new ast::NumericLiteral{static_cast<double>(*reader.reader_iface().get_integer())} };
-        }
-        case DataType::Real: {
-          return wayward::CloningPtr<ast::SingleValue>{ new ast::NumericLiteral{*reader.reader_iface().get_real()} };
-        }
-        case DataType::String: {
-          return wayward::CloningPtr<ast::SingleValue>{ new ast::StringLiteral{*reader.reader_iface().get_string()} };
-        }
-        case DataType::List: {
-          auto list = wayward::CloningPtr<ast::List>{ new ast::List };
-          for (auto it: reader) {
-            list->elements.push_back(literal_for_spectator(it));
-          }
-          return std::move(list);
-        }
-        case DataType::Dictionary: {
-          // TODO: Support JSON literals.
-          throw PostgreSQLError{"PostgreSQL does not have a literal representation of dictionary objects."};
-        }
-      }
-    }
-  }
-
-  wayward::CloningPtr<ast::SingleValue>
-  PostgreSQLConnection::literal_for_value(const DataRef& data) {
-    // TODO: Specializations for things like DateTime etc.
-
-    wayward::data_franca::Spectator reader { data.reader() };
-    return literal_for_spectator(reader);
   }
 
   std::unique_ptr<PostgreSQLConnection>

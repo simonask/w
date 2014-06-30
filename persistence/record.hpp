@@ -4,8 +4,13 @@
 
 #include <persistence/record_type.hpp>
 #include <persistence/property.hpp>
+#include <persistence/connection_provider.hpp>
+#include <persistence/datetime.hpp>
+#include <persistence/insert.hpp>
 
+#include <wayward/support/datetime.hpp>
 #include <wayward/support/error.hpp>
+#include <wayward/support/logger.hpp>
 
 namespace persistence {
   struct PrimaryKeyError : wayward::Error {
@@ -15,6 +20,8 @@ namespace persistence {
   struct PersistError : wayward::Error {
     PersistError(const std::string& msg) : wayward::Error(msg) {}
   };
+
+  using wayward::make_error;
 
   template <typename T>
   bool is_persisted(const RecordPtr<T>& record) {
@@ -31,76 +38,28 @@ namespace persistence {
   }
 
   template <typename T>
-  bool update(const RecordPtr<T>& record) {
+  Result<void> update(const RecordPtr<T>& record) {
     if (!is_persisted(record)) {
-      throw PrimaryKeyError{"Cannot UPDATE because the record is new and doesn't have a primary key."};
+      return make_error<PrimaryKeyError>("Cannot UPDATE because the record is new and doesn't have a primary key.");
     }
-    throw PersistError{"Update NIY"};
+    return make_error<PersistError>("Update NIY");
   }
 
   template <typename T>
-  bool insert(RecordPtr<T>& record) {
+  Result<void> save(RecordPtr<T>& record) {
     if (is_persisted(record)) {
-      throw PersistError{"Trying to insert record that already has a primary key."};
-    }
-
-    // Get the type and primary key.
-    auto t = get_type<T>();
-    auto pk = t->primary_key();
-
-    // Set created_at if it exists.
-    auto created_at_property = t->find_property_by_column_name("created_at");
-    if (created_at_property != nullptr) {
-      auto created_at_datetime_property = dynamic_cast<const PropertyOfBase<T, wayward::DateTime>*>(created_at_property);
-      if (created_at_datetime_property != nullptr) {
-        created_at_datetime_property->get(*record) = wayward::DateTime::now();
-      }
-    }
-
-    // Build the INSERT query.
-    ast::InsertQuery query;
-    query.relation = t->relation();
-    size_t num = t->num_properties();
-    query.columns.reserve(num);
-    query.values.reserve(num);
-    if (pk) {
-      query.returning_columns.push_back(pk->column());
-    }
-
-    auto conn = current_connection_provider().acquire_connection_for_data_store(t->data_store());
-
-    for (size_t i = 0; i < t->num_properties(); ++i) {
-      auto p = t->property_at(i);
-      if (p == t->primary_key()) continue;
-      query.columns.push_back(p->column());
-      query.values.push_back(conn.literal_for_value(p->get_data(*record)));
-    }
-
-    conn.logger()->log(wayward::Severity::Debug, "p", wayward::format("Insert {0}", t->name()));
-
-    auto result = conn.execute(query);
-
-    // Set the primary key of the record.
-    if (result) {
-      auto mid = result->get(0, pk->column());
-      if (mid) {
-        wayward::data_franca::Mutator mut { pk->get_member_adapter(*record, wayward::data_franca::Options::None) };
-        mut << *mid;
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  template <typename T>
-  bool save(RecordPtr<T>& record) {
-    if (is_persisted(record)) {
-      update(record);
+      return update(record);
     } else {
-      insert(record);
+      return insert(record);
     }
-    return false; // TODO
+  }
+
+  template <typename T>
+  void save_or_throw(RecordPtr<T>& record) {
+    auto r = save(record);
+    if (!r) {
+      throw *r.error();
+    }
   }
 }
 

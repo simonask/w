@@ -23,7 +23,6 @@ namespace wayward {
       ReaderPtr get(const String& key) const final { return nullptr; }
 
       size_t length() const final {
-        load();
         return this->ref_.count();
       }
 

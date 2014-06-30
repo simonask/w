@@ -22,7 +22,7 @@ namespace persistence {
     if (pk) {
       auto pk_typed = dynamic_cast<const PropertyOf<T, PrimaryKey>*>(pk);
       if (pk_typed) {
-        auto& pk_id = pk_typed->get(*record);
+        auto& pk_id = pk_typed->get_known(*record);
         if (pk_id.is_persisted()) {
           return &pk_id;
         }
@@ -152,7 +152,7 @@ namespace persistence {
   };
 
   template <typename T>
-  struct BelongsToType : IDataTypeFor<BelongsTo<T>, IBelongsToType> {
+  struct BelongsToType : wayward::DataTypeFor<BelongsTo<T>, IBelongsToType> {
     std::string name() const final { return wayward::format("BelongsTo<{0}>", get_type<T>()->name()); }
     bool is_nullable() const final { return false; }
 
@@ -160,22 +160,18 @@ namespace persistence {
       return value.id().is_persisted();
     }
 
-    bool deserialize_value(BelongsTo<T>& value, const wayward::data_franca::ScalarSpectator& source) const final {
-      PrimaryKey key;
-      if (get_type<PrimaryKey>()->deserialize_value(key, source)) {
-        value.value_ = std::move(key);
-        return true;
+    void visit(BelongsTo<T>& value, wayward::DataVisitor& visitor) const final {
+      auto ptr = value.id_ptr();
+      if (ptr) {
+        get_type<decltype(*ptr)>()->visit_data(*ptr, visitor);
+      } else {
+        visitor(Nothing);
       }
-      return false;
-    }
-
-    bool serialize_value(const BelongsTo<T>& value, wayward::data_franca::ScalarMutator& target) const final {
-      return get_type<PrimaryKey>()->serialize_value(value.id(), target);
     }
   };
 
   template <typename T>
-  const BelongsToType<T>* build_type(const TypeIdentifier<BelongsTo<T>>*) {
+  const BelongsToType<T>* build_type(const wayward::TypeIdentifier<BelongsTo<T>>*) {
     static const auto p = new BelongsToType<T>;
     return p;
   }
@@ -191,14 +187,17 @@ namespace persistence {
     using MemberPtr = typename PropertyOfBase<T, BelongsTo<M>>::MemberPtr;
     PropertyOf(MemberPtr ptr, std::string col) : PropertyOfBase<T, BelongsTo<M>>(ptr, std::move(col)) {}
 
-    DataRef
-    get_data(const T& record) const override {
-      auto& assoc = this->get(record);
+    Result<Any> get(AnyConstRef record) const override {
+      if (!record.is_a<T>()) {
+        return detail::make_type_error_for_mismatching_record_type(get_type<T>(), record.type_info());
+      }
+      auto object = record.get<T>();
+      auto& assoc = this->get_known(*object);
       auto id = assoc.id_ptr();
       if (id) {
-        return DataRef{ *id };
+        return Any{ *id };
       } else {
-        return DataRef{ Nothing };
+        return Any{};
       }
     }
   };
