@@ -167,7 +167,11 @@ namespace persistence {
         value = pk;
       } else {
         auto ptr = value.id_ptr();
-        get_type<decltype(*ptr)>()->visit_data(*ptr, visitor);
+        if (ptr) {
+          get_type<decltype(*ptr)>()->visit_data(*ptr, visitor);
+        } else {
+          visitor(Nothing);
+        }
       }
     }
   };
