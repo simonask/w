@@ -161,11 +161,13 @@ namespace persistence {
     }
 
     void visit(BelongsTo<T>& value, wayward::DataVisitor& visitor) const final {
-      auto ptr = value.id_ptr();
-      if (ptr) {
-        get_type<decltype(*ptr)>()->visit_data(*ptr, visitor);
+      if (visitor.can_modify() && !visitor.is_nil_at_current()) {
+        auto pk = value.id();
+        get_type<decltype(pk)>()->visit_data(pk, visitor);
+        value = pk;
       } else {
-        visitor(Nothing);
+        auto ptr = value.id_ptr();
+        get_type<decltype(*ptr)>()->visit_data(*ptr, visitor);
       }
     }
   };
@@ -193,12 +195,7 @@ namespace persistence {
       }
       auto object = record.get<T>();
       auto& assoc = this->get_known(*object);
-      auto id = assoc.id_ptr();
-      if (id) {
-        return Any{ *id };
-      } else {
-        return Any{};
-      }
+      return Any{assoc};
     }
   };
 }

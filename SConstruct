@@ -61,6 +61,7 @@ persistence_sources = Split("""
   persistence/data_as_literal.cpp
   persistence/projection.cpp
   persistence/column.cpp
+  persistence/assign_attributes.cpp
   """)
 
 wayward_synth_sources = Split("""

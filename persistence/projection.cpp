@@ -349,10 +349,10 @@ namespace persistence {
 
               if (m) {
                 value = std::move(*m);
+                return;
               }
               throw TypeError(wayward::format("Couldn't parse DateTime from string: '{0}'", string_rep));
             }
-            throw TypeError("ERROR: Couldn't parse DateTime (input not a string).");
           }
         }
 
