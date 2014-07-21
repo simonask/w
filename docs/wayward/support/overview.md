@@ -27,8 +27,3 @@ Some classes in Wayward Support are simpler implementations of equivalents in Bo
 - [Reflection library](reflection.md) — Runtime type reflection library.
 - [Static Metaprogramming library](static.md) — Compile-time type reflection library (various extensions to the standard `<type_traits>`).
 - [String utilities](string.md) — Commonly used string functions missing from the C++ Standard Library.
-
-## Metaprogramming facilities
-
-- Static metaprogramming utilities
-- Reflection utilities
