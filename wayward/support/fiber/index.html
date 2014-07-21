@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+
+        <title>Fiber - Wayward Documentation</title>
+
+        <link href="../../../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../../../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../../../css/prettify-1.0.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="../../..">Wayward Documentation</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            <!-- Main navigation -->
+            <ul class="nav navbar-nav">
+            
+            
+                <li >
+                    <a href="../../..">Overview</a>
+                </li>
+            
+            
+            
+                <li class="dropdown active">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Wayward Support API <b class="caret"></b></a>
+                    <ul class="dropdown-menu">
+                    
+                        <li >
+                            <a href="../overview/">Overview</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../any/">Any</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../command_line_options/">CommandLineOptions</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../data_franca/">Data Franca</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../datetime/">DateTime</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../either/">Either</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../error/">Error</a>
+                        </li>
+                    
+                        <li class="active">
+                            <a href="./">Fiber</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../format/">Format</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../http/">HTTP</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../json/">JSON</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../logger/">Logger</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../maybe/">Maybe</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../monads/">Monads</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../reflection/">Reflection</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../result/">Result</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../static/">Static Metaprogramming</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../string/">String utilities</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../uri/">URI</a>
+                        </li>
+                    
+                    </ul>
+                </li>
+            
+            
+            
+                <li >
+                    <a href="../../">Wayward API</a>
+                </li>
+            
+            
+            
+                <li >
+                    <a href="../../../persistence/">Persistence API</a>
+                </li>
+            
+            
+            </ul>
+
+            <!-- Search, Navigation and Repo links -->
+            <ul class="nav navbar-nav navbar-right">
+                
+                <li >
+                    <a rel="next" href="../error/">
+                        <i class="fa fa-arrow-left"></i> Previous
+                    </a>
+                </li>
+                <li >
+                    <a rel="prev" href="../format/">
+                        Next <i class="fa fa-arrow-right"></i>
+                    </a>
+                </li>
+                
+                <li>
+                    <a href="https://github.com/simonask/w">
+                        
+                            <i class="fa fa-github"></i>
+                        
+                        GitHub
+                    </a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#class-fiber">Class: Fiber</a></li>
+        
+    
+        <li class="main "><a href="#types">Types</a></li>
+        
+            <li><a href="#fiberptr">FiberPtr</a></li>
+        
+            <li><a href="#fiberfunction">fiber::Function</a></li>
+        
+            <li><a href="#fibererrorhandler">fiber::ErrorHandler</a></li>
+        
+    
+        <li class="main "><a href="#functions">Functions</a></li>
+        
+            <li><a href="#fibercurrent">fiber::current</a></li>
+        
+            <li><a href="#fibercreate">fiber::create</a></li>
+        
+            <li><a href="#fiberresume">fiber::resume</a></li>
+        
+            <li><a href="#fibercreate_1">fiber::create</a></li>
+        
+            <li><a href="#fiberterminate">fiber::terminate</a></li>
+        
+            <li><a href="#fiberyield">fiber::yield</a></li>
+        
+    
+    </ul>
+</div></div>
+            <div class="col-md-9" role="main">
+
+<h1 id="class-fiber">Class: Fiber</h1>
+<p><a href="https://github.com/simonask/w/blob/master/wayward/support/fiber.hpp">wayward/support/fiber.hpp</a></p>
+<p>Fiber is an implementation of coroutines. It uses <code>setjmp</code>/<code>longjmp</code> internally to manage execution contexts, but supports exceptions and stack unwinding.</p>
+<hr />
+<h1 id="types">Types</h1>
+<hr />
+<h2 id="fiberptr">FiberPtr</h2>
+<p>An opaque pointer with value semantics representing a reference to a fiber/coroutine.</p>
+<p>It is currently defined in terms of <code>std::shared_ptr</code>. When the last reference to a fiber is destroyed, the fiber is terminated and destroyed as well.</p>
+<h2 id="fiberfunction">fiber::Function</h2>
+<p>Defined as <code>std::function&lt;void()&gt;</code> — The entry point of a fiber.</p>
+<h2 id="fibererrorhandler">fiber::ErrorHandler</h2>
+<p>Defined as <code>std::function&lt;void(std::exception_ptr)&gt;</code> — A callback that will be called if an exception is uncaught and the stack unwinds beyond a fiber boundary.</p>
+<hr />
+<h1 id="functions">Functions</h1>
+<hr />
+<h2 id="fibercurrent">fiber::current</h2>
+<p>Returns: A <code>FiberPtr</code> representing the currently running fiber. If a thread has not launched any fibers yet, a special <code>FiberPtr</code> representing the thread is returned. There is no difference between this and regular fibers, except all threads including the main thread always have an implicit reference to the main thread fiber, so it never goes out of scope before the thread finishes.</p>
+<h2 id="fibercreate">fiber::create</h2>
+<p>Invoke: <code>fiber::create(Function)</code> or <code>fiber::create(Function, ErrorHandler)</code></p>
+<p>Create a new fiber (optionally with an error handler) without starting it.</p>
+<p>If an <a href="#fiberErrorHandler"><code>ErrorHandler</code></a> is provided, it will be called if the fiber throws an exception that remains uncaught at the fiber boundary. The default error handler terminates the program (similar to how an uncaught exception outside of fibers behave).</p>
+<h2 id="fiberresume">fiber::resume</h2>
+<p>Invoke: <code>fiber::resume(FiberPtr)</code></p>
+<p>Start or resume a fiber.</p>
+<h2 id="fibercreate_1">fiber::create</h2>
+<p>Invoke: <code>fiber::start(Function)</code></p>
+<p>Equivalent to <a href="#fibercreate"><code>fiber::create</code></a> + <a href="#fiberresume"><code>fiber::resume</code></a></p>
+<h2 id="fiberterminate">fiber::terminate</h2>
+<p>Invoke: <code>fiber::terminate(FiberPtr)</code></p>
+<p>Terminates a fiber, unwinding its stack and running all destructors.</p>
+<p>Internally, this resumes the fiber with a signal that tells the fiber to throw a special exception handled silently at the fiber boundary before termination.</p>
+<h2 id="fiberyield">fiber::yield</h2>
+<p>Invoke: <code>fiber::yield()</code></p>
+<p>Resumes the fiber that resumed the current fiber. Throws an exception if the current fiber is orphaned (i.e., was never resumed by anybody else, i.e. is most likely the main fiber).</p>
+</div>
+        </div>
+
+        
+
+        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="../../../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../../../js/prettify-1.0.min.js"></script>
+        <script src="../../../js/base.js"></script>
+    </body>
+</html>

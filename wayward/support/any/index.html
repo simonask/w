@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+
+        <title>Any - Wayward Documentation</title>
+
+        <link href="../../../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../../../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../../../css/prettify-1.0.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="../../..">Wayward Documentation</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            <!-- Main navigation -->
+            <ul class="nav navbar-nav">
+            
+            
+                <li >
+                    <a href="../../..">Overview</a>
+                </li>
+            
+            
+            
+                <li class="dropdown active">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Wayward Support API <b class="caret"></b></a>
+                    <ul class="dropdown-menu">
+                    
+                        <li >
+                            <a href="../overview/">Overview</a>
+                        </li>
+                    
+                        <li class="active">
+                            <a href="./">Any</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../command_line_options/">CommandLineOptions</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../data_franca/">Data Franca</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../datetime/">DateTime</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../either/">Either</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../error/">Error</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../fiber/">Fiber</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../format/">Format</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../http/">HTTP</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../json/">JSON</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../logger/">Logger</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../maybe/">Maybe</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../monads/">Monads</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../reflection/">Reflection</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../result/">Result</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../static/">Static Metaprogramming</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../string/">String utilities</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../uri/">URI</a>
+                        </li>
+                    
+                    </ul>
+                </li>
+            
+            
+            
+                <li >
+                    <a href="../../">Wayward API</a>
+                </li>
+            
+            
+            
+                <li >
+                    <a href="../../../persistence/">Persistence API</a>
+                </li>
+            
+            
+            </ul>
+
+            <!-- Search, Navigation and Repo links -->
+            <ul class="nav navbar-nav navbar-right">
+                
+                <li >
+                    <a rel="next" href="../overview/">
+                        <i class="fa fa-arrow-left"></i> Previous
+                    </a>
+                </li>
+                <li >
+                    <a rel="prev" href="../command_line_options/">
+                        Next <i class="fa fa-arrow-right"></i>
+                    </a>
+                </li>
+                
+                <li>
+                    <a href="https://github.com/simonask/w">
+                        
+                            <i class="fa fa-github"></i>
+                        
+                        GitHub
+                    </a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#class-any">Class: Any</a></li>
+        
+    
+        <li class="main "><a href="#constructors">Constructors</a></li>
+        
+            <li><a href="#anyt-value">Any(T&amp;&amp; value)</a></li>
+        
+            <li><a href="#anyconst-t-value">Any(const T&amp; value)</a></li>
+        
+            <li><a href="#anynothingtype">Any(NothingType)</a></li>
+        
+            <li><a href="#any">Any()</a></li>
+        
+            <li><a href="#anyany-and-anyconst-any">Any(Any&amp;&amp;) and Any(const Any&amp;)</a></li>
+        
+    
+        <li class="main "><a href="#methods">Methods</a></li>
+        
+            <li><a href="#is_a">is_a</a></li>
+        
+            <li><a href="#get">get</a></li>
+        
+            <li><a href="#whenclosure">when(closure)</a></li>
+        
+            <li><a href="#type_info">type_info</a></li>
+        
+    
+    </ul>
+</div></div>
+            <div class="col-md-9" role="main">
+
+<h1 id="class-any">Class: Any</h1>
+<p><a href="https://github.com/simonask/w/blob/master/wayward/support/any.hpp">wayward/support/any.hpp</a></p>
+<p><code>Any</code> can contain any object by value. When an <code>Any</code> is constructed, the input value is copied or moved into the <code>Any</code> instance's private storage as well as a piece of unique type information.</p>
+<p>The underlying type of an <code>Any</code> instance can be queried with the method <a href="#is_a"><code>is_a&lt;T&gt;()</code></a>, which returns a boolean. The held value can be accessed with <a href="#get"><code>get&lt;T&gt;()</code></a>, which returns a <a href="../maybe/"><code>Maybe&lt;T&gt;</code></a>. If the held value is not of type <code>T</code>, <code>Nothing</code> is returned.</p>
+<p>The held value can also be accessed by reference by passing a closure to <a href="#whenclosure"><code>when&lt;T&gt;(...)</code></a>, where the closure will only be run if the type matches. The argument to the closure will be a reference to the held value.</p>
+<p>The two related classes <code>AnyRef</code> and <code>AnyConstRef</code> behave identical to <code>Any</code>, except they don't own the value they refer to. Instead, they hold a reference and a const reference, respectively. Care must be taken to ensure that the lifetime of the <code>AnyRef</code> or <code>AnyConstRef</code> does not exceed the lifetime of the object they refer to (as a rule of thumb: use <code>AnyRef</code>/<code>AnyConstRef</code> in method signatures only, and never store the reference).</p>
+<hr />
+<h1 id="constructors">Constructors</h1>
+<hr />
+<h2 id="anyt-value">Any(T&amp;&amp; value)</h2>
+<p>Construct an <code>Any</code> by moving <code>value</code>.</p>
+<h2 id="anyconst-t-value">Any(const T&amp; value)</h2>
+<p>Construct an <code>Any</code> by copying <code>value</code>.</p>
+<h2 id="anynothingtype">Any(NothingType)</h2>
+<p>Construct an empty <code>Any</code>.</p>
+<h2 id="any">Any()</h2>
+<p>Identical to <code>Any(NothingType)</code>.</p>
+<h2 id="anyany-and-anyconst-any">Any(Any&amp;&amp;) and Any(const Any&amp;)</h2>
+<p>Move or copy an <code>Any</code>, if the underlying type supports the respective operation.</p>
+<p>If the underlying type does not support moving, the value will be copied instead. If the underlying type does not support copying, and a copy is requested, an exception is thrown.</p>
+<hr />
+<h1 id="methods">Methods</h1>
+<hr />
+<h2 id="is_a">is_a</h2>
+<p>Invoke: <code>is_a&lt;T&gt;()</code></p>
+<p>Returns: <code>bool</code></p>
+<p>Takes a template parameter <code>T</code>. Returns true if the held value has type <code>T</code>.</p>
+<h2 id="get">get</h2>
+<p>Invoke: <code>get&lt;T&gt;()</code></p>
+<p>Returns: <a href="../maybe/"><code>Maybe&lt;T&gt;</code></a></p>
+<p>Takes a template parameter <code>T</code>. Returns a <code>Maybe&lt;T&gt;</code> containing the value if the value has type <code>T</code>. Otherwise, returns <code>Nothing</code>.</p>
+<h2 id="whenclosure">when(closure)</h2>
+<p>Invoke: <code>when&lt;T&gt;(closure)</code></p>
+<p>Returns: <code>Maybe&lt;U&gt;</code>, where <code>U</code> is the return type of <code>closure</code>.</p>
+<p>Takes a template parameter <code>T</code> and a generic closure/callback. If the held value is of type <code>T</code>, the closure is called with a reference to the held value.</p>
+<p>Example:</p>
+<pre class="prettyprint well"><code>Any any { (int)123 };
+any.when&lt;int&gt;([](const int&amp; number) {
+  std::cout &lt;&lt; "Any was an int: " &lt;&lt; number &lt;&lt; std::endl;
+});
+</code></pre>
+<h2 id="type_info">type_info</h2>
+<p>Invoke: <code>type_info()</code></p>
+<p>Returns: A pointer to a <a href="../reflection/#typeinfo">TypeInfo</a>.</p>
+</div>
+        </div>
+
+        
+
+        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="../../../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../../../js/prettify-1.0.min.js"></script>
+        <script src="../../../js/base.js"></script>
+    </body>
+</html>

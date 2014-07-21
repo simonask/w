@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../../img/favicon.ico">
+
+        <title>Overview - Wayward Documentation</title>
+
+        <link href="../../../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../../../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../../../css/prettify-1.0.css" rel="stylesheet">
+        <link href="../../../css/base.css" rel="stylesheet">
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="../../..">Wayward Documentation</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            <!-- Main navigation -->
+            <ul class="nav navbar-nav">
+            
+            
+                <li >
+                    <a href="../../..">Overview</a>
+                </li>
+            
+            
+            
+                <li class="dropdown active">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Wayward Support API <b class="caret"></b></a>
+                    <ul class="dropdown-menu">
+                    
+                        <li class="active">
+                            <a href="./">Overview</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../any/">Any</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../command_line_options/">CommandLineOptions</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../data_franca/">Data Franca</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../datetime/">DateTime</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../either/">Either</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../error/">Error</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../fiber/">Fiber</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../format/">Format</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../http/">HTTP</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../json/">JSON</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../logger/">Logger</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../maybe/">Maybe</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../monads/">Monads</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../reflection/">Reflection</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../result/">Result</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../static/">Static Metaprogramming</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../string/">String utilities</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../uri/">URI</a>
+                        </li>
+                    
+                    </ul>
+                </li>
+            
+            
+            
+                <li >
+                    <a href="../../">Wayward API</a>
+                </li>
+            
+            
+            
+                <li >
+                    <a href="../../../persistence/">Persistence API</a>
+                </li>
+            
+            
+            </ul>
+
+            <!-- Search, Navigation and Repo links -->
+            <ul class="nav navbar-nav navbar-right">
+                
+                <li >
+                    <a rel="next" href="../../..">
+                        <i class="fa fa-arrow-left"></i> Previous
+                    </a>
+                </li>
+                <li >
+                    <a rel="prev" href="../any/">
+                        Next <i class="fa fa-arrow-right"></i>
+                    </a>
+                </li>
+                
+                <li>
+                    <a href="https://github.com/simonask/w">
+                        
+                            <i class="fa fa-github"></i>
+                        
+                        GitHub
+                    </a>
+                </li>
+                
+            </ul>
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#wayward-support-api">Wayward Support API</a></li>
+        
+            <li><a href="#classes">Classes</a></li>
+        
+            <li><a href="#libraries">Libraries</a></li>
+        
+    
+    </ul>
+</div></div>
+            <div class="col-md-9" role="main">
+
+<h1 id="wayward-support-api">Wayward Support API</h1>
+<p>Wayward Support is a collection of classes and functions designed to work in addition to the C++ Standard Library.</p>
+<p>Some classes in Wayward Support are simpler implementations of equivalents in Boost without as much template cruft, while implement concepts that are unique to Wayward.</p>
+<h2 id="classes">Classes</h2>
+<ul>
+<li><a href="../any/">Any</a> — Hold any value.</li>
+<li><a href="../command_line_options/">CommandLineOptions</a> — Simple command line option parser.</li>
+<li><a href="../either/">Either</a> — Hold one of a predefined set of value types (tagged union).</li>
+<li><a href="../error/">Error</a> — Base class for all exceptions that captures a stack trace.</li>
+<li><a href="../fiber/">Fiber</a> — Coroutine implementation for cooperative multitasking.</li>
+<li><a href="../logger/">Logger</a> — Logging interface.</li>
+<li><a href="../maybe/">Maybe</a> — Option type, equivalent to <code>boost::optional</code> with some monadic extensions.</li>
+<li><a href="../result/">Result</a> — Either a value or an Error.</li>
+<li><a href="../uri/">URI</a> — Structured representation of a Uniform Resource Identifier.</li>
+</ul>
+<h2 id="libraries">Libraries</h2>
+<ul>
+<li><a href="../data_franca/">Data Franca library</a> — Data observation library. Provides unified access to any data type that implements an adapter, allowing users to query arbitrary data structures. The main use is to provide a way for templating languages to access structured data at runtime.</li>
+<li><a href="../datetime/">DateTime library</a> — The DateTime library provides an intuitive interface to POSIX date/time functions.</li>
+<li><a href="../format/">Format library</a> — String formatting and interpolation library.</li>
+<li><a href="../http/">HTTP library</a> — Evented HTTP Server and Client classes.</li>
+<li><a href="../json/">JSON library</a> — Convert arbitrary data structures (via <a href="../reflection/">reflection</a> or <a href="../data_franca/">Data Franca</a>) to and from JSON.</li>
+<li><a href="../monads/">Monads</a> — Common "monadic" idioms that can make some code patterns safer and easier to use.</li>
+<li><a href="../reflection/">Reflection library</a> — Runtime type reflection library.</li>
+<li><a href="../static/">Static Metaprogramming library</a> — Compile-time type reflection library (various extensions to the standard <code>&lt;type_traits&gt;</code>).</li>
+<li><a href="../string/">String utilities</a> — Commonly used string functions missing from the C++ Standard Library.</li>
+</ul>
+</div>
+        </div>
+
+        
+
+        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="../../../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../../../js/prettify-1.0.min.js"></script>
+        <script src="../../../js/base.js"></script>
+    </body>
+</html>
