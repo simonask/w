@@ -1,0 +1,6 @@
+*.os
+*.dylib
+site
+*.o
+*_test
+*.a

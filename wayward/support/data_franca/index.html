@@ -56,6 +56,39 @@
             
             
             
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Wayward API <b class="caret"></b></a>
+                    <ul class="dropdown-menu">
+                    
+                        <li >
+                            <a href="../../overview/">Overview</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../../routing/">Routing</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../../request/">Requests</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../../response/">Rendering Responses</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../../advanced_routes/">Advanced Routes</a>
+                        </li>
+                    
+                        <li >
+                            <a href="../../templates/">Templates</a>
+                        </li>
+                    
+                    </ul>
+                </li>
+            
+            
+            
                 <li class="dropdown active">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">Wayward Support API <b class="caret"></b></a>
                     <ul class="dropdown-menu">
@@ -142,12 +175,6 @@
             
             
                 <li >
-                    <a href="../../">Wayward API</a>
-                </li>
-            
-            
-            
-                <li >
                     <a href="../../../persistence/">Persistence API</a>
                 </li>
             
@@ -191,11 +218,57 @@
     
         <li class="main "><a href="#spectators">Spectators</a></li>
         
+            <li><a href="#type">type</a></li>
+        
+            <li><a href="#is_nothing">is_nothing</a></li>
+        
+            <li><a href="#operator-bool">operator bool</a></li>
+        
+            <li><a href="#operatorboolean">operator&gt;&gt;(Boolean&amp;)</a></li>
+        
+            <li><a href="#operatorinteger">operator&gt;&gt;(Integer&amp;)</a></li>
+        
+            <li><a href="#operatorreal">operator&gt;&gt;(Real&amp;)</a></li>
+        
+            <li><a href="#operatorstring">operator&gt;&gt;(String&amp;)</a></li>
+        
+            <li><a href="#operator">operator</a></li>
+        
+            <li><a href="#operator_1">operator</a></li>
+        
+            <li><a href="#has_key">has_key</a></li>
+        
+            <li><a href="#length">length</a></li>
+        
+            <li><a href="#begin">begin</a></li>
+        
+            <li><a href="#end">end</a></li>
+        
     
         <li class="main "><a href="#mutators">Mutators</a></li>
         
+            <li><a href="#operatornothingtype">operator&lt;&lt;(NothingType)</a></li>
+        
+            <li><a href="#operatorboolean_1">operator&lt;&lt;(Boolean)</a></li>
+        
+            <li><a href="#operatorinteger_1">operator&lt;&lt;(Integer)</a></li>
+        
+            <li><a href="#operatorreal_1">operator&lt;&lt;(Real)</a></li>
+        
+            <li><a href="#operatorstring_1">operator&lt;&lt;(String)</a></li>
+        
+            <li><a href="#operator_2">operator</a></li>
+        
+            <li><a href="#operator_3">operator</a></li>
+        
+            <li><a href="#erase">erase</a></li>
+        
+            <li><a href="#push_back">push_back</a></li>
+        
     
         <li class="main "><a href="#adapters">Adapters</a></li>
+        
+            <li><a href="#implementing-custom-adapters">Implementing custom adapters</a></li>
         
     
         <li class="main "><a href="#objects">Objects</a></li>
@@ -206,20 +279,151 @@
             <div class="col-md-9" role="main">
 
 <h1 id="data-franca-api">Data Franca API</h1>
-<p><a href="https://github.com/simonask/w/tree/master/wayward/support/data_franca">wayward/support/data_franca</a></p>
-<p>TODO: Overview</p>
+<p>Github: <a href="https://github.com/simonask/w/tree/master/wayward/support/data_franca">wayward/support/data_franca</a></p>
+<p>Namespace: <code>wayward::data_franca</code></p>
+<p>Data Franca is a data observation/mutation library. It provides a single, unified interface to querying and modifying arbitrary data structures.</p>
+<p>Possible use cases:</p>
+<ul>
+<li>Serialization</li>
+<li>Data binding</li>
+<li>Interfacing with scripting languages, namely template languages</li>
+</ul>
+<p>Data Franca is based around 4 core concepts:</p>
+<ul>
+<li><strong><a href="#spectators">Spectators</a>:</strong> Query objects providing a read-only interface to any data structure.</li>
+<li><strong><a href="#mutators">Mutators</a>:</strong> Same as spectators, except they can also modify data structures.</li>
+<li><strong><a href="#adapters">Adapters</a>:</strong> Interface classes that bind the spectator/mutator interface to arbitrary data types. Simply put, to be able to inspect or mutate a custom object, an adapter needs to be defined for it.</li>
+<li><strong><a href="#objects">Objects</a>:</strong> Opaque, mutable object structure that always supports all operations. This is handy for building structured data on the fly, e.g. constructing a JSON document. Objects behave like mutators, except they own their data.</li>
+</ul>
 <hr />
 <h1 id="spectators">Spectators</h1>
 <hr />
+<p>Making a spectator can be constructed from a reference to any object that has an <a href="#adapters">adapter</a>.</p>
+<pre class="prettyprint well"><code>std::map&lt;std::string, std::string&gt; dict = {{"foo", "bar"}, {"baz", "car"}};
+
+Spectator spec { dict };
+std::string result;
+if (spec["foo"] &gt;&gt; result) {
+  std::cout &lt;&lt; result; // Will print "bar".
+}
+</code></pre>
+<p>Scalar values (strings, numbers) are extracted with <code>operator&gt;&gt;</code>, which returns a boolean that is true if the value could be successfully extracted to the requested type. Extraction attempts to convert the underlying value to the requested type, so if the underlying type is a string, but an integer or float is requested, it will be interpreted as a string representation of a number. Extraction as string always succeeds, unless the accessed value is a dictionary or list.</p>
+<p>Compound values (dictionaries, lists) are accessed with <code>operator[]</code>. If called with a string argument, the value is assumed to be a dictionary, and if called with an integer argument, it is assumed to be a list. If the underlying type is not the requested container type (e.g. if a list or scalar is accessed with a string subscript), an empty spectator representing <code>Nothing</code> will be returned.</p>
+<h2 id="type">type</h2>
+<p>Returns: <code>DataType</code></p>
+<p>One of <code>DataType::Nothing</code>, <code>DataType::Boolean</code>, <code>DataType::Integer</code>, <code>DataType::Real</code>, <code>DataType::String</code>, <code>DataType::List</code>, <code>DataType::Dictionary</code>.</p>
+<h2 id="is_nothing">is_nothing</h2>
+<p>Returns: <code>bool</code></p>
+<p>True if the represented value is conceptually "nothing" (<code>Nothing</code>, <code>NULL</code>, etc.).</p>
+<h2 id="operator-bool">operator bool</h2>
+<p>Returns: <code>bool</code></p>
+<p>True if the represented value is not conceptually "nothing". Reverse of <a href="#isnothing">is_nothing</a>.</p>
+<h2 id="operatorboolean">operator&gt;&gt;(Boolean&amp;)</h2>
+<p>Returns: <code>bool</code></p>
+<p>Extract boolean value. Returns true if the underlying type is a boolean, or could be converted to a boolean.</p>
+<h2 id="operatorinteger">operator&gt;&gt;(Integer&amp;)</h2>
+<p>Returns: <code>bool</code></p>
+<p>Extract integer value. Returns true if the underlying type is an integer, or could be converted to an integer.</p>
+<h2 id="operatorreal">operator&gt;&gt;(Real&amp;)</h2>
+<p>Returns: <code>bool</code></p>
+<p>Extract float value. Returns true if the underlying type is a float, or could be converted to a float.</p>
+<h2 id="operatorstring">operator&gt;&gt;(String&amp;)</h2>
+<p>Returns: <code>bool</code></p>
+<p>Extract string value. Returns true if the underlying type is a string, or could be converted to a string.</p>
+<h2 id="operator">operator<a href="std::string"></a></h2>
+<p>Returns: <code>Spectator</code></p>
+<p>Access value as a dictionary. If the value is not a dictionary, or the key does not exist in the dictionary, a spectator representing "nothing" is returned.</p>
+<h2 id="operator_1">operator<a href="size_t"></a></h2>
+<p>Returns: <code>Spectator</code></p>
+<p>Access value as a list. If the value is not a list, or the index is out of bounds, a spectator representing "nothing" is returned.</p>
+<h2 id="has_key">has_key</h2>
+<p>Invoke: <code>has_key(key)</code></p>
+<p>Returns: <code>bool</code></p>
+<p>True if the underlying value is a dictionary and has key <code>key</code>.</p>
+<h2 id="length">length</h2>
+<p>Invoke: <code>length()</code></p>
+<p>Returns: <code>size_t</code></p>
+<p>If the underlying value is a dictionary or list, returns the number of pairs or elements. Otherwise, returns 0.</p>
+<h2 id="begin">begin</h2>
+<p>Invoke: <code>begin()</code></p>
+<p>Returns: An iterator that can be used to enumerate all elements or pairs of the underlying list or dictionary, or "end" if they are empty, or "end" if the underlying value is not a container.</p>
+<h2 id="end">end</h2>
+<p>Invoke: <code>end()</code></p>
+<p>Returns: An iterator pointing to the conceptual "end" (nothing). May never be dereferenced.</p>
 <hr />
 <h1 id="mutators">Mutators</h1>
 <hr />
+<p>Mutators are used like <a href="#spectators">Spectators</a>, except they can also modify the underlying data structures.</p>
+<p>Example:</p>
+<pre class="prettyprint well"><code>std::map&lt;std::string, std::string&gt; dict = {{"foo", "bar"}, {"baz", "car"}};
+
+Mutator mut { dict };
+if (mut["foo"] &lt;&lt; "lol") {
+  // dict["foo"] == "lol"
+}
+</code></pre>
+<p>In contrast to spectators, type coercion is enforced at the adapter level — some adapters allow changing the type of represented values at runtime, while other don't, so the mutator interface can't make the decision. Therefore, setting a value can fail, and the return value of <code>operator&lt;&lt;</code> determines if the write was successful.</p>
+<p>In addition to the interface provided by <a href="#spectators">Spectators</a>, they implement the following:</p>
+<h2 id="operatornothingtype">operator&lt;&lt;(NothingType)</h2>
+<p>Returns: <code>bool</code></p>
+<p>Set the represented value to <code>Nothing</code>.</p>
+<h2 id="operatorboolean_1">operator&lt;&lt;(Boolean)</h2>
+<p>Returns: <code>bool</code></p>
+<p>Set the represented value to the boolean value.</p>
+<h2 id="operatorinteger_1">operator&lt;&lt;(Integer)</h2>
+<p>Returns: <code>bool</code></p>
+<p>Set the represented value to the integer value.</p>
+<h2 id="operatorreal_1">operator&lt;&lt;(Real)</h2>
+<p>Returns: <code>bool</code></p>
+<p>Set the represented value to the floating-point value.</p>
+<h2 id="operatorstring_1">operator&lt;&lt;(String)</h2>
+<p>Returns: <code>bool</code></p>
+<p>Set the represented value to the string value.</p>
+<h2 id="operator_2">operator<a href="std::string"></a></h2>
+<p>Returns: <code>Mutator</code></p>
+<p>Access dictionary value. Some adapters may coerce the underlying type to become a dictionary.</p>
+<h2 id="operator_3">operator<a href="size_t"></a></h2>
+<p>Returns: <code>Mutator</code></p>
+<p>Access list element. Some adapters may coerce the underlying type to become a list.</p>
+<h2 id="erase">erase</h2>
+<p>Invoke: <code>erase(std::string)</code></p>
+<p>Returns: <code>bool</code></p>
+<p>Erase the dictionary element. Returns true if the erase was successful.</p>
+<h2 id="push_back">push_back</h2>
+<p>Invoke: <code>push_back(value)</code></p>
+<p>Returns: <code>bool</code></p>
+<p>Append a value to the end of a list. Some adapters may coerce the underlying type to become a list.</p>
 <hr />
 <h1 id="adapters">Adapters</h1>
 <hr />
+<h2 id="implementing-custom-adapters">Implementing custom adapters</h2>
+<p>To allow inspection of a custom type, implement <code>Adapter&lt;T&gt;</code>, where <code>T</code> is your custom type.</p>
+<p><code>Adapter&lt;T&gt;</code> must implement the interface <code>IAdapter</code>, which implies <code>IReader</code> and <code>IWriter</code>.</p>
+<p>Relevant interfaces:</p>
+<ul>
+<li>IAdapter: <a href="https://github.com/simonask/w/blob/master/wayward/support/data_franca/adapter.hpp">wayward/support/data_franca/adapter.hpp</a></li>
+<li>IReader: <a href="https://github.com/simonask/w/blob/master/wayward/support/data_franca/reader.hpp">wayward/support/data_franca/reader.hpp</a></li>
+<li>IWriter: <a href="https://github.com/simonask/w/blob/master/wayward/support/data_franca/writer.hpp">wayward/support/data_franca/writer.hpp</a></li>
+</ul>
 <hr />
 <h1 id="objects">Objects</h1>
 <hr />
+<p>A Data Franca Object implements the <a href="#mutators">Mutator</a> interface (including the <a href="#spectators">Spectator</a> interface), but owns its own data.</p>
+<p>Write-operations on objects always convert the internal type of the object to match the corresponding write operation. Therefore, a write operation on an Object never fails.</p>
+<p>Example:</p>
+<pre class="prettyprint well"><code>Object o;
+o["foo"]["bar"] &lt;&lt; 123;
+o["lol"].push_back("baz");
+o["lol"].push_back("boo");
+</code></pre>
+<p>If <code>o</code> in the above were converted to, say, JSON, it would look like this:</p>
+<pre class="prettyprint well"><code>{
+  "foo": {
+    "bar": 123
+  },
+  "lol": ["baz", "boo"]
+}
+</code></pre>
 </div>
         </div>
 
