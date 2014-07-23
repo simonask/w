@@ -1,1 +1,0 @@
-# Wayward Web Framework

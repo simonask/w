@@ -7,6 +7,15 @@ pages:
 # Base:
 - [index.md, "Overview"]
 
+
+# Wayward API:
+- ["wayward/overview.md", "Wayward API", "Overview"]
+- ["wayward/routing.md", "Wayward API", "Routing"]
+- ["wayward/request.md", "Wayward API", "Requests"]
+- ["wayward/response.md", "Wayward API", "Rendering Responses"]
+- ["wayward/advanced_routes.md", "Wayward API", "Advanced Routes"]
+- ["wayward/templates.md", "Wayward API", "Templates"]
+
 # Wayward Support API:
 - ["wayward/support/overview.md", "Wayward Support API", "Overview"]
 - ["wayward/support/any.md", "Wayward Support API", "Any"]
@@ -27,9 +36,6 @@ pages:
 - ["wayward/support/static.md", "Wayward Support API", "Static Metaprogramming"]
 - ["wayward/support/string.md", "Wayward Support API", "String utilities"]
 - ["wayward/support/uri.md", "Wayward Support API", "URI"]
-
-# Wayward API:
-- [wayward.md, "Wayward API"]
 
 # Persistence API:
 - [persistence.md, "Persistence API"]
