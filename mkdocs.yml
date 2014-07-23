@@ -39,4 +39,4 @@ pages:
 
 # Persistence API:
 - [persistence.md, "Persistence API"]
-theme: yeti
+theme: flatly
