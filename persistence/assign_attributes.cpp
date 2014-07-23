@@ -120,10 +120,10 @@ namespace persistence {
       }
 
       void visit_float(float& o) final {
-        Integer i;
-        if (spec >> i) { o = static_cast<float>(i); return; }
         Real r;
         if (spec >> r) { o = static_cast<float>(r); return; }
+        Integer i;
+        if (spec >> i) { o = static_cast<float>(i); return; }
         String str;
         if (spec >> str) {
           std::stringstream ss { std::move(str) };
@@ -132,10 +132,10 @@ namespace persistence {
       }
 
       void visit_double(double& o) final {
-        Integer i;
-        if (spec >> i) { o = static_cast<double>(i); return; }
         Real r;
         if (spec >> r) { o = static_cast<double>(r); return; }
+        Integer i;
+        if (spec >> i) { o = static_cast<double>(i); return; }
         String str;
         if (spec >> str) {
           std::stringstream ss { std::move(str) };
