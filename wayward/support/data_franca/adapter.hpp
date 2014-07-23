@@ -58,11 +58,7 @@ namespace wayward {
     template <typename T> struct GetAdapter;
 
     template <typename T>
-    auto make_adapter(T&& object, Bitflags<Options> options) ->
-    // C++14 now please...
-    decltype(
-      GetAdapter<typename meta::RemoveConstRef<T>::Type>::get(std::forward<T>(object), options)
-    ) {
+    auto make_adapter(T&& object, Bitflags<Options> options) {
       return GetAdapter<typename meta::RemoveConstRef<T>::Type>::get(std::forward<T>(object), options);
     }
 
