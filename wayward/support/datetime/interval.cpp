@@ -96,33 +96,33 @@ namespace wayward {
     }
   }
 
-  bool DateTimeInterval::operator==(const DateTimeInterval& other) const {
-    auto common = common_unit(*this, other);
+  bool operator==(const DateTimeInterval& a, const DateTimeInterval& b) {
+    auto common = common_unit(a, b);
     return common.first == common.second;
   }
 
-  bool DateTimeInterval::operator!=(const DateTimeInterval& other) const {
-    auto common = common_unit(*this, other);
+  bool operator!=(const DateTimeInterval& a, const DateTimeInterval& b) {
+    auto common = common_unit(a, b);
     return common.first != common.second;
   }
 
-  bool DateTimeInterval::operator<(const DateTimeInterval& other) const {
-    auto common = common_unit(*this, other);
+  bool operator<(const DateTimeInterval& a, const DateTimeInterval& b) {
+    auto common = common_unit(a, b);
     return common.first < common.second;
   }
 
-  bool DateTimeInterval::operator>(const DateTimeInterval& other) const {
-    auto common = common_unit(*this, other);
+  bool operator>(const DateTimeInterval& a, const DateTimeInterval& b) {
+    auto common = common_unit(a, b);
     return common.first > common.second;
   }
 
-  bool DateTimeInterval::operator<=(const DateTimeInterval& other) const {
-    auto common = common_unit(*this, other);
+  bool operator<=(const DateTimeInterval& a, const DateTimeInterval& b) {
+    auto common = common_unit(a, b);
     return common.first <= common.second;
   }
 
-  bool DateTimeInterval::operator>=(const DateTimeInterval& other) const {
-    auto common = common_unit(*this, other);
+  bool operator>=(const DateTimeInterval& a, const DateTimeInterval& b) {
+    auto common = common_unit(a, b);
     return common.first >= common.second;
   }
 
