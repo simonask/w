@@ -19,3 +19,4 @@ w_dev
 *.o
 .sconsign.dblite
 site
+*.pyc
