@@ -17,12 +17,30 @@ It uses the C++ Standard Template Library extensively.
 
 ## Getting Started
 
-1. Make sure you have the dependencies installed.
-2. `git clone --recursive https://github.com/simonask/w.git`
-3. `cd w && scons -j4`
-4. Include `<w>` in your cpp file, and start creating! Yay!
+Wayward is both a library and a command-line utility, named `w_dev`. Wayward apps can exist without `w_dev`, but it does makes life for developers a lot easier. `w_dev` creates projects, generates standardized components in projects, and has a built-in development server that automatically rebuilds and restarts your app when you make changes to it, allowing for live "Rails-style" coding.
 
-See the included examples in `w/examples`.
+### Building `w_dev`
+
+1. Make sure dependencies are installed (git, scons, clang, libevent).
+2. `git clone --recursive https://github.com/simonask/w.git`
+3. `cd w`
+4. `scons -j8 w_dev` (This will only build the necessary components for `w_dev`. Running with `-jN` makes scons run tasks in parallel.)
+
+### Creating a Project
+
+1. `cd ~/your/path/to/projects`
+2. `path/to/w_dev new my_project`
+3. Wait for `w_dev` to finish installing dependencies in your project dir.
+4. You now have a project named `my_project` in `~/your/path/to/projects`.
+
+### Building and Running
+
+1. `cd my_project`
+3. `path/to/w_dev server my_project`
+4. Browse to `localhost:3000`. The first request in the lifetime of the project will take some time.
+
+On the first request to the app server, `w_dev` will build your app. This may take about a minute the very first time because it also needs to build Wayward and dependencies, but subsequent requests will only cause a rebuild of the things that have changed in your own project. Normal turnaround for an incremental build should be very short.
+
 
 ## Sample "Hello World"
 
@@ -37,14 +55,6 @@ See the included examples in `w/examples`.
 
       return app.run();
     }
-
-Save as "hello.cpp" and compile with:
-
-    clang++ -Iw -lwayward -lwayward_support -o hello hello.cpp
-
-Run as:
-
-    ./hello
 
 ## Dependencies
 
