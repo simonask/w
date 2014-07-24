@@ -40,6 +40,7 @@ w_util_sources = Split("""
   w_util/server.cpp
   w_util/recompiler.cpp
   w_util/main.cpp
+  w_util/init.cpp
   """)
 
 wayward_testing_sources = Split("""
