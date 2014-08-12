@@ -1,0 +1,42 @@
+site_name: Wayward Documentation
+site_description: Wayward Web Framework documentation
+
+repo_url: https://github.com/simonask/w
+
+pages:
+# Base:
+- [index.md, "Overview"]
+
+
+# Wayward API:
+- ["wayward/overview.md", "Wayward API", "Overview"]
+- ["wayward/routing.md", "Wayward API", "Routing"]
+- ["wayward/request.md", "Wayward API", "Requests"]
+- ["wayward/response.md", "Wayward API", "Rendering Responses"]
+- ["wayward/advanced_routes.md", "Wayward API", "Advanced Routes"]
+- ["wayward/templates.md", "Wayward API", "Templates"]
+
+# Wayward Support API:
+- ["wayward/support/overview.md", "Wayward Support API", "Overview"]
+- ["wayward/support/any.md", "Wayward Support API", "Any"]
+- ["wayward/support/command_line_options.md", "Wayward Support API", "CommandLineOptions"]
+- ["wayward/support/data_franca.md", "Wayward Support API", "Data Franca"]
+- ["wayward/support/datetime.md", "Wayward Support API", "DateTime"]
+- ["wayward/support/either.md", "Wayward Support API", "Either"]
+- ["wayward/support/error.md", "Wayward Support API", "Error"]
+- ["wayward/support/fiber.md", "Wayward Support API", "Fiber"]
+- ["wayward/support/format.md", "Wayward Support API", "Format"]
+- ["wayward/support/http.md", "Wayward Support API", "HTTP"]
+- ["wayward/support/json.md", "Wayward Support API", "JSON"]
+- ["wayward/support/logger.md", "Wayward Support API", "Logger"]
+- ["wayward/support/maybe.md", "Wayward Support API", "Maybe"]
+- ["wayward/support/monads.md", "Wayward Support API", "Monads"]
+- ["wayward/support/reflection.md", "Wayward Support API", "Reflection"]
+- ["wayward/support/result.md", "Wayward Support API", "Result"]
+- ["wayward/support/static.md", "Wayward Support API", "Static Metaprogramming"]
+- ["wayward/support/string.md", "Wayward Support API", "String utilities"]
+- ["wayward/support/uri.md", "Wayward Support API", "URI"]
+
+# Persistence API:
+- [persistence.md, "Persistence API"]
+theme: flatly

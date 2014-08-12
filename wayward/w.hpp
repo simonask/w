@@ -73,6 +73,7 @@ namespace wayward {
         R routes;
         routes.before(req);
         auto response = routes.around(req, [&](Request& r) { return (routes.*handler)(r); });
+        // TODO: Make the response available to "after" filters.
         routes.after(req);
         return std::move(response);
       };

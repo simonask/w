@@ -64,7 +64,8 @@ namespace app {
       if (r) {
         return redirect(format("/posts/{0}", post->id));
       } else {
-        session.flash["error"] = r.error();
+        throw *r.error();
+        //session.flash["error"] = r.error();
         return redirect(format("/posts/{0}/comments", post->id));
       }
     }

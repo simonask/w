@@ -3,6 +3,7 @@ import os
 
 wayward_support_sources = Split("""
   wayward/support/any.cpp
+  wayward/support/benchmark.cpp
   wayward/support/format.cpp
   wayward/support/uri.cpp
   wayward/support/json.cpp
@@ -39,6 +40,7 @@ w_util_sources = Split("""
   w_util/server.cpp
   w_util/recompiler.cpp
   w_util/main.cpp
+  w_util/init.cpp
   """)
 
 wayward_testing_sources = Split("""
@@ -61,6 +63,7 @@ persistence_sources = Split("""
   persistence/data_as_literal.cpp
   persistence/projection.cpp
   persistence/column.cpp
+  persistence/assign_attributes.cpp
   """)
 
 wayward_synth_sources = Split("""

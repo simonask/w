@@ -26,13 +26,6 @@ namespace wayward {
     Microseconds microseconds() const;
     Nanoseconds nanoseconds() const;
 
-    bool operator==(const DateTimeInterval& other) const;
-    bool operator!=(const DateTimeInterval& other) const;
-    bool operator<(const DateTimeInterval& other) const;
-    bool operator>(const DateTimeInterval& other) const;
-    bool operator<=(const DateTimeInterval& other) const;
-    bool operator>=(const DateTimeInterval& other) const;
-
     DateTimeInterval operator-() const { DateTimeInterval copy = *this; copy.value_ = -copy.value_; return copy; }
     DateTimeInterval operator+(const DateTimeInterval&) const;
     DateTimeInterval operator-(const DateTimeInterval&) const;
@@ -64,6 +57,13 @@ namespace wayward {
   {}
 
   std::ostream& operator<<(std::ostream&, const DateTimeInterval&);
+
+  bool operator==(const DateTimeInterval& a, const DateTimeInterval& b);
+  bool operator!=(const DateTimeInterval& a, const DateTimeInterval& b);
+  bool operator<(const DateTimeInterval& a, const DateTimeInterval& b);
+  bool operator>(const DateTimeInterval& a, const DateTimeInterval& b);
+  bool operator<=(const DateTimeInterval& a, const DateTimeInterval& b);
+  bool operator>=(const DateTimeInterval& a, const DateTimeInterval& b);
 }
 
 #endif // WAYWARD_SUPPORT_DATETIME_INTERVAL_HPP_INCLUDED

@@ -3,6 +3,7 @@
 #define WAYWARD_SUPPORT_TYPE_HPP_INCLUDED
 
 #include <wayward/support/type_info.hpp>
+#include <wayward/support/format.hpp>
 #include <wayward/support/error.hpp>
 #include <wayward/support/meta.hpp>
 #include <wayward/support/any.hpp>
@@ -37,7 +38,7 @@ namespace wayward {
 
     void visit_data(AnyConstRef data, DataVisitor& visitor) const final {
       if (&data.type_info() != &this->type_info()) {
-        throw TypeError("visit_data called with data of wrong type.");
+        throw TypeError(format("visit_data called with data of wrong type (got {0}, expected {1}).", data.type_info().name(), this->name()));
       }
       // XXX: Erm.. Maybe we should find a better way to do this.
       this->visit(const_cast<T&>(*data.get<const T&>()), visitor);
