@@ -76,6 +76,16 @@ namespace persistence {
   Column<Type, ColumnType> column(std::string alias, std::string column) {
     return Column<Type, ColumnType>(std::move(alias), std::move(column));
   }
+
+  template <typename Type, typename ColumnType, typename Other>
+  auto eq(ColumnType Type::*a, Other b) -> decltype(column(a) == b) {
+    return column(a) == b;
+  }
+
+  template <typename Type, typename ColumnType, typename Other>
+  auto eq(Other b, ColumnType Type::*a) -> decltype(column(a) == b) {
+    return column(a) == b;
+  }
 }
 
 #endif // PERSISTENCE_COLUMN_HPP_INCLUDED
