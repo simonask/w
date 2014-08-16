@@ -15,6 +15,27 @@ namespace wayward {
 namespace {
   using wayward::String;
   using wayward::Char;
+  using wayward::trim;
+
+  TEST(String, trim_returns_identity) {
+    std::string a = "aaa";
+    EXPECT_EQ("aaa", trim(a));
+  }
+
+  TEST(String, trim_strips_leading_spaces) {
+    std::string a = " aa";
+    EXPECT_EQ("aa", trim(a));
+  }
+
+  TEST(String, trim_strips_trailing_spaces) {
+    std::string a = "aa ";
+    EXPECT_EQ("aa", trim(a));
+  }
+
+  TEST(String, trim_does_not_remove_whitespace_from_the_middle) {
+    std::string a = " a a ";
+    EXPECT_EQ("a a", trim(a));
+  }
 
 
   TEST(String, recognizes_ascii_character) {

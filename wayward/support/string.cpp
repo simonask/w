@@ -53,6 +53,18 @@ namespace wayward {
     return std::move(result);
   }
 
+  std::string trim(const std::string& input) {
+    if (input.size() == 0)
+      return input;
+
+    std::string::size_type p0 = 0;
+    std::string::size_type p1 = input.size() - 1;
+    while (::isspace(input[p0])) ++p0;
+    while (::isspace(input[p1])) --p1;
+
+    return input.substr(p0, p1 - p0 + 1);
+  }
+
   namespace utf8 {
     size_t char_length(const char* utf8, size_t max_bytes) {
       if (max_bytes) {
