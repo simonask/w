@@ -34,6 +34,8 @@ wayward_sources = Split("""
   wayward/render.cpp
   wayward/log.cpp
   wayward/template_engine.cpp
+  wayward/respond_to.cpp
+  wayward/content_type.cpp
   """)
 
 w_util_sources = Split("""
