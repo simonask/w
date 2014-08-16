@@ -4,6 +4,7 @@
 
 #include <wayward/content_type.hpp>
 #include <wayward/support/http.hpp>
+#include <wayward/content_type.hpp>
 
 #include <set>
 
@@ -28,7 +29,10 @@ namespace wayward {
     Responder& when(F&& f);
 
     template <typename F>
-    Responder& when(std::string content_type, F&& f);
+    Responder& when(std::string format, F&& f);
+
+    template <typename F>
+    Responder& when_accepting(std::string content_type, F&& f);
 
     template <typename F>
     Responder& otherwise(F&& f);
@@ -47,11 +51,16 @@ namespace wayward {
 
   template <typename ContentType, typename F>
   Responder& Responder::when(F&& f) {
-    return when(ContentType::MimeType, std::forward<F>(f));
+    return when_accepting(ContentType::MimeType, std::forward<F>(f));
   }
 
   template <typename F>
-  Responder& Responder::when(std::string content_type, F&& f) {
+  Responder& Responder::when(std::string ext, F&& f) {
+    return when_accepting(*content_type_for_extension(ext), std::forward<F>(f));
+  }
+
+  template <typename F>
+  Responder& Responder::when_accepting(std::string content_type, F&& f) {
     if (should_accept_content_type(content_type)) {
       generated_response_ = f();
     }

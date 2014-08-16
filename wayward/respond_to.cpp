@@ -5,12 +5,20 @@ namespace wayward {
   namespace {
     std::set<std::string> get_content_types(const Request& request) {
       std::set<std::string> result;
+      std::string param_format;
+      if (request.params["format"] >> param_format) {
+        auto maybe_content_type = content_type_for_extension(param_format);
+        monad::fmap(std::move(maybe_content_type), [&](auto& content_type) {
+          return result = {std::move(content_type)};
+        });
+      }
+
       auto it = request.headers.find("Accept");
       if (it != request.headers.end()) {
         auto types = split(it->second, ";");
         for (auto& t: types) {
           auto trimmed = trim(t);
-          if (t == "*/*") return std::set<std::string>{};
+          if (t == "*/*") return std::move(result);
           result.insert(std::move(trimmed));
         }
       }
