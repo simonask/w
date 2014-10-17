@@ -81,7 +81,7 @@ wayward         = WaywardLibrary(env_with_ws, 'wayward', wayward_sources)
 wayward_testing = WaywardLibrary(env_with_ws, 'wayward_testing', wayward_testing_sources)
 
 env_for_synth = env.Clone()
-env_for_synth.Append(CPPPATH = Split('3rdparty/synth'))
+env_for_synth.Append(CPPPATH = Split('3rdparty/synth 3rdparty/synth/external/boost'))
 wayward_synth   = WaywardPlugin(env_for_synth, 'wayward_synth', wayward_synth_sources)
 
 if platform.system() == 'Linux':
