@@ -20,3 +20,4 @@ w_dev
 .sconsign.dblite
 site
 *.pyc
+wayward_synth.plugin
