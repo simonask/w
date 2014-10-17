@@ -93,6 +93,7 @@ wayward_headers = Split("""
   wayward/session.hpp
   wayward/template_engine.hpp
   wayward/w.hpp
+  w
   """)
 
 w_util_sources = Split("""
@@ -167,6 +168,7 @@ persistence_headers = Split("""
   persistence/relational_algebra.hpp
   persistence/result_set.hpp
   persistence/validation_errors.hpp
+  p
   """)
 
 wayward_synth_sources = Split("""
