@@ -10,6 +10,7 @@
 namespace wayward {
   std::vector<std::string> split(const std::string& input, const std::string& delimiter);
   std::vector<std::string> split(const std::string& input, const std::string& delimiter, size_t max_groups);
+  std::string trim(const std::string& input);
 
   struct String;
 

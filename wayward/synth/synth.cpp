@@ -8,6 +8,8 @@
 
 namespace ajg {
   namespace synth {
+    using namespace adapters;
+
     using wayward::data_franca::Spectator;
     using wayward::data_franca::ReaderPtr;
     using wayward::data_franca::ReaderEnumeratorPtr;
@@ -20,6 +22,11 @@ namespace ajg {
 
     struct AdaptedWaywardNode {
 
+      AdaptedWaywardNode() {}
+      AdaptedWaywardNode(AdaptedWaywardNode&&) = default;
+      AdaptedWaywardNode(const AdaptedWaywardNode&) = default;
+      AdaptedWaywardNode& operator=(AdaptedWaywardNode&&) = default;
+      AdaptedWaywardNode& operator=(const AdaptedWaywardNode&) = default;
       explicit AdaptedWaywardNode(Spectator node) : node(std::move(node)) {}
       Spectator node;
 
@@ -205,6 +212,11 @@ namespace ajg {
       return os << node.to_string();
     }
 
+    template <typename OS>
+    bool operator>>(OS& os, AdaptedWaywardNode& node) {
+      return false;
+    }
+
     template <class Behavior>
     struct adapter<Behavior, AdaptedWaywardNode> : concrete_adapter<Behavior, AdaptedWaywardNode> {
       adapter(const AdaptedWaywardNode& adapted) : concrete_adapter<Behavior, AdaptedWaywardNode>(AdaptedWaywardNode(adapted)) {}
@@ -215,7 +227,7 @@ namespace ajg {
 
       boolean_type to_boolean() const { return (bool)node(); } // Conversion with operator bool()
       //datetime_type to_datetime() const { return boost::local_sec_clock::local_time(); /* TODO */ }
-      void output(ostream_type& out) const { out << get_string(); }
+      bool output(ostream_type& out) const { out << get_string(); return true; }
       const_iterator begin() const { return this->adapted().begin(); }
       const_iterator end()   const { return this->adapted().end(); }
 
@@ -249,7 +261,7 @@ namespace ajg {
       }
 
     private:
-      std::string get_string() const {
+      optional<std::string> get_string() const {
         std::string str;
         node() >> str;
         return std::move(str);
@@ -271,15 +283,19 @@ namespace wayward {
       using Traits = synth::default_traits<char>;
       using Engine = synth::engines::django::engine<Traits>;
       using Template = synth::templates::path_template<Engine>;
-      using Context = typename Template::context_type;
+      using Context = Template::context_type;//<std::map<std::string, synth::AdaptedWaywardNode>>;
 
       auto path = wayward::format("{0}/{1}", template_path, template_name);
-      Template templ { path, { template_path } };
 
-      Context ctx;
-      for (auto it = params.begin(); it != params.end(); ++it) {
-        ctx[it->first] = synth::AdaptedWaywardNode{it->second};
+      Template::options_type options;
+      options.directories.push_back(template_path);
+      Template templ { path, options };
+
+      std::map<std::string, synth::AdaptedWaywardNode> values;
+      for (auto& pair: params) {
+        values[pair.first] = synth::AdaptedWaywardNode{pair.second};
       }
+      Context ctx { std::move(values) };
 
       wayward::log::debug("synth", wayward::format("Rendering template: {0}", path));
 

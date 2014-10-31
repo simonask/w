@@ -1,7 +1,7 @@
 import glob
 import os
 
-Import('env', 'wayward_support', 'wayward', 'persistence', 'wayward_testing', 'WaywardProgram')
+Import('env', 'wayward_support', 'wayward', 'persistence', 'wayward_testing', 'WaywardInternalProgram')
 
 env = env.Clone()
 env.Append(CPPPATH = Split('googletest/include googletest ..'))
@@ -15,7 +15,7 @@ case_env.Append(LIBS = [test_main, gtest, wayward_testing])
 test_targets = []
 
 for f in glob.glob('wayward/support/*.cpp'):
-  target = WaywardProgram(case_env, f.replace('.cpp', '', 1), source = f, rpaths = Split('../../.. ../..'))
+  target = WaywardInternalProgram(case_env, f.replace('.cpp', '', 1), source = f, rpaths = Split('../../.. ../..'))
   #target = case_env.Program(f.replace('.cpp', '', 1), source = [f], LINKFLAGS = Split('-Wl,-rpath -Wl,@executable_path/../../../ -Wl,-rpath -Wl,@executable_path/../../'))
   test_targets.append(target)
 
@@ -23,7 +23,7 @@ persistence_case_env = env.Clone()
 persistence_case_env.Append(LIBS = [test_main, gtest, persistence, wayward_testing])
 
 for f in glob.glob('persistence/*.cpp'):
-  target = WaywardProgram(persistence_case_env, f.replace('.cpp', '', 1), source = f, rpaths = Split('../.. ..'))
+  target = WaywardInternalProgram(persistence_case_env, f.replace('.cpp', '', 1), source = f, rpaths = Split('../.. ..'))
   #target = persistence_case_env.Program(f.replace('.cpp', '', 1), source = [f], LINKFLAGS = Split('-Wl,-rpath -Wl,@executable_path/../../ -rpath @executable_path/../'))
   test_targets.append(target)
 

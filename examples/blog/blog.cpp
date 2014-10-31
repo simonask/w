@@ -10,6 +10,8 @@ namespace app {
   using w::redirect;
   using w::render;
   using w::format;
+  using w::HTML;
+  using w::JSON;
 
   struct PostsRoutes : w::Routes {
     w::Response get_all_posts(w::Request& req) {
@@ -29,21 +31,29 @@ namespace app {
     void before(w::Request& req) override {
       int64_t id;
       if (req.params["post_id"] >> id) {
-        post = from<Post>().where(p::column(&Post::id) == id).inner_join(&Post::author).first();
+        post = from<Post>().where(p::eq(id, &Post::id)).inner_join(&Post::author).first();
       }
       if (!post)
         throw w::not_found();
     }
 
     w::Response get_post(w::Request& req) {
-      auto comments = post->comments.scope().left_outer_join(&Comment::author).order(&Comment::created_at);
-      return w::render("post.html", {{"post", post}, {"comments", comments}});
+      return w::respond_to(req)
+      .when<HTML>([&]() {
+        auto comments = post->comments.scope().left_outer_join(&Comment::author).order(&Comment::created_at);
+        return w::render("post.html", {{"post", post}, {"comments", comments}});
+      })
+      .when<JSON>([&]() {
+        return w::render_json(post);
+      });
     }
 
     w::Response put_post(w::Request& req) {
       p::assign_attributes(post, req.params["post"]);
       p::save(post);
-      return w::redirect(w::format("/posts/{0}", post->id));
+      return w::respond_to(req)
+      .when<HTML>([&]() { return w::redirect(w::format("/posts/{0}", post->id)); })
+      .when<JSON>([&]() { return w::render_json(post); });
     }
 
     w::Response delete_post(w::Request& req) {
@@ -78,7 +88,7 @@ namespace app {
       PostRoutes::before(req);
       int64_t id;
       if (req.params["comment_id"] >> id) {
-        comment = from<Comment>().where(p::column(&Comment::post) == post->id && p::column(&Comment::id) == id).first();
+        comment = from<Comment>().where(p::eq(&Comment::post, post->id) && p::eq(id, &Comment::id)).first();
       }
     }
 

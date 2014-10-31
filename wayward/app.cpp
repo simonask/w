@@ -58,7 +58,7 @@ namespace wayward {
       handler.path = std::move(path);
 
       static const std::regex find_placeholder {"/:([\\w\\d]+)(/?)", std::regex::ECMAScript};
-      static const std::string match_placeholder = "/(.+)";
+      static const std::string match_placeholder = "/([^/.]+)";
       std::stringstream rs;
       size_t group_counter = 1;
       regex_replace_stream(rs, handler.path, find_placeholder, [&](std::ostream& os, const MatchResults& match) {
@@ -68,6 +68,11 @@ namespace wayward {
           os << match[2]; // Trailing '/'
         }
       });
+
+      // Trailing ".:format":
+      rs << "(\\.([\\w\\d]+))?";
+      group_counter++;
+      handler.regex_group_names[group_counter++] = "format";
 
       handler.human_readable_regex = rs.str();
       handler.regex = std::regex(handler.human_readable_regex);

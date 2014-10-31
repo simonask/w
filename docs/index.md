@@ -17,7 +17,7 @@ It uses the C++ Standard Template Library extensively.
 
 ## Getting Started
 
-Wayward is both a library and a command-line utility, named `w_dev`. Wayward apps can exist without `w_dev`, but it does makes life for developers a lot easier. `w_dev` creates projects, generates standardized components in projects, and has a built-in development server that automatically rebuilds and restarts your app when you make changes to it, allowing for live "Rails-style" coding.
+Wayward is both a library and a command-line utility, named `w_dev`. Wayward apps can exist without `w_dev`, but it does make life for developers a lot easier. `w_dev` creates projects, generates standardized components in projects, and has a built-in development server that automatically rebuilds and restarts your app when you make changes to it, allowing for live "Rails-style" coding.
 
 ### Building `w_dev`
 
