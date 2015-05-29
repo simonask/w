@@ -3,7 +3,6 @@
 #define WAYWARD_SUPPORT_META_HPP_INCLUDED
 
 #include <type_traits>
-#include <limits.h>
 #include <memory>
 
 namespace wayward {
@@ -34,7 +33,7 @@ namespace wayward {
     template <typename T, typename TL, size_t I = 0> struct IndexOf;
     template <typename T, size_t I>
     struct IndexOf<T, TypeList<>, I> {
-      static constexpr size_t Value = SIZE_T_MAX;
+      static constexpr size_t Value = std::numeric_limits<size_t>::max();
     };
     template <typename T, size_t I, typename... Rest>
     struct IndexOf<T, TypeList<T, Rest...>, I> {

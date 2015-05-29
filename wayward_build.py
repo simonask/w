@@ -52,7 +52,7 @@ def WaywardInternalProgram(environment, target_name, source, rpaths = []):
     # them as part of LINKFLAGS. This is because the GNU linker discards a library after having encountered it and
     # resolved any currently pending symbols.
     libs = copy.copy(_wayward_default_libs)
-    libs.extend['event', 'event_pthreads', 'pq', 'unwind']
+    libs.extend(['event', 'event_pthreads', 'pq', 'unwind'])
     env.Append(LIBS = libs)
   env.Append(LINKFLAGS = linkflags)
   return env.Program(target = target_name, source = source)
@@ -97,9 +97,9 @@ def WaywardEnvironment(base):
     env.Replace(CXX = 'clang++')
     env.Replace(CC  = 'clang')
     env.Append(CCFLAGS = '-fcolor-diagnostics')
-    env.Append(CXXFLAGS = Split('-std=c++11 -stdlib=libc++'))
+    env.Append(CXXFLAGS = Split('-std=c++1y -stdlib=libc++'))
     env.Append(SHCCFLAGS = Split('-fPIC'))
-    env.Append(LINKFLAGS = Split("-pthread -stdlib=libc++ --export-dynamic"))
+    env.Append(LINKFLAGS = Split("-pthread -stdlib=libc++"))
     env.Append(SHLINKFLAGS = Split("$LINKFLAGS -fvisibility=default -fPIC -soname '${TARGET.file}'"))
     mode_flags["release"]["ccflags"]     = Split("-O3 -g -flto")
     mode_flags["release"]["linkflags"]   = Split("-flto")
