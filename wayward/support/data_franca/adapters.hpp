@@ -55,6 +55,7 @@ namespace wayward {
     template <> struct IsSignedIntegerValue<signed int> { static const bool Value = true; };
     template <> struct IsSignedIntegerValue<signed char> { static const bool Value = true; };
     template <> struct IsSignedIntegerValue<long long> { static const bool Value = true; };
+    template <> struct IsSignedIntegerValue<long> { static const bool Value = true; };
     template <typename T> struct IsSignedIntegerValue { static const bool Value = false; };
 
     template <typename T>
