@@ -97,7 +97,7 @@ def WaywardEnvironment(base):
     env.Replace(CXX = 'clang++')
     env.Replace(CC  = 'clang')
     env.Append(CCFLAGS = '-fcolor-diagnostics')
-    env.Append(CXXFLAGS = Split('-std=c++11 -stdlib=libc++'))
+    env.Append(CXXFLAGS = Split('-std=c++1y -stdlib=libc++'))
     env.Append(SHCCFLAGS = Split('-fPIC'))
     env.Append(LINKFLAGS = Split("-pthread -stdlib=libc++ --export-dynamic"))
     env.Append(SHLINKFLAGS = Split("$LINKFLAGS -fvisibility=default -fPIC -soname '${TARGET.file}'"))
