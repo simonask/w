@@ -99,7 +99,7 @@ def WaywardEnvironment(base):
     env.Append(CCFLAGS = '-fcolor-diagnostics')
     env.Append(CXXFLAGS = Split('-std=c++1y -stdlib=libc++'))
     env.Append(SHCCFLAGS = Split('-fPIC'))
-    env.Append(LINKFLAGS = Split("-pthread -stdlib=libc++ --export-dynamic"))
+    env.Append(LINKFLAGS = Split("-pthread -stdlib=libc++"))
     env.Append(SHLINKFLAGS = Split("$LINKFLAGS -fvisibility=default -fPIC -soname '${TARGET.file}'"))
     mode_flags["release"]["ccflags"]     = Split("-O3 -g -flto")
     mode_flags["release"]["linkflags"]   = Split("-flto")
