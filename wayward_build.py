@@ -52,7 +52,7 @@ def WaywardInternalProgram(environment, target_name, source, rpaths = []):
     # them as part of LINKFLAGS. This is because the GNU linker discards a library after having encountered it and
     # resolved any currently pending symbols.
     libs = copy.copy(_wayward_default_libs)
-    libs.extend['event', 'event_pthreads', 'pq', 'unwind']
+    libs.extend(['event', 'event_pthreads', 'pq', 'unwind'])
     env.Append(LIBS = libs)
   env.Append(LINKFLAGS = linkflags)
   return env.Program(target = target_name, source = source)
