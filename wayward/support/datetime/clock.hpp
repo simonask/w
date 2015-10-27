@@ -4,16 +4,19 @@
 
 namespace wayward {
   struct DateTime;
+  struct Timezone;
 
   struct IClock {
     virtual ~IClock() {}
     virtual DateTime now() const = 0;
+    virtual Timezone timezone() const = 0;
   };
 
   IClock& clock();
 
   struct SystemClock : IClock {
     DateTime now() const final;
+    Timezone timezone() const final;
     static SystemClock& get();
   private:
     SystemClock();

@@ -3,8 +3,12 @@
 #define WAYWARD_SUPPORT_TYPE_INFO_HPP_INCLUDED
 
 #include <type_traits>
+#include <typeinfo>
+#include <string>
 
 namespace wayward {
+  std::string demangle_symbol(const std::string&);
+
   struct TypeInfo {
     using Constructor = void(*)(void*);
     using Destructor  = void(*)(void*);
@@ -12,6 +16,7 @@ namespace wayward {
     using MoveConstructor = void(*)(void*, void*);
     using CopyAssign      = void(*)(void*, const void*);
     using MoveAssign      = void(*)(void*, void*);
+    using GetID           = const std::type_info&(*)();
 
     size_t size;
     size_t alignment;
@@ -21,6 +26,9 @@ namespace wayward {
     MoveConstructor move_construct;
     CopyAssign copy_assign;
     MoveAssign move_assign;
+    GetID get_id;
+
+    std::string name() const { return demangle_symbol(get_id().name()); }
   };
 
   template <typename T>
@@ -51,6 +59,11 @@ namespace wayward {
   template <typename T>
   void move_assign(void* a, void* b) {
     *reinterpret_cast<T*>(a) = std::move(*reinterpret_cast<T*>(b));
+  }
+
+  template <typename T>
+  const std::type_info& get_id() {
+    return typeid(T);
   }
 
 #define DEFINE_GET_FUNCTION_IF_SUPPORTED_BY_TYPE(CHECK_SUPPORT_STRUCT, FUNCTION_NAME) \
@@ -86,6 +99,7 @@ namespace wayward {
       .move_construct = GET_FUNCTION_IF_SUPPORTED(T, move_construct),
       .copy_assign    = GET_FUNCTION_IF_SUPPORTED(T, copy_assign),
       .move_assign    = GET_FUNCTION_IF_SUPPORTED(T, move_assign),
+      .get_id         = get_id<T>,
     };
   };
 

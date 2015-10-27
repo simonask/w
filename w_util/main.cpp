@@ -30,8 +30,7 @@ int main(int argc, char const *argv[])
     return w_dev::server(argc - 1, argv + 1);
   } else
   if (cmd == "init" || cmd == "new") {
-    // TODO!
-    //return w_dev::init(argc - 1, argv + 1);
+    return w_dev::init(argc - 1, argv + 1);
     w_dev::usage(argv[0]);
   } else
   if (cmd == "help" || cmd == "--help" || cmd == "-h") {

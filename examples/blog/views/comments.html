@@ -1,0 +1,10 @@
+{% extends "views/layout.html" %}
+{% block content %}
+<h1>Comments for post: <a href="/posts/{{post.id}}">{{ post.title }}</a></h1>
+{% for comment in comments %}
+<div class="comment">
+<p>{{ comment.text }}</p>
+<p>Author: {{ comment.author.name }} ({{ comment.author.email }})</p>
+</div>
+{% endfor %}
+{% endblock %}

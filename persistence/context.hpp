@@ -36,7 +36,7 @@ namespace persistence {
         pool = dynamic_cast<Pool<T>*>(it->second.get());
       }
       auto ptr = std::unique_ptr<T>(new T);
-      get_type<T>()->initialize_associations_in_object(ptr.get());
+      get_type<T>()->initialize_associations_in_object(ptr.get(), this);
       RecordPtr<T> rptr { ptr.get(), sentinel_ };
       pool->objects_.push_back(std::move(ptr));
       return std::move(rptr);
@@ -56,7 +56,7 @@ namespace persistence {
     LifetimeError(const std::string& msg) : wayward::Error(msg) {}
   };
 
-  Context::~Context() {
+  inline Context::~Context() {
     clear(); // Clear first to delete any RecordPtrs in associations.
     auto count = sentinel_.use_count() - 1;
     if (count > 0) {

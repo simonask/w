@@ -3,8 +3,8 @@
 #include <persistence/projection.hpp>
 #include <persistence/primary_key.hpp>
 #include <persistence/persistence_macro.hpp>
-#include <persistence/types.hpp>
 #include <persistence/data_store.hpp>
+#include <wayward/support/types.hpp>
 
 #include "connection_mock.hpp"
 #include "adapter_mock.hpp"
@@ -94,7 +94,7 @@ namespace {
     auto q = from<Foo>(context);
     size_t counter = 0;
     q.each([&](const Foo& foo) {
-      EXPECT_EQ((bool)foo.nullable_string_value, (bool)results().rows_.at(counter).at(2));
+      EXPECT_EQ((bool)results().rows_.at(counter).at(2), (bool)foo.nullable_string_value);
       ++counter;
     });
     EXPECT_NE(0, counter);
@@ -108,7 +108,7 @@ namespace {
       ss.str(*results().rows_.at(counter).at(3));
       int32_t n;
       ss >> n;
-      EXPECT_EQ(foo.int32_value, n);
+      EXPECT_EQ(n, foo.int32_value);
       ++counter;
     });
     EXPECT_NE(0, counter);
@@ -122,7 +122,7 @@ namespace {
       ss.str(*results().rows_.at(counter).at(4));
       double n;
       ss >> n;
-      EXPECT_EQ(foo.double_value, n);
+      EXPECT_EQ(n, foo.double_value);
       ++counter;
     });
     EXPECT_NE(0, counter);
@@ -151,14 +151,14 @@ namespace {
     property(&Article::id, "id");
     property(&Article::title, "title");
     property(&Article::text, "text");
-    belongs_to(&Article::author, "author_id");
+    belongs_to(&Article::author, "author");
   }
 
   PERSISTENCE(User) {
     property(&User::id, "id");
     property(&User::name, "name");
-    has_many(&User::articles, "author_id");
-    belongs_to(&User::supervisor, "supervisor_id");
+    has_many(&User::articles, "articles", "author_id");
+    belongs_to(&User::supervisor, "supervisor");
   }
 
   namespace w = wayward;

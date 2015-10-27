@@ -1,6 +1,6 @@
 #include <wayward/support/format.hpp>
 #include <wayward/support/http.hpp>
-#include <wayward/support/node.hpp>
+#include <wayward/support/data_franca/spectator.hpp>
 #include <wayward/template_engine.hpp>
 #include <wayward/w.hpp>
 #include <ajg/synth.hpp>
@@ -8,41 +8,62 @@
 
 namespace ajg {
   namespace synth {
+    using namespace adapters;
+
+    using wayward::data_franca::Spectator;
+    using wayward::data_franca::ReaderPtr;
+    using wayward::data_franca::ReaderEnumeratorPtr;
+    using wayward::data_franca::DataType;
+    using wayward::data_franca::make_reader;
+    using wayward::data_franca::Boolean;
+    using wayward::data_franca::Integer;
+    using wayward::data_franca::Real;
+    using wayward::data_franca::String;
+
     struct AdaptedWaywardNode {
-      explicit AdaptedWaywardNode(const wayward::Node& node) : node(node.ptr_) {}
-      wayward::StructuredDataConstPtr node;
+
+      AdaptedWaywardNode() {}
+      AdaptedWaywardNode(AdaptedWaywardNode&&) = default;
+      AdaptedWaywardNode(const AdaptedWaywardNode&) = default;
+      AdaptedWaywardNode& operator=(AdaptedWaywardNode&&) = default;
+      AdaptedWaywardNode& operator=(const AdaptedWaywardNode&) = default;
+      explicit AdaptedWaywardNode(Spectator node) : node(std::move(node)) {}
+      Spectator node;
 
       bool operator==(const AdaptedWaywardNode& other) const {
         if (!node || !other.node) {
-          return node == other.node;
-        } else if (node->type() == other.node->type()) {
-          auto t = node->type();
+          return node.is_nothing() == other.node.is_nothing();
+        } else if (node.type() == other.node.type()) {
+          auto t = node.type();
           switch (t) {
-            case wayward::NodeType::Nil: {
+            case DataType::Nothing: {
               return true;
               break;
             }
-            case wayward::NodeType::Boolean: {
-              return *node->get_boolean() == *other.node->get_boolean();
+            case DataType::Boolean: {
+              Boolean a, b;
+              return (node >> a) && (other.node >> b) && a == b;
+            }
+            case DataType::Integer: {
+              Integer a, b;
+              return (node >> a) && (other.node >> b) && a == b;
               break;
             }
-            case wayward::NodeType::Integer: {
-              return *node->get_integer() == *other.node->get_integer();
+            case DataType::Real: {
+              Real a, b;
+              return (node >> a) && (other.node >> b) && a == b;
               break;
             }
-            case wayward::NodeType::Float: {
-              return *node->get_float() == *other.node->get_float();
+            case DataType::String: {
+              String a, b;
+              return (node >> a) && (other.node >> b) && a == b;
               break;
             }
-            case wayward::NodeType::String: {
-              return *node->get_string() == *other.node->get_string();
-              break;
-            }
-            case wayward::NodeType::List: {
+            case DataType::List: {
               return false;
               break;
             }
-            case wayward::NodeType::Dictionary: {
+            case DataType::Dictionary: {
               return false;
               break;
             }
@@ -53,36 +74,147 @@ namespace ajg {
 
       bool operator<(const AdaptedWaywardNode& other) const {
         if (node && other.node) {
-          return wayward::Node{node}.to_string() < wayward::Node{other.node}.to_string();
+          auto t = node.type();
+          if (t == other.node.type()) {
+            switch (t) {
+              case DataType::Nothing: {
+                return false;
+              }
+              case DataType::Boolean: {
+                Boolean a, b;
+                return (node >> a) && (other.node >> b) && a < b;
+              }
+              case DataType::Integer: {
+                Integer a, b;
+                return (node >> a) && (other.node >> b) && a < b;
+                break;
+              }
+              case DataType::Real: {
+                Real a, b;
+                return (node >> a) && (other.node >> b) && a < b;
+                break;
+              }
+              case DataType::String: {
+                String a, b;
+                return (node >> a) && (other.node >> b) && a < b;
+                break;
+              }
+              case DataType::List: {
+                // TODO:
+                return false;
+              }
+              case DataType::Dictionary: {
+                // TODO:
+                return false;
+              }
+            }
+          } else {
+            return node.type() < other.node.type();
+          }
         } else {
-          return node < other.node;
+          return false;
         }
       }
 
       struct iterator {
-        iterator(const AdaptedWaywardNode& node, size_t idx) : node(node), idx(idx) {}
-        iterator(const iterator& other) = default;
-        bool operator==(const iterator& other) const { return &node == &other.node && idx == other.idx; }
+        Spectator::iterator it;
+
+        iterator(Spectator::iterator it) : it(std::move(it)) {}
+        iterator(const iterator&) = default;
+        iterator(iterator&&) = default;
+
+
+        bool operator==(const iterator& other) const { return it == other.it; }
         bool operator!=(const iterator& other) const { return !(*this == other); }
 
         AdaptedWaywardNode operator*() const {
-          return AdaptedWaywardNode{wayward::Node{node.node}[idx]};
+          return AdaptedWaywardNode{Spectator{*it}};
         }
 
-        iterator& operator++() { ++idx; return *this; }
-        iterator operator++(int) { auto copy = *this; ++idx; return copy; }
-
-        const AdaptedWaywardNode& node;
-        size_t idx;
+        iterator& operator++() { ++it; return *this; }
+        iterator operator++(int) { auto copy = *this; ++it; return copy; }
       };
 
-      iterator begin() const { return iterator{*this, 0}; }
-      iterator end() const { return iterator{*this, wayward::Node{node}.length()}; }
+      iterator begin() const { return iterator{node.begin()}; }
+      iterator end() const { return iterator{node.end()}; }
+
+      std::string to_string() const {
+        switch (node.type()) {
+          case DataType::Nothing: {
+            return "";
+          }
+          case DataType::Boolean: {
+            Boolean b;
+            node >> b;
+            return b ? "true" : "false";
+          }
+          case DataType::Integer: {
+            Integer n;
+            node >> n;
+            std::stringstream ss;
+            ss << n;
+            return ss.str();
+          }
+          case DataType::Real: {
+            Real r;
+            node >> r;
+            std::stringstream ss;
+            ss << r;
+            return ss.str();
+          }
+          case DataType::String: {
+            String s;
+            node >> s;
+            return std::move(s);
+          }
+          case DataType::List: {
+            std::stringstream ss;
+            ss << '[';
+            for (auto it = node.begin(); it != node.end();) {
+              if (it->type() == DataType::String)
+                ss << '"';
+              ss << AdaptedWaywardNode{*it}.to_string();
+              if (it->type() == DataType::String)
+                ss << '"';
+              ++it;
+              if (it != node.end()) {
+                ss << ", ";
+              }
+            }
+            ss << ']';
+            return ss.str();
+          }
+          case DataType::Dictionary: {
+            std::stringstream ss;
+            ss << '{';
+            for (auto it = node.begin(); it != node.end();) {
+              ss << *it.key();
+              ss << ": ";
+              if (it->type() == DataType::String)
+                ss << '"';
+              ss << AdaptedWaywardNode{*it}.to_string();
+              if (it->type() == DataType::String)
+                ss << '"';
+              ++it;
+              if (it != node.end()) {
+                ss << ", ";
+              }
+            }
+            ss << '}';
+            return ss.str();
+          }
+        }
+      }
     };
 
     template <typename OS>
     OS& operator<<(OS& os, const AdaptedWaywardNode& node) {
-      return os << wayward::Node(node.node).to_string();
+      return os << node.to_string();
+    }
+
+    template <typename OS>
+    bool operator>>(OS& os, AdaptedWaywardNode& node) {
+      return false;
     }
 
     template <class Behavior>
@@ -91,37 +223,45 @@ namespace ajg {
 
       AJG_SYNTH_ADAPTER_TYPEDEFS(Behavior);
 
-      wayward::Node node() const { return wayward::Node(this->adapted().node); }
+      const Spectator& node() const { return this->adapted().node; }
 
       boolean_type to_boolean() const { return (bool)node(); } // Conversion with operator bool()
       //datetime_type to_datetime() const { return boost::local_sec_clock::local_time(); /* TODO */ }
-      void output(ostream_type& out) const { out << get_string(); }
+      bool output(ostream_type& out) const { out << get_string(); return true; }
       const_iterator begin() const { return this->adapted().begin(); }
       const_iterator end()   const { return this->adapted().end(); }
 
-      boolean_type is_boolean() const { return node().type() == wayward::NodeType::Boolean; }
-      boolean_type is_string()  const { return node().type() == wayward::NodeType::String; }
-      boolean_type is_numeric() const { return node().type() == wayward::NodeType::Integer || node().type() == wayward::NodeType::Float; }
+      boolean_type is_boolean() const { return node().type() == DataType::Boolean; }
+      boolean_type is_string()  const { return node().type() == DataType::String; }
+      boolean_type is_numeric() const { return node().type() == DataType::Integer || node().type() == DataType::Real; }
 
       optional<value_type> index(const value_type& what) const {
-        const wayward::Node& o = node();
+        auto& o = node();
 
         // Dictionary lookup:
-        if (o.type() == wayward::NodeType::Dictionary) {
+        if (o.type() == DataType::Dictionary) {
           std::string key = what.to_string();
-          return optional<value_type>(AdaptedWaywardNode(o[key]));
+          return optional<value_type>(AdaptedWaywardNode{o[key]});
         }
 
-        if (o.type() == wayward::NodeType::List) {
-          size_t idx = static_cast<size_t>(what.to_floating());
-          return optional<value_type>(AdaptedWaywardNode(o[idx]));
+        // List lookup:
+        if (o.type() == DataType::List) {
+          if (what.template is<integer_type>() || what.template is<floating_type>()) {
+            size_t idx = static_cast<size_t>(what.to_floating());
+            return optional<value_type>(AdaptedWaywardNode{o[idx]});
+          } else if (what.template is<string_type>()) {
+            std::string key = what.to_string();
+            if (key == "count" || key == "length") {
+              return optional<value_type>(AdaptedWaywardNode{(int64_t)o.length()});
+            }
+          }
         }
 
         return boost::none;
       }
 
     private:
-      std::string get_string() const {
+      optional<std::string> get_string() const {
         std::string str;
         node() >> str;
         return std::move(str);
@@ -134,24 +274,28 @@ namespace wayward {
   struct SynthTemplateEngine : ITemplateEngine {
     std::string template_path;
 
-    void initialize(Dict options) final {
+    void initialize(Options options) final {
       options["template_path"] >> template_path;
     }
 
-    std::string render(const std::string& template_name, Dict params) final {
+    std::string render(const std::string& template_name, Options params) final {
       namespace synth = ajg::synth;
       using Traits = synth::default_traits<char>;
       using Engine = synth::engines::django::engine<Traits>;
       using Template = synth::templates::path_template<Engine>;
-      using Context = typename Template::context_type;
+      using Context = Template::context_type;//<std::map<std::string, synth::AdaptedWaywardNode>>;
 
       auto path = wayward::format("{0}/{1}", template_path, template_name);
-      Template templ { path, { template_path } };
 
-      Context ctx;
+      Template::options_type options;
+      options.directories.push_back(template_path);
+      Template templ { path, options };
+
+      std::map<std::string, synth::AdaptedWaywardNode> values;
       for (auto& pair: params) {
-        ctx[pair.first] = synth::AdaptedWaywardNode{pair.second};
+        values[pair.first] = synth::AdaptedWaywardNode{pair.second};
       }
+      Context ctx { std::move(values) };
 
       wayward::log::debug("synth", wayward::format("Rendering template: {0}", path));
 

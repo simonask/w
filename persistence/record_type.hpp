@@ -2,7 +2,8 @@
 #ifndef PERSISTENCE_RECORD_TYPE_INCLUDED
 #define PERSISTENCE_RECORD_TYPE_INCLUDED
 
-#include <persistence/type.hpp>
+#include <wayward/support/type.hpp>
+
 #include <persistence/property.hpp>
 #include <persistence/association.hpp>
 #include <wayward/support/maybe.hpp>
@@ -11,23 +12,26 @@
 #include <memory>
 
 namespace persistence {
+  using wayward::IType;
+
   struct IRecordType : IType {
     virtual std::string relation() const = 0;
     virtual std::string data_store() const = 0;
-    virtual void initialize_associations_in_object(void*) const = 0;
+    virtual void initialize_associations_in_object(void*, Context*) const = 0;
 
-    virtual const IProperty* find_property_by_column_name(const std::string& name) const = 0;
+    virtual const IProperty* find_abstract_property_by_column_name(const std::string& name) const = 0;
+    virtual const IAssociation* find_abstract_association_by_name(const std::string& name) const = 0;
 
-    virtual const IProperty* primary_key() const = 0;
+    virtual const IProperty* abstract_primary_key() const = 0;
 
     virtual size_t num_properties() const = 0;
-    virtual const IProperty& property_at(size_t idx) const = 0;
-
     virtual size_t num_associations() const = 0;
-    virtual const IAssociation& association_at(size_t idx) const = 0;
+    virtual const IProperty* abstract_property_at(size_t idx) const = 0;
+    virtual const IAssociation* abstract_association_at(size_t idx) const = 0;
   };
 
-  struct RecordTypeBase : IRecordType {
+  template <class Base>
+  struct RecordTypeBase : Base {
     // IType
     std::string name() const final { return name_; }
     bool is_nullable() const final { return false; }
@@ -42,32 +46,55 @@ namespace persistence {
     std::string data_store_ = "default";
   };
 
-  template <typename RT>
-  struct RecordType : RecordTypeBase {
+  template <class RT>
+  struct RecordType : RecordTypeBase<wayward::DataTypeFor<RT, IRecordType>> {
     // TODO: Constructors, destructors, etc.
     std::vector<std::unique_ptr<IPropertyOf<RT>>> properties_;
     std::vector<std::unique_ptr<IAssociationFrom<RT>>> associations_;
     const IPropertyOf<RT>* primary_key_ = nullptr;
 
-    void initialize_associations_in_object(void* obj) const final {
-      RT& object = *reinterpret_cast<RT*>(obj);
-      for (auto& p: associations_) {
-        p->initialize_in_object(object);
+    bool has_value(const RT&) const final { return true; }
+
+    void visit(RT& value, wayward::DataVisitor& visitor) const final {
+      for (auto& prop: properties_) {
+        prop->visit(value, visitor);
       }
     }
 
-    const IProperty* primary_key() const final { return primary_key_; }
+    void initialize_associations_in_object(void* obj, Context* ctx) const final {
+      RT& object = *reinterpret_cast<RT*>(obj);
+      for (auto& p: associations_) {
+        p->initialize_in_object(object, ctx);
+      }
+    }
 
+    // IRecordType interface:
+    const IProperty* find_abstract_property_by_column_name(const std::string& name) const final { return find_property_by_column_name(name); }
+    const IAssociation* find_abstract_association_by_name(const std::string& name) const final { return find_association_by_name(name); }
+    const IProperty* abstract_primary_key() const final { return primary_key(); }
     size_t num_properties() const final { return properties_.size(); }
-    const IProperty& property_at(size_t idx) const final { return *properties_.at(idx); }
-
     size_t num_associations() const final { return associations_.size(); }
-    const IAssociation& association_at(size_t idx) const final { return *associations_.at(idx); }
+    const IProperty* abstract_property_at(size_t idx) const final { return property_at(idx); }
+    const IAssociation* abstract_association_at(size_t idx) const final { return association_at(idx); }
 
-    const IProperty* find_property_by_column_name(const std::string& name) const {
+    // RecordType interface:
+    const IPropertyOf<RT>* primary_key() const { return primary_key_; }
+    const IPropertyOf<RT>* property_at(size_t idx) const { return properties_.at(idx).get(); }
+    const IAssociationFrom<RT>* association_at(size_t idx) const { return associations_.at(idx).get(); }
+
+    const IPropertyOf<RT>* find_property_by_column_name(const std::string& name) const {
       for (auto& prop: properties_) {
         if (prop->column() == name) {
           return prop.get();
+        }
+      }
+      return nullptr;
+    }
+
+    const IAssociationFrom<RT>* find_association_by_name(const std::string& name) const {
+      for (auto& assoc: associations_) {
+        if (assoc->name() == name) {
+          return assoc.get();
         }
       }
       return nullptr;
@@ -84,11 +111,11 @@ namespace persistence {
     }
 
     template <typename M>
-    const SingularAssociation<RT, typename M::Type>*
-    find_singular_association_by_member_pointer(M RT::*member) const {
+    auto find_singular_association_by_member_pointer(M RT::*member) const -> const SingularAssociationBase<RT, M>* {
+      using Assoc = SingularAssociationBase<RT, M>;
       for (auto& assoc: associations_) {
-        auto p = dynamic_cast<const SingularAssociation<RT, typename M::Type>*>(assoc.get());
-        if (p) return p;
+        auto p = dynamic_cast<const Assoc*>(assoc.get());
+        if (p && p->member_ptr() == member) return p;
       }
       return nullptr;
     }
@@ -106,8 +133,8 @@ namespace persistence {
   };
 
   template <typename T>
-  void initialize_associations(T& object) {
-    get_type<T>()->initialize_associations_in_object(&object);
+  void initialize_associations(T& object, Context& ctx) {
+    get_type<T>()->initialize_associations_in_object(&object, &ctx);
   }
 }
 

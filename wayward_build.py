@@ -3,23 +3,41 @@ import platform
 import copy
 from SCons.Script import *
 
+opts = Variables()
+opts.Add(PathVariable('PREFIX', 'Directory to install under', '/usr/local', PathVariable.PathIsDir))
+
+lib_prefix = '$PREFIX/lib'
+bin_prefix = '$PREFIX/bin'
+inc_prefix = '$PREFIX/include'
+
 libevent_cflags = os.popen('pkg-config --cflags libevent libevent_pthreads').read().strip()
 libevent_libs   = os.popen('pkg-config --libs libevent libevent_pthreads').read().strip()
 libpq_cflags    = os.popen('pkg-config --cflags libpq').read().strip()
 libpq_libs      = os.popen('pkg-config --libs libpq').read().strip()
 
-def WaywardLibrary(env, target, source):
+def WaywardLibrary(env, target, source, headers):
+  opts.Update(env)
   if platform.system() == 'Darwin':
-    return env.SharedLibrary(target = target, source = source)
+    lib = env.SharedLibrary(target = target, source = source)
   elif platform.system() == 'Linux':
-    return env.StaticLibrary(target = target, source = source)
+    lib = env.StaticLibrary(target = target, source = source)
+
+  for header in headers:
+    subdir = os.path.dirname(header)
+    path = inc_prefix + '/' + subdir
+    env.Install(path, header)
+    env.Alias('install-inc', path)
+
+  env.Install(lib_prefix, lib)
+  env.Alias('install-lib', lib_prefix)
+  return lib
 
 _wayward_default_libs = []
 
 def WaywardAddDefaultLibraries(targets):
   _wayward_default_libs.extend(targets)
 
-def WaywardProgram(environment, target_name, source, rpaths = []):
+def WaywardInternalProgram(environment, target_name, source, rpaths = []):
   linkflags = []
   env = environment.Clone()
   if platform.system() == 'Darwin':
@@ -38,6 +56,13 @@ def WaywardProgram(environment, target_name, source, rpaths = []):
     env.Append(LIBS = libs)
   env.Append(LINKFLAGS = linkflags)
   return env.Program(target = target_name, source = source)
+
+def WaywardProgram(environment, target_name, source, rpaths = []):
+  opts.Update(environment)
+  program = WaywardInternalProgram(environment, target_name, source, rpaths)
+  environment.Install(bin_prefix, program)
+  environment.Alias('install-bin', bin_prefix)
+  return program
 
 def WaywardPlugin(env, target, source):
   env = env.Clone()
@@ -61,7 +86,7 @@ def WaywardEnvironment(base):
     env.Replace(CXX = 'clang++')
     env.Replace(CC  = 'clang')
     env.Append(CCFLAGS     = Split('-fcolor-diagnostics')) # SCons messes with the TTY so clang can't autodetect color capability.
-    env.Append(CXXFLAGS    = Split('-std=c++11'))
+    env.Append(CXXFLAGS    = Split('-std=c++1y'))
     env.Append(CFLAGS      = Split('-I/usr/local/include'))
     env.Append(LINKFLAGS   = Split('-rpath @loader_path/'))
     env.Append(SHLINKFLAGS = Split('-install_name @rpath/${TARGET.file}'))

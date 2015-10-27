@@ -13,8 +13,6 @@ Persistence
 Wayward
 -------
 
-- Params de-/restructuralization
-- Dictionary class that returns Maybe<T> for non-existing values.
 - Make sure that plugin architecture (and Synth) is working on Linux.
 
 Wayward Support
@@ -24,3 +22,4 @@ Wayward Support
 - Path utility functions (maybe a path class).
 - A string class that does proper UTF-8 handling.
 - A HTML class representing a string that is unescaped HTML.
+- Find better names for everything in data_franca.

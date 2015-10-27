@@ -4,13 +4,22 @@
 
 #include <persistence/result_set.hpp>
 
+#include <persistence/ast.hpp>
+
 #include <memory>
 
 namespace wayward {
   struct ILogger;
+  struct AnyConstRef;
+
+  namespace data_franca {
+    struct Spectator;
+  }
 }
 
 namespace persistence {
+  using wayward::AnyConstRef;
+
   namespace ast {
     struct IQuery;
   }

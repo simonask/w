@@ -2,7 +2,7 @@
 #include <wayward/support/datetime/datetime.hpp>
 #include <wayward/support/datetime/private.hpp>
 
-#include <sys/time.h>
+#include <time.h>
 
 namespace wayward {
   namespace {
@@ -28,17 +28,11 @@ namespace wayward {
   }
 
   DateTime SystemClock::now() const {
-    // Note: Not using std::chrono::system_clock::now(), because it doesn't understand timezones.
-    struct timeval tv;
-    struct timezone tz;
-    ::gettimeofday(&tv, &tz);
+    auto n = std::chrono::system_clock::now();
+    return DateTime{DateTime::Repr{n}};
+  }
 
-    Timezone timezone;
-    timezone.utc_offset = Seconds{-tz.tz_minuteswest * 60};
-    timezone.is_dst = tz.tz_dsttime != 0;
-
-    auto ns = std::chrono::seconds{tv.tv_sec} + std::chrono::microseconds{tv.tv_usec};
-
-    return DateTime{DateTime::Repr{ns}, timezone};
+  Timezone SystemClock::timezone() const {
+    return Timezone{::tzname[0]};
   }
 }

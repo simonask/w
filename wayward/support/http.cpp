@@ -2,7 +2,7 @@
 #include <wayward/support/event_loop.hpp>
 #include <wayward/support/fiber.hpp>
 #include <wayward/support/event_loop_private.hpp>
-#include <wayward/support/mutable_node.hpp>
+#include <wayward/support/string.hpp>
 
 #include <cassert>
 #include <event2/event.h>
@@ -31,24 +31,19 @@ namespace wayward {
       return std::move(keys);
     }
 
-    void add_destructured_param_to_dict(MutableNode& params, std::string k, std::string v) {
+    void add_destructured_param_to_dict(data_franca::Object& params, std::string k, std::string v) {
       static const std::regex restructuralize_dictionary_keys { "^([^\\[]+)(\\[[^\\]]+\\])*$" };
       MatchResults results;
       if (std::regex_match(k, results, restructuralize_dictionary_keys)) {
         auto keys = get_keys_from_destructured_param(k);
-        MutableNode dict;
-        dict.take_data(params.data());
+        data_franca::Object* dict = &params;
         for (size_t i = 0; i < keys.size(); ++i) {
           auto& key = keys[i];
 
-          if (dict.type() != NodeType::Dictionary) {
-            dict = MutableNode::dictionary();
-          }
-
           if (i + 1 == keys.size()) {
-            dict[key] = std::move(v);
+            (*dict)[key] = std::move(v);
           } else {
-            dict.take_data(dict[key].data());
+            dict = &(*dict)[key];
           }
         }
       } else {
@@ -112,7 +107,7 @@ namespace wayward {
         default: break;
       }
 
-      MutableNode params = MutableNode::dictionary();
+      r.params = data_franca::Object::dictionary();
 
       if (uri->query) {
         for (auto param = uri->query->tqh_first; param; param = param->next.tqe_next) {
@@ -120,11 +115,21 @@ namespace wayward {
           std::string v { param->val, param->vlen };
           k = URI::decode(k);
           v = URI::decode(v);
-          add_destructured_param_to_dict(params, std::move(k), std::move(v));
+          add_destructured_param_to_dict(r.params, std::move(k), std::move(v));
         }
       }
 
-      r.params.take_data(std::move(params).data());
+      if (r.method == "POST" && r.body.size()) {
+        printf("POST BODY: %s\n", r.body.c_str());
+        auto kv_pairs = split(r.body, "&");
+        for (auto& p: kv_pairs) {
+          auto kv = split(p, "=", 2);
+          if (kv.size() < 2) continue;
+          auto k = URI::decode(kv[0]);
+          auto v = URI::decode(kv[1]);
+          add_destructured_param_to_dict(r.params, std::move(k), std::move(v));
+        }
+      }
 
       std::string query_raw { uri->query_raw ? reinterpret_cast<char*>(uri->query_raw) : "" };
       std::string fragment  { uri->fragment  ? reinterpret_cast<char*>(uri->fragment)  : "" };
@@ -337,6 +342,17 @@ namespace wayward {
     {
       throw HTTPError(wayward::format("Invalid method: {0}", req.method));
     }
+
+    for (auto& pair: req.headers) {
+      auto kv = evhtp_header_new(pair.first.c_str(), pair.second.c_str(), 0, 0); // 0 means "do not copy"
+      evhtp_headers_add_header(r->headers_out, kv);
+    }
+
+    if (req.body.size()) {
+      evbuffer_add(r->buffer_out, req.body.c_str(), req.body.size());
+      evbuffer_add(r->buffer_out, "\n\n", 2);
+    }
+
     p_->initiating_fiber = fiber::current();
     p_->recorded_response = Nothing;
     p_->error = nullptr;

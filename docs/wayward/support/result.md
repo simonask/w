@@ -1,0 +1,3 @@
+# Class: Result
+
+TODO

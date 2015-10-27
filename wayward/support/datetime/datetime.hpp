@@ -16,7 +16,7 @@ namespace wayward {
   template <typename T> struct DateTimeArithmetic;
 
   /*
-    DateTime represents a point in time, with nanosecond precision.
+    DateTime represents a UTC point in time, with nanosecond precision.
   */
   struct DateTime {
     using Clock = std::chrono::system_clock;
@@ -24,14 +24,9 @@ namespace wayward {
 
     DateTime() {}
     explicit DateTime(Repr repr) : repr_(repr) {}
-    DateTime(Repr repr, Timezone tz) : repr_(repr), timezone_(tz) {}
-    operator Repr() const { return repr_; }
+    DateTime(const DateTime&) = default;
     Repr& r() { return repr_; }
     DateTime& operator=(const DateTime&) = default;
-
-    // Returns the same time in the UTC time zone.
-    DateTime utc() const;
-    Repr r_utc() const;
 
     template <typename T>
     DateTime operator+(DateTimeDuration<T> duration) {
@@ -61,39 +56,40 @@ namespace wayward {
 
     DateTimeInterval operator-(DateTime other) const;
 
-    bool operator==(const DateTime& other) const { return r_utc() == other.r_utc(); }
-    bool operator!=(const DateTime& other) const { return r_utc() != other.r_utc(); }
-    bool operator<(const DateTime& other)  const { return r_utc() <  other.r_utc(); }
-    bool operator>(const DateTime& other)  const { return r_utc() >  other.r_utc(); }
-    bool operator<=(const DateTime& other) const { return r_utc() <= other.r_utc(); }
-    bool operator>=(const DateTime& other) const { return r_utc() >= other.r_utc(); }
+    bool operator==(const DateTime& other) const { return repr_ == other.repr_; }
+    bool operator!=(const DateTime& other) const { return repr_ != other.repr_; }
+    bool operator<(const DateTime& other)  const { return repr_ <  other.repr_; }
+    bool operator>(const DateTime& other)  const { return repr_ >  other.repr_; }
+    bool operator<=(const DateTime& other) const { return repr_ <= other.repr_; }
+    bool operator>=(const DateTime& other) const { return repr_ >= other.repr_; }
 
     static DateTime now() { return clock().now(); }
 
-    int32_t year() const;
-    int32_t month() const;
-    int32_t day() const;
-    int32_t hour() const;
-    int32_t minute() const;
-    int32_t second() const;
-    int32_t millisecond() const;
-    int32_t microsecond() const;
-    int32_t nanosecond() const;
+    Years year() const;
+    Months month() const;
+    Days day() const;
+    Hours hour() const;
+    Minutes minute() const;
+    Seconds second() const;
+    Milliseconds millisecond() const;
+    Microseconds microsecond() const;
+    Nanoseconds nanosecond() const;
 
     Seconds unix_timestamp() const;
     std::string strftime(const std::string& format) const;
     std::string iso8601() const;
 
     struct CalendarValues {
-      int32_t year;
-      int32_t month;
-      int32_t day;
-      int32_t hour;
-      int32_t minute;
-      int32_t second;
-      int32_t millisecond;
-      int32_t microsecond;
-      int32_t nanosecond;
+      Years year;
+      Months month;
+      Days day;
+      Hours hour;
+      Minutes minute;
+      Seconds second;
+      Milliseconds millisecond;
+      Microseconds microsecond;
+      Nanoseconds nanosecond;
+      Timezone timezone = Timezone::UTC;
     };
 
     CalendarValues as_calendar_values() const;
@@ -107,15 +103,13 @@ namespace wayward {
 
       NOTE: Months/days start at 1.
     */
-    static DateTime at(int32_t year, int32_t month, int32_t d, int32_t h, int32_t m, int32_t s, int32_t ms = 0, int32_t us = 0, int32_t ns = 0);
+    static DateTime at(Years year, Months month, Days d, Hours h, Minutes m, Seconds s, Milliseconds ms = 0, Microseconds us = 0, Nanoseconds ns = 0);
+    static DateTime at(Timezone tz, Years year, Months month, Days d, Hours h, Minutes m, Seconds s, Milliseconds ms = 0, Microseconds us = 0, Nanoseconds ns = 0);
     static DateTime at(const CalendarValues& calendar_values);
-    static DateTime at(Timezone tz, int32_t year, int32_t month, int32_t d, int32_t h, int32_t m, int32_t s, int32_t ms = 0, int32_t us = 0, int32_t ns = 0);
-    static DateTime at(Timezone tz, const CalendarValues& calendar_values);
 
     static Maybe<DateTime> strptime(const std::string& input, const std::string& format);
 
     Repr repr_;
-    Timezone timezone_ = Timezone::UTC;
   };
 
   template <>

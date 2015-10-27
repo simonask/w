@@ -2,16 +2,18 @@
 #ifndef WAYWARD_SUPPORT_DATETIME_TIMEZONE_HPP_INCLUDED
 #define WAYWARD_SUPPORT_DATETIME_TIMEZONE_HPP_INCLUDED
 
+#include <string>
+
 #include <wayward/support/datetime/duration_units.hpp>
 
 namespace wayward {
   struct Timezone {
     static const Timezone UTC;
     Timezone() {}
-    explicit Timezone(Seconds utc_offset, bool is_dst = false) : utc_offset(utc_offset), is_dst(is_dst) {}
+    Timezone(const Timezone&) = default;
+    explicit Timezone(std::string name) : zone(std::move(name)) {}
 
-    Seconds utc_offset = Seconds{0};
-    bool is_dst = false;
+    std::string zone;
   };
 }
 

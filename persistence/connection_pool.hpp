@@ -5,6 +5,7 @@
 #include <persistence/connection.hpp>
 #include <wayward/support/maybe.hpp>
 #include <wayward/support/error.hpp>
+#include <wayward/support/any.hpp>
 
 namespace persistence {
   struct IConnectionPool;
@@ -31,6 +32,7 @@ namespace persistence {
     std::shared_ptr<ILogger> logger() const final { return connection_->logger(); }
     void set_logger(std::shared_ptr<ILogger> l) final { connection_->set_logger(std::move(l)); }
   private:
+    AcquiredConnection(const AcquiredConnection&) = delete;
     IConnectionPool* pool_ = nullptr;
     IConnection* connection_ = nullptr;
     void release();

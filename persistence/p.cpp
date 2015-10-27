@@ -1,2 +1,2 @@
 #include "persistence/p.hpp"
-#include <persistence/postgresql.hpp>
+#include <persistence/adapters/postgresql/connection.hpp>

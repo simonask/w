@@ -6,19 +6,13 @@
 
 namespace persistence {
   template <typename AssociatedType>
-  struct HasOne {
-    const IAssociationTo<AssociatedType>* association_ = nullptr;
+  struct HasOne : SingularAssociationAnchor<AssociatedType> {
   };
 
   template <typename O, typename A>
-  struct HasOneAssociation : SingularAssociation<O, A> {
+  struct HasOneAssociation : SingularAssociationBase<O, HasOne<A>> {
     using MemberPointer = HasOne<A> O::*;
-    explicit HasOneAssociation(std::string key, MemberPointer ptr) : SingularAssociation<O, A>{std::move(key)}, ptr_(ptr) {}
-    MemberPointer ptr_;
-
-    void initialize_in_object(O& object) const final {
-      (object.*ptr_).association_ = this;
-    }
+    explicit HasOneAssociation(std::string key, MemberPointer ptr) : SingularAssociationBase<O, HasOne<A>>{std::move(key), ptr} {}
   };
 }
 

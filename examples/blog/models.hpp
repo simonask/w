@@ -48,8 +48,8 @@ PERSISTENCE(User) {
   property(&User::password_salt, "password_salt");
   property(&User::name, "name");
 
-  has_many(&User::posts, "author_id");
-  has_many(&User::comments, "author_id");
+  has_many(&User::posts, "posts", "author_id");
+  has_many(&User::comments, "comments", "author_id");
 }
 
 PERSISTENCE(Post) {
@@ -60,8 +60,8 @@ PERSISTENCE(Post) {
   property(&Post::title, "title");
   property(&Post::text, "text");
 
-  belongs_to(&Post::author, "author_id");
-  has_many(&Post::comments, "author_id");
+  belongs_to(&Post::author, "author");
+  has_many(&Post::comments, "comments", "post_id");
 }
 
 PERSISTENCE(Comment) {
@@ -70,6 +70,6 @@ PERSISTENCE(Comment) {
   property(&Comment::updated_at, "updated_at");
   property(&Comment::text, "text");
 
-  belongs_to(&Comment::author, "author_id");
-  belongs_to(&Comment::post, "post_id");
+  belongs_to(&Comment::author, "author");
+  belongs_to(&Comment::post, "post");
 }

@@ -3,6 +3,7 @@
 #define WAYWARD_SUPPORT_CLONING_PTR_HPP_INCLUDED
 
 #include <memory>
+#include <wayward/support/meta.hpp>
 
 namespace wayward {
   struct ICloneable {
@@ -70,6 +71,7 @@ namespace wayward {
     void reset(pointer ptr = pointer()) { ptr.reset(ptr); }
     void swap(CloningPtr<T>& other) { ptr.swap(other.ptr); }
     pointer get() { return ptr.get(); }
+    const pointer get() const { return ptr.get(); }
     explicit operator bool() const { return ptr.operator bool(); }
     T& operator*() const { return *ptr; }
     pointer operator->() const { return ptr.operator->(); }
@@ -88,8 +90,22 @@ namespace wayward {
   }
 
   template <typename T>
+  bool operator==(const CloningPtr<T>& lhs, std::nullptr_t) {
+    return lhs.get() == nullptr;
+  }
+
+  template <typename T>
+  bool operator==(std::nullptr_t, const CloningPtr<T>& rhs) {
+    return rhs.get() == nullptr;
+  }
+
+  template <typename T>
   CloningPtr<T> make_cloning_ptr(T* ptr) {
     return CloningPtr<T>(ptr);
+  }
+
+  namespace meta {
+    template <class T> struct IsPointerLike<CloningPtr<T>> : TrueType {};
   }
 }
 

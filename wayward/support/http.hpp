@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include <wayward/support/mutable_node.hpp>
+#include <wayward/support/data_franca/object.hpp>
 #include <wayward/support/uri.hpp>
 
 namespace wayward {
@@ -108,7 +108,7 @@ namespace wayward {
   };
 
   using Headers = std::map<std::string, std::string>;
-  using Params = MutableNode;
+  using Params = data_franca::Object;
 
   struct Request {
     Headers headers;

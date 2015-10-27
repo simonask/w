@@ -32,7 +32,7 @@ namespace wayward {
     }
   }
 
-  Response render(const std::string& template_name, Dict params, HTTPStatusCode code) {
+  Response render(const std::string& template_name, Options params, HTTPStatusCode code) {
     auto engine = current_template_engine();
     Response response;
     response.code = code;

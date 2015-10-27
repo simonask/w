@@ -3,108 +3,302 @@
 #define PERSISTENCE_RECORD_AS_STRUCTURED_DATA
 
 #include <persistence/record_ptr.hpp>
-#include <wayward/support/meta.hpp>
-#include <wayward/support/structured_data.hpp>
-#include <wayward/support/structured_data_adapters.hpp>
+#include <wayward/support/data_franca/adapters.hpp>
 #include <wayward/support/datetime.hpp>
+#include <wayward/support/monad.hpp>
 
 namespace persistence {
 
 }
 
 namespace wayward {
+  namespace data_franca {
+    using ::persistence::get_type;
+    using ::persistence::RecordPtr;
 
-  /// Adapter: PrimaryKey
-  template <typename T>
-  struct StructuredDataAdapter<
-    T,
-    typename std::enable_if<std::is_same<typename meta::RemoveConstRef<T>::Type, ::persistence::PrimaryKey>::value>::type
-  >
-  : StructuredDataIntegerAdapter {
-    StructuredDataAdapter(::persistence::PrimaryKey key) : StructuredDataIntegerAdapter(key) {}
-  };
+    template <class T>
+    struct RecordAdapter : AdapterBase<RecordPtr<T>> {
+      RecordAdapter(RecordPtr<T>& ref, Bitflags<Options> options) : AdapterBase<RecordPtr<T>>(ref, options) {}
 
-  /// Adapter: DateTime
-  // TODO: Move this to a wayward-library, since DateTime is in Wayward Support.
-  template <typename T>
-  struct StructuredDataAdapter<
-    T,
-    typename std::enable_if<std::is_same<typename meta::RemoveConstRef<T>::Type, ::wayward::DateTime>::value>::type
-  >
-  : StructuredDataValue {
-    DateTime dt_;
-    StructuredDataAdapter(const DateTime& dt) : dt_(dt) {}
-    NodeType type() const override { return NodeType::String; }
-    Maybe<std::string> get_string() const override { return dt_.iso8601(); }
-  };
-
-  /// Adapter: BelongsTo
-  template <typename T>
-  struct StructuredDataAdapter<::persistence::BelongsTo<T>>
-  : StructuredDataAdapter<::persistence::RecordPtr<T>> {
-    StructuredDataAdapter(const ::persistence::BelongsTo<T>& assoc) : StructuredDataAdapter<::persistence::RecordPtr<T>>(assoc.ptr_) {}
-  };
-  template <typename T>
-  struct StructuredDataAdapter<const ::persistence::BelongsTo<T>&>
-  : StructuredDataAdapter<::persistence::RecordPtr<T>> {
-    StructuredDataAdapter(const ::persistence::BelongsTo<T>& assoc) : StructuredDataAdapter<::persistence::RecordPtr<T>>(assoc.ptr_) {}
-  };
-  template <typename T>
-  struct StructuredDataAdapter<::persistence::BelongsTo<T>&>
-  : StructuredDataAdapter<::persistence::RecordPtr<T>> {
-    StructuredDataAdapter(const ::persistence::BelongsTo<T>& assoc) : StructuredDataAdapter<::persistence::RecordPtr<T>>(assoc.ptr_) {}
-  };
-
-  /// Adapter: RecordPtr<T>
-  template <typename T>
-  struct StructuredDataAdapter<::persistence::RecordPtr<T>> : IStructuredData {
-    ::persistence::RecordPtr<T> ptr_;
-
-    explicit StructuredDataAdapter(::persistence::RecordPtr<T> ptr) : ptr_(std::move(ptr)) {}
-
-    NodeType type() const final {
-      return ptr_ ? NodeType::Dictionary : NodeType::Nil;
-    }
-
-    size_t length() const final {
-      return ::persistence::get_type<T>()->num_properties();
-    }
-
-    std::vector<std::string> keys() const final {
-      std::vector<std::string> k;
-      auto t = ::persistence::get_type<T>();
-      size_t n = t->num_properties();
-      k.reserve(n);
-      for (size_t i = 0; i < n; ++i) {
-        auto& property = t->property_at(i);
-        k.push_back(property.column());
+      DataType type() const final {
+        return this->ref_ ? DataType::Dictionary : DataType::Nothing;
       }
-      return k;
-    }
 
-    StructuredDataConstPtr get(const std::string& str) const final {
-      if (ptr_ == nullptr) return nullptr;
+      bool has_property(const String& key) const {
+        return get_type<T>()->find_property_by_column_name(key) != nullptr;
+      }
 
-      auto t = ::persistence::get_type<T>();
-      auto property = t->find_property_by_column_name(str);
-      if (property) {
-        auto property_of = dynamic_cast<const ::persistence::IPropertyOf<T>*>(property);
-        if (property_of) {
-          return property_of->get_value_as_structured_data(*ptr_);
+      bool has_association(const String& key) const {
+        return get_type<T>()->find_association_by_name(key) != nullptr;
+      }
+
+      bool has_key(const String& key) const final {
+        return has_property(key) || has_association(key);
+      }
+
+      ReaderPtr get(const String& key) const final {
+        auto association = get_type<T>()->find_association_by_name(key);
+        if (association) {
+          return association->get_member_reader(*this->ref_, this->options_);
+        }
+
+        auto property = get_type<T>()->find_property_by_column_name(key);
+        if (property) {
+          return property->get_member_reader(*this->ref_, this->options_);
+        }
+        return nullptr;
+      }
+
+      size_t length() const final {
+        return get_type<T>()->num_properties();
+      }
+
+      AdapterPtr reference_at_key(const String& key) final {
+        auto association = get_type<T>()->find_association_by_name(key);
+        if (association) {
+          return association->get_member_adapter(*this->ref_, this->options_);
+        }
+
+        auto property = get_type<T>()->find_property_by_column_name(key);
+        if (property) {
+          return property->get_member_adapter(*this->ref_, this->options_);
+        }
+        return nullptr;
+      }
+
+      bool set_nothing() final {
+        this->ref_ = nullptr;
+        return true;
+      }
+
+      bool erase(const String& key) final {
+        auto ptr = reference_at_key(key);
+        if (ptr) {
+          return ptr->set_nothing();
+        }
+        return false;
+      }
+
+      struct PropertyEnumerator : Cloneable<PropertyEnumerator, IReaderEnumerator> {
+        persistence::RecordPtr<T> record;
+        const persistence::RecordType<T>* t;
+        size_t i = 0;
+        Bitflags<Options> options_;
+        PropertyEnumerator(const PropertyEnumerator&) = default;
+        PropertyEnumerator(PropertyEnumerator&&) = default;
+        PropertyEnumerator(persistence::RecordPtr<T> record, Bitflags<Options> o) : record(std::move(record)), t(::persistence::get_type<T>()), options_(o) {}
+
+        ReaderPtr current_value() const final {
+          auto prop = t->property_at(i);
+          return prop->get_member_reader(*record, options_);
+        }
+
+        Maybe<String> current_key() const final {
+          auto prop = t->property_at(i);
+          return prop->column();
+        }
+
+        bool at_end() const final { return i >= t->num_properties(); }
+        void move_next() final {
+          if (i < t->num_properties()) {
+            ++i;
+          }
+        }
+      };
+
+      ReaderEnumeratorPtr enumerator() const final {
+        return ReaderEnumeratorPtr{new PropertyEnumerator{this->ref_, this->options_}};
+      }
+    };
+
+    template <typename T>
+    struct Adapter<RecordPtr<T>> : RecordAdapter<T> {
+      Adapter(RecordPtr<T>& ref, Bitflags<Options> options) : RecordAdapter<T>(ref, options) {}
+    };
+
+    template <>
+    struct Adapter<persistence::PrimaryKey> : Adapter<int64_t> {
+      Adapter(persistence::PrimaryKey& key, Bitflags<Options> o = Options::None) : Adapter<int64_t>(key.id) {}
+    };
+
+    template <>
+    struct Adapter<DateTime> : AdapterBase<DateTime> {
+      Adapter(DateTime& ref, Bitflags<Options> = Options::None) : AdapterBase<DateTime>(ref, Options::None) {}
+
+      // TODO:
+      DataType type() const final { return DataType::String; }
+      Maybe<std::string> get_string() const final { return this->ref_.iso8601(); }
+      bool set_string(String str) final {
+        auto dt = DateTime::strptime("%Y-%m-%d %H:%M:%S %z", str);
+        if (dt) {
+          this->ref_ = *dt;
+          return true;
+        }
+        return false;
+      }
+    };
+
+    template <typename T>
+    struct AssociationAdapter : AdapterBase<T> {
+      AssociationAdapter(T& ref, Bitflags<Options> o) : AdapterBase<T>(ref, o) {}
+
+      bool can_load() const {
+        return this->options_ & Options::AllowLoad;
+      }
+
+      bool is_loaded() const {
+        return this->ref_.is_loaded();
+      }
+
+      void load() const {
+        const_cast<T&>(this->ref_).load();
+      }
+    };
+
+    template <typename T>
+    struct SingularAssociationAdapter : AssociationAdapter<T> {
+      SingularAssociationAdapter(T& ref, Bitflags<Options> o) : AssociationAdapter<T>(ref, o) {}
+
+      bool has_value() const {
+        return this->ref_.is_set();
+      }
+
+      DataType type() const override {
+        if (this->can_load() || this->is_loaded()) {
+          return DataType::Dictionary;
+        } else if (has_value()) {
+          return DataType::Integer;
+        } else {
+          return DataType::Nothing;
         }
       }
-      return nullptr;
-    }
 
-    StructuredDataConstPtr get(size_t idx) const final {
-      return nullptr;
-    }
+      Maybe<Integer> get_integer() const override {
+        return monad::fmap(this->ref_.id(), [&](const persistence::PrimaryKey& key) { return key.id; });
+      }
 
-    Maybe<std::string>  get_string()  const final { return wayward::Nothing; }
-    Maybe<int64_t>      get_integer() const final { return wayward::Nothing; }
-    Maybe<double>       get_float()   const final { return wayward::Nothing; }
-    Maybe<bool>         get_boolean() const final { return wayward::Nothing; }
-  };
+      bool has_key(const String& key) const override {
+        if (type() == DataType::Dictionary) {
+          auto t = this->ref_.association()->foreign_type();
+          return t->find_abstract_property_by_column_name(key) != nullptr || t->find_abstract_association_by_name(key) != nullptr;
+        }
+        return false;
+      }
+
+      size_t length() const override {
+        if (type() == DataType::Dictionary) {
+          return this->ref_.association()->foreign_type()->num_properties();
+        }
+        return 0;
+      }
+
+      ReaderPtr value_reader() const {
+        if (type() == DataType::Dictionary) {
+          if (this->can_load() && !this->is_loaded()) {
+            this->load();
+          }
+          auto ptr = this->ref_.get();
+          return make_owning_reader(std::move(ptr), this->options_);
+        } else if (has_value()) {
+          return make_owning_reader(this->ref_.id());
+        }
+        return nullptr;
+      }
+
+      AdapterPtr value_adapter() const {
+        if (type() == DataType::Dictionary) {
+          if (this->can_load() && !this->is_loaded()) {
+            this->load();
+          }
+          auto ptr = this->ref_.get();
+          return make_owning_adapter(std::move(ptr), this->options_);
+        } else if (has_value()) {
+          return make_owning_adapter(*this->ref_.id_ptr(), this->options_);
+        }
+        return nullptr;
+      }
+
+      ReaderPtr get(const String& key) const override {
+        return value_reader()->get(key);
+      }
+
+      ReaderEnumeratorPtr enumerator() const override {
+        return value_reader()->enumerator();
+      }
+
+      bool set_integer(Integer n) override {
+        this->ref_.value_ = persistence::PrimaryKey{n};
+        return true;
+      }
+
+      AdapterPtr reference_at_key(const String& key) override {
+        return value_adapter()->reference_at_key(key);
+      }
+
+      bool erase(const String& key) override {
+        return value_adapter()->erase(key);
+      }
+    };
+
+    template <typename T>
+    struct PluralAssociationAdapter : AssociationAdapter<T> {
+      PluralAssociationAdapter(T& ref, Bitflags<Options> o) : AssociationAdapter<T>(ref, o) {}
+      mutable Maybe<ReaderPtr> reader_;
+
+      DataType type() const {
+        if (this->can_load() || this->is_loaded()) {
+          return DataType::List;
+        }
+        return DataType::Nothing;
+      }
+
+      ReaderPtr value_reader() const {
+        if (!reader_ && type() == DataType::List) {
+          if (this->can_load() && !this->is_loaded()) {
+            this->load();
+          }
+          reader_ = make_owning_reader(this->ref_.get(), this->options_);
+        }
+        return *reader_;
+      }
+
+      size_t length() const override {
+        return value_reader()->length();
+      }
+
+      ReaderPtr at(size_t idx) const override {
+        return value_reader()->at(idx);
+      }
+
+      ReaderEnumeratorPtr enumerator() const override {
+        return value_reader()->enumerator();
+      }
+
+      AdapterPtr reference_at_index(size_t idx) override {
+        return nullptr;
+      }
+    };
+
+    template <typename T>
+    struct Adapter<persistence::BelongsTo<T>> : SingularAssociationAdapter<persistence::BelongsTo<T>> {
+      Adapter(persistence::BelongsTo<T>& ref, Bitflags<Options> o) : SingularAssociationAdapter<persistence::BelongsTo<T>>(ref, o) {}
+    };
+
+    template <typename T>
+    struct Adapter<persistence::HasOne<T>> : SingularAssociationAdapter<persistence::HasOne<T>> {
+      Adapter(persistence::HasOne<T>& ref, Bitflags<Options> o) : SingularAssociationAdapter<persistence::HasOne<T>>(ref, o) {}
+    };
+
+    template <typename T>
+    struct Adapter<persistence::HasMany<T>> : PluralAssociationAdapter<persistence::HasMany<T>> {
+      Adapter(persistence::HasMany<T>& ref, Bitflags<Options> o) : PluralAssociationAdapter<persistence::HasMany<T>>(ref, o) {}
+    };
+
+    // template <typename T>
+    // struct Adapter<persistence::HasOne<T>> : Adapter<RecordPtr<T>> {
+    //   Adapter(persistence::HasOne<T>& ref) : Adapter<RecordPtr<T>>(ref.ptr_) {}
+    // };
+  }
 }
 
 #endif // PERSISTENCE_RECORD_AS_STRUCTURED_DATA

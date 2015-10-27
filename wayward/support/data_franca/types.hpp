@@ -21,6 +21,13 @@ namespace wayward {
       List,
       Dictionary,
     };
+
+    struct IReader;
+    struct IWriter;
+    struct IAdapter;
+    using ReaderPtr = std::shared_ptr<const IReader>;
+    using WriterPtr = std::shared_ptr<IWriter>;
+    using AdapterPtr = std::shared_ptr<IAdapter>;
   }
 }
 

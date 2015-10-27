@@ -1,9 +1,12 @@
 #include <wayward/support/datetime.hpp>
+#include <wayward/support/datetime/timezone.hpp>
 
 #include <ctime>
 #include <cassert>
 
 #include <array>
+
+#include <time.h>
 
 namespace wayward {
   using namespace units;
@@ -20,18 +23,6 @@ namespace wayward {
   constexpr char GetTimeUnitName<Milliseconds>::Value[];
   constexpr char GetTimeUnitName<Microseconds>::Value[];
   constexpr char GetTimeUnitName<Nanoseconds>::Value[];
-
-  DateTime::Repr DateTime::r_utc() const {
-    auto adjusted = repr_ + timezone_.utc_offset.repr_;
-    if (timezone_.is_dst) {
-      adjusted -= Hours{1}.repr_;
-    }
-    return adjusted;
-  }
-
-  DateTime DateTime::utc() const {
-    return DateTime{r_utc(), Timezone::UTC};
-  }
 
   DateTime DateTime::operator+(const DateTimeInterval& interval) const {
     DateTime copy = *this;
@@ -61,22 +52,23 @@ namespace wayward {
 
   namespace {
     bool
-    is_leap_year(int64_t year) {
+    is_leap_year(Years year) {
       // It's leap year every 4 years, except every 100 years, but then again every 400 years.
       // Source: http://en.wikipedia.org/wiki/Leap_year
-      return ((year % 4) == 0) && (((year % 100) != 0) || ((year % 400) == 0));
+      int y = year.count();
+      return ((y % 4) == 0) && (((y % 100) != 0) || ((y % 400) == 0));
     }
 
-    uint32_t
-    days_in_month(int64_t year, int64_t month) {
+    Days
+    days_in_month(Years year, Months month) {
       int64_t month_sign = month < 0 ? -1 : 1;
 
       month *= month_sign; // abs
-      year += month_sign * ((month - 1) / 12);
-      month = ((month - 1) % 12) + 1;
+      year += month_sign * ((month - 1_month) / 12);
+      month = ((month - 1_month) % 12) + 1_month;
       month *= month_sign; // undo abs
 
-      switch (month) {
+      switch (month.count()) {
         case 1: return 31;
         case 2: return is_leap_year(year) ? 29 : 28;
         case 3: return 31;
@@ -96,52 +88,47 @@ namespace wayward {
     struct tm
     calendar_values_to_tm(const DateTime::CalendarValues& cal) {
       struct tm t = {0};
-      t.tm_year = cal.year - 1900;
+      t.tm_year = (cal.year - 1900_years).count();
 
       // TODO: timegm gives an error when wrapping old dates, for some weird reason
-      t.tm_mon = cal.month - 1;
-      t.tm_mday = cal.day;
-
-      t.tm_hour = cal.hour;
-      t.tm_min = cal.minute;
-      t.tm_sec = cal.second;
+      t.tm_mon = (cal.month - 1_month).count();
+      t.tm_mday = cal.day.count();
+      t.tm_hour = cal.hour.count();
+      t.tm_min = cal.minute.count();
+      t.tm_sec = cal.second.count();
+      t.tm_zone = const_cast<char*>(cal.timezone.zone.data());
       return t;
     }
 
     DateTime::CalendarValues
     tm_to_calendar_values(const struct tm& t) {
       DateTime::CalendarValues cal;
-      cal.year = t.tm_year + 1900;
-      cal.month = t.tm_mon + 1;
-      cal.day = t.tm_mday;
-      cal.hour = t.tm_hour;
-      cal.minute = t.tm_min;
-      cal.second = t.tm_sec;
+      cal.year = Years{t.tm_year + 1900};
+      cal.month = Months{t.tm_mon + 1};
+      cal.day = Days{t.tm_mday};
+      cal.hour = Hours{t.tm_hour};
+      cal.minute = Minutes{t.tm_min};
+      cal.second = Seconds{t.tm_sec};
+      cal.timezone.zone = t.tm_zone;
       return cal;
     }
 
-    Nanoseconds calendar_values_to_nanoseconds_from_epoch(const DateTime::CalendarValues& cal) {
-      struct tm t = calendar_values_to_tm(cal);
-
-      int64_t microseconds_from_nanoseconds = cal.nanosecond / 1000;
-      int64_t nanoseconds = cal.nanosecond % 1000;
-      int64_t microseconds = cal.microsecond + microseconds_from_nanoseconds;
-      int64_t milliseconds_from_microseconds = microseconds / 1000;
-      microseconds %= 1000;
-      int64_t milliseconds = cal.millisecond + milliseconds_from_microseconds;
-      int64_t seconds_from_milliseconds = milliseconds / 1000;
-      t.tm_sec += seconds_from_milliseconds;
-      milliseconds %= 1000;
-
-      auto time_us = std::chrono::system_clock::from_time_t(::timegm(&t));
-      auto from_epoch_ns = std::chrono::nanoseconds{time_us.time_since_epoch().count() * 1000};
-      from_epoch_ns += std::chrono::nanoseconds{nanoseconds};
-      from_epoch_ns += std::chrono::microseconds{microseconds};
-      from_epoch_ns += std::chrono::milliseconds{milliseconds};
-      return from_epoch_ns;
+    Nanoseconds local_tm_to_utc_epoch(struct tm t) {
+      auto time_us = std::chrono::system_clock::from_time_t(::mktime(&t));
+      return Nanoseconds{time_us.time_since_epoch()};
     }
 
-    struct tm nanoseconds_to_tm(Nanoseconds ns) {
+    Nanoseconds local_calendar_values_to_utc_epoch(const DateTime::CalendarValues& cal) {
+      // TODO: The time zone must be the local timezone, otherwise it won't work :(
+      struct tm t = calendar_values_to_tm(cal);
+      Nanoseconds ns = local_tm_to_utc_epoch(t);
+      ns += cal.nanosecond;
+      ns += cal.microsecond;
+      ns += cal.millisecond;
+      return ns;
+    }
+
+    struct tm utc_epoch_to_tm_utc(Nanoseconds ns) {
       // Standard std::chrono::time_point only understands microsecond precision.
       auto us = ns.repr_.count() / 1000;
       std::chrono::time_point<std::chrono::system_clock> us_repr {std::chrono::microseconds(us)};
@@ -151,24 +138,35 @@ namespace wayward {
       return t;
     }
 
-    DateTime::CalendarValues
-    nanoseconds_from_epoch_to_calendar_values(Nanoseconds ns) {
-      DateTime::CalendarValues cal = tm_to_calendar_values(nanoseconds_to_tm(ns));
-      auto ns_rem = ns.repr_.count() % 1000;
+    struct tm utc_epoch_to_tm_local(Nanoseconds ns) {
+      // Standard std::chrono::time_point only understands microsecond precision.
       auto us = ns.repr_.count() / 1000;
-      cal.millisecond = (us / 1000) % 1000;
-      cal.microsecond = us % 1000;
-      cal.nanosecond = ns_rem;
+      std::chrono::time_point<std::chrono::system_clock> us_repr {std::chrono::microseconds(us)};
+      auto from_epoch = std::chrono::system_clock::to_time_t(us_repr);
+      struct tm t;
+      ::localtime_r(&from_epoch, &t);
+      return t;
+    }
+
+    DateTime::CalendarValues
+    utc_epoch_to_local_calendar_values(Nanoseconds ns) {
+      struct tm t = utc_epoch_to_tm_local(ns);
+      auto cal = tm_to_calendar_values(t);
+
+      cal.nanosecond = ns % 1000000000;
+      cal.microsecond = cal.nanosecond.count() / 1000;
+      cal.nanosecond %= 1000;
+      cal.millisecond = cal.microsecond.count() / 1000;
+      cal.microsecond %= 1000;
       return cal;
     }
   }
 
   DateTime::CalendarValues DateTime::as_calendar_values() const {
-    auto ns = repr_.time_since_epoch();
-    return nanoseconds_from_epoch_to_calendar_values(ns);
+    return utc_epoch_to_local_calendar_values(repr_.time_since_epoch());
   }
 
-  DateTime DateTime::at(int32_t year, int32_t month, int32_t d, int32_t h, int32_t m, int32_t s, int32_t ms, int32_t us, int32_t ns) {
+  DateTime DateTime::at(Timezone tz, Years year, Months month, Days d, Hours h, Minutes m, Seconds s, Milliseconds ms, Microseconds us, Nanoseconds ns) {
     CalendarValues cal;
     cal.year = year;
     cal.month = month;
@@ -179,90 +177,87 @@ namespace wayward {
     cal.millisecond = ms;
     cal.microsecond = us;
     cal.nanosecond = ns;
+    cal.timezone = tz;
     return at(cal);
   }
 
-  DateTime DateTime::at(const CalendarValues& cal) {
-    return DateTime{DateTime::Repr{calendar_values_to_nanoseconds_from_epoch(cal)}};
+  DateTime DateTime::at(Years year, Months month, Days d, Hours h, Minutes m, Seconds s, Milliseconds ms, Microseconds us, Nanoseconds ns) {
+    return at(clock().timezone(), year, month, d, h, m, s, ms, us, ns);
   }
 
-  DateTime DateTime::at(Timezone tz, const CalendarValues& cal) {
-    return DateTime{DateTime::Repr{calendar_values_to_nanoseconds_from_epoch(cal)}, tz};
+  DateTime DateTime::at(const CalendarValues& cal) {
+    return DateTime{DateTime::Repr{local_calendar_values_to_utc_epoch(cal)}};
   }
 
   Seconds DateTime::unix_timestamp() const {
-    auto ns = repr_.time_since_epoch().count();
-    return Seconds{ns / 1000000000};
+    return Seconds{repr_.time_since_epoch().count() / 1000000};
   }
 
-  int32_t DateTime::year() const {
+  Years DateTime::year() const {
     auto cal = as_calendar_values();
     return cal.year;
   }
 
-  int32_t DateTime::month() const {
+  Months DateTime::month() const {
     auto cal = as_calendar_values();
     return cal.month;
   }
 
-  int32_t DateTime::day() const {
+  Days DateTime::day() const {
     auto cal = as_calendar_values();
     return cal.day;
   }
 
-  int32_t DateTime::hour() const {
+  Hours DateTime::hour() const {
     auto cal = as_calendar_values();
     return cal.hour;
   }
 
-  int32_t DateTime::minute() const {
+  Minutes DateTime::minute() const {
     auto cal = as_calendar_values();
     return cal.minute;
   }
 
-  int32_t DateTime::second() const {
+  Seconds DateTime::second() const {
     auto cal = as_calendar_values();
     return cal.second;
   }
 
-  int32_t DateTime::millisecond() const {
+  Milliseconds DateTime::millisecond() const {
     auto cal = as_calendar_values();
     return cal.millisecond;
   }
 
-  int32_t DateTime::microsecond() const {
+  Microseconds DateTime::microsecond() const {
     auto cal = as_calendar_values();
     return cal.microsecond;
   }
 
-  int32_t DateTime::nanosecond() const {
+  Nanoseconds DateTime::nanosecond() const {
     auto cal = as_calendar_values();
     return cal.nanosecond;
   }
 
   std::string DateTime::strftime(const std::string& fmt) const {
-    auto tz_adjust = timezone_.utc_offset.repr_ + (timezone_.is_dst ? 1_hour : 0_hours).repr_;
-    struct tm t = nanoseconds_to_tm(repr_.time_since_epoch() + tz_adjust);
-    t.tm_isdst = timezone_.is_dst;
-    t.tm_gmtoff = timezone_.utc_offset.repr_.count();
+    struct tm t = utc_epoch_to_tm_local(repr_.time_since_epoch());
     std::array<char, 128> buffer;
     size_t len = ::strftime(buffer.data(), buffer.size(), fmt.c_str(), &t);
     return std::string(buffer.data(), len);
   }
 
   Maybe<DateTime> DateTime::strptime(const std::string& input, const std::string& fmt) {
-    struct tm t;
+    struct tm t = {0};
     char* r = ::strptime(input.c_str(), fmt.c_str(), &t);
     if (r == nullptr || r == input.c_str()) {
       // Conversion failed.
       return Nothing;
     } else {
-      return DateTime::at(Timezone{Seconds(t.tm_gmtoff), t.tm_isdst != 0}, tm_to_calendar_values(t));
+      return DateTime{Repr{local_tm_to_utc_epoch(t)}};
     }
   }
 
   std::string DateTime::iso8601() const {
-    return strftime("%Y-%m-%d %H:%M:%S %z");
+    return strftime("%Y-%m-%d %T %z");
   }
 
   bool DateTimeArithmetic<DateTimeInterval>::is_months(const DateTimeInterval& interval) {
@@ -303,7 +298,7 @@ namespace wayward {
 
     // If we're adding years from a leap year, we way end up with
     // an off-by-one-day error.
-    uint32_t dim = days_in_month(cal.year, cal.month);
+    Days dim = days_in_month(cal.year, cal.month);
     if (cal.day > dim) {
       cal.day = dim;
     }
@@ -316,7 +311,7 @@ namespace wayward {
     cal.month += by.repr_.count();
 
     // Don't leak into next month.
-    uint32_t dim = days_in_month(cal.year, cal.month);
+    Days dim = days_in_month(cal.year, cal.month);
     if (cal.day > dim) {
       cal.day = dim;
     }

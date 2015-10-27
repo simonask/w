@@ -3,6 +3,8 @@
 
 namespace wayward {
   namespace {
+    using namespace data_franca;
+
     void escape_json_stream(std::ostream& os, const std::string& input) {
       for (auto it = input.cbegin(); it != input.cend(); it++) {
         switch (*it) {
@@ -25,13 +27,13 @@ namespace wayward {
       }
     }
 
-    void node_to_json_stream(std::ostream& os, const Node& node, JSONMode mode, int indent = 0) {
+    void node_to_json_stream(std::ostream& os, const Spectator& node, JSONMode mode, int indent = 0) {
       switch (node.type()) {
-        case NodeType::Nil: {
+        case DataType::Nothing: {
           os << "null";
           break;
         }
-        case NodeType::Boolean: {
+        case DataType::Boolean: {
           bool b;
           if (node >> b) {
             os << (b ? "true" : "false");
@@ -41,8 +43,8 @@ namespace wayward {
           }
           break;
         }
-        case NodeType::Integer: {
-          int64_t n;
+        case DataType::Integer: {
+          Integer n;
           if (node >> n) {
             os << n;
           } else {
@@ -51,8 +53,8 @@ namespace wayward {
           }
           break;
         }
-        case NodeType::Float: {
-          double n;
+        case DataType::Real: {
+          Real n;
           if (node >> n) {
             os << n;
           } else {
@@ -61,8 +63,8 @@ namespace wayward {
           }
           break;
         }
-        case NodeType::String: {
-          std::string str;
+        case DataType::String: {
+          String str;
           if (node >> str) {
             os << "\"";
             escape_json_stream(os, str);
@@ -73,13 +75,15 @@ namespace wayward {
           }
           break;
         }
-        case NodeType::List: {
+        case DataType::List: {
           size_t len = node.length();
           os << '[';
           if (mode == JSONMode::Compact) {
-            for (size_t i = 0; i < len; ++i) {
-              node_to_json_stream(os, node[i], mode);
-              if (i+1 != len) {
+            auto end = node.end();
+            for (auto it = node.begin(); it != end;) {
+              node_to_json_stream(os, *it, mode);
+              ++it;
+              if (it != end) {
                 os << ", ";
               }
             }
@@ -87,10 +91,12 @@ namespace wayward {
             if (len != 0) {
               os << '\n';
               indentation(os, indent);
-              for (size_t i = 0; i < len; ++i) {
+              auto end = node.end();
+              for (auto it = node.begin(); it != end;) {
                 indentation(os, 1);
-                node_to_json_stream(os, node[i], mode, indent+1);
-                if (i+1 != len) {
+                node_to_json_stream(os, *it, mode, indent+1);
+                ++it;
+                if (it != end) {
                   os << ',';
                 }
                 os << '\n';
@@ -101,31 +107,32 @@ namespace wayward {
           os << ']';
           break;
         }
-        case NodeType::Dictionary: {
-          auto keys = node.keys();
-          size_t len = keys.size();
+        case DataType::Dictionary: {
           os << '{';
           if (mode == JSONMode::Compact) {
-            for (auto it = keys.begin(); it != keys.end(); ++it) {
+            auto end = node.end();
+            for (auto it = node.begin(); it != end;) {
               os << "\"";
-              escape_json_stream(os, *it);
+              escape_json_stream(os, *it.key());
               os << "\": ";
-              node_to_json_stream(os, node[*it], mode);
-              if (it+1 != keys.end()) {
+              node_to_json_stream(os, *it, mode);
+              ++it;
+              if (it != end) {
                 os << ", ";
               }
             }
           } else {
-            if (len != 0) {
+            if (node.length() != 0) {
               indentation(os, indent);
-              for (auto it = keys.begin(); it != keys.end(); ++it) {
+              auto end = node.end();
+              for (auto it = node.begin(); it != end;) {
                 indentation(os, 1);
-                os << "\"";
-                escape_json_stream(os, *it);
+                escape_json_stream(os, *it.key());
                 os << "\": ";
-                node_to_json_stream(os, node[*it], mode, indent+1);
-                if (it+1 != keys.end()) {
-                  os << ',';
+                node_to_json_stream(os, *it, mode, indent+1);
+                ++it;
+                if (it != end) {
+                  os << ", ";
                 }
                 os << '\n';
                 indentation(os, indent);
@@ -145,7 +152,7 @@ namespace wayward {
     return ss.str();
   }
 
-  std::string as_json(const Node& node, JSONMode mode) {
+  std::string as_json(const data_franca::Spectator& node, JSONMode mode) {
     std::stringstream ss;
     node_to_json_stream(ss, node, mode);
     return ss.str();
