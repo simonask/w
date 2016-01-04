@@ -71,7 +71,7 @@ Example app
 #include <w>
 
 int main(int argc, char** argv) {
-  w::App app { argv, argv };
+  w::App app { argc, argv };
 
   app.get("/", [](w::Request& req) -> w::Response {
     return w::render_text("Hello, World!");
